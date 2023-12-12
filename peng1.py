@@ -8,8 +8,6 @@ https://www.nationalgas.com/data-and-operations/quality
 
 UNITS: bar, K, litres
 """
-# AI-generated code. Review and use carefully. More info on FAQ.
-
 # This algorithm does NOT deal with the temperature dependence of alpha properly. 
 # The code should be rearranged to calculate alpha for each point ont he plot for each gas.
 
@@ -20,12 +18,16 @@ UNITS: bar, K, litres
 
 R = 0.08314462  # l.bar/(mol.K)
 
+# L M N for H2 from https://www.researchgate.net/figure/Coefficients-for-the-Twu-alpha-function_tbl3_306073867
+# 'L': 0.7189,'M': 2.5411,'N': 10.2,
+# for cryogenic vapour pressure. This FAILS for room temperature work, producing infinities. Use omega instead.
+
 PR_constants = {
     'H2': {'Tc': 33.2, 'Pc': 13.0, 'omega': -0.22},
     'CH4': {'Tc': 190.6, 'Pc': 45.99, 'omega': 0.011},
     'C2H6': {'Tc': 305.32, 'Pc': 48.72, 'omega': 0.099}, # 305.556, 48.299, 0.1064 for SRK eos
     'C3H8': {'Tc': 369.8, 'Pc': 42.48, 'omega': 0.152},
-    'nC4': {'Tc': 306.152, 'Pc': 38, 'L': 0.152,'M': 0.152,'N': 0.152, 'omega': 0.15}, # omega is WRONG, guessed. Tc Pc     Tc Pc from https://www.engineeringtoolbox.com/butane-d_1415.html
+    'nC4': {'Tc': 306.152, 'Pc': 38,  'omega': 0.15}, # omega is WRONG, guessed. Tc Pc from https://www.engineeringtoolbox.com/butane-d_1415.html
     'iC4': {'Tc': 407.7, 'Pc': 36.5, 'omega': 0.15}, # omega is WRONG, guessed. https://webbook.nist.gov/cgi/cbook.cgi?ID=C75285&Mask=1F
     'CO2': {'Tc': 304.2, 'Pc': 73.8, 'omega': 0.225},
     'H2O': {'Tc': 647.1, 'Pc': 220.6, 'omega': 0.345}, # https://link.springer.com/article/10.1007/s10765-020-02643-6/tables/1
@@ -37,17 +39,18 @@ PR_constants = {
 # Natural gas compositions (mole fractions)
 # Assuming hypothetical compositions for demonstration purposes
 natural_gas_compositions = {
-    'oH2': {'H2': 1},
+    'oH2': {'H2': 1}, # hydrogen, but using the mixing rules: software test check
     'NG1': {'CH4': 0.9, 'C2H6': 0.05, 'C3H8': 0.03, 'CO2': 0.02},
     'NG2': {'CH4': 0.85, 'C2H6': 0.07, 'C3H8': 0.05, 'CO2': 0.03},
     'NG3': {'CH4': 0.8, 'C2H6': 0.1, 'C3H8': 0.05, 'CO2': 0.05},
-    'NSEA': {'CH4': 0.836, 'C2H6': 0.0748, 'C3H8': 0.0392, 'CO2': 0.0114, 'N2': 0.0195},#  'nC4': 0.0081, 'i-C4'	:0.81, 'nC5':0.15, 'iC5':0.14
-    # north sea gas https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7347886/
+    'NSEA': {'CH4': 0.836, 'C2H6': 0.0748, 'C3H8':0.0392, 'nC4':0.0081, 'iC4':0.81, 
+        'CO2':0.0114, 'N2':0.0195},#  'nC5':0.15, 'iC5':0.14
+        # north sea gas https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7347886/
     'MIX6': {'CH4': 0.8, 'C2H6': 0.05, 'C3H8': 0.03, 'CO2': 0.02, 'N2': 0.10}, # mix6 from https://backend.orbit.dtu.dk/ws/files/131796794/FPE_D_16_00902R1.pdf
     'GG': {'CH4': 0.827, 'C2H6': 0.03, 'C3H8': 0.003, 'CO2': 0, 'N2': 0.14},
-    'ethane': {'C2H6': 1.0}, # software test check
+    'ethane': {'C2H6': 1.0}, # hydrogen, but using the mixing rules: software test check
 }
-# 20% H2, rem. N.Sea gas
+# 20% H2, remainder N.Sea gas
 fifth = {}
 fifth['H2'] = 0.2
 nsea = natural_gas_compositions['NSEA']
@@ -58,6 +61,9 @@ natural_gas_compositions['NG20H2'] = fifth
 # Binary interaction parameters for hydrocarbons for Peng-Robinson
 # based on the Chueh-Prausnitz correlation
 # from https://wiki.whitson.com/eos/cubic_eos/
+# also from Privat & Jaubert, 2023 (quoting a 1987 paper)
+
+# BUT we should be calculating these from other thermodynamic data really...?
 k_ij = {
     'CH4': {'C2H6': 0.0021, 'C3H8': 0.007, 'iC4': 0.013, 'nC4': 0.012, 'iC5': 0.018, 'nC5': 0.018, 'C6': 0.021, 'CO2': 0},
     'C2H6': {'C3H8': 0.001, 'iC4': 0.005, 'nC4': 0.004, 'iC5': 0.008, 'nC5': 0.008, 'C6': 0.010},
@@ -75,21 +81,11 @@ def calculate_PR_constants_for_mixture(name_mix):
     """
     Calculate the Peng-Robinson constants for a mixture of hydrocarbon gases.
     
-    This uses the Van der Waals mixing rules and assumes that the
+    This uses the (modified) Van der Waals mixing rules and assumes that the
     binary interaction parameters are non-zero between all pairs of components
     that we have data for.
     
-    Zc is the compressibility factor at the critical point
-    
-    Parameters:
-    gas_mixture (dict): A dictionary of gases with their mole fractions and individual
-                        Peng-Robinson constants. Each key is the gas name, and the value
-                        is another dictionary with keys 'mole_fraction', 'Tc', 'Pc', and 'omega'.
-    
-    Returns:
-    dict: A dictionary with the mixture's critical temperature (Tc_mix), critical pressure (Pc_mix),
-          and acentric factor (omega_mix).
-          
+    Zc is the compressibility factor at the critical point    
     """
     eps = 0.00001
     warn = 0.02 # 2 %
@@ -196,13 +192,17 @@ def a_and_b(gas, T=298.15):
     
     
     # Constants, valid only if amega < 0.49
-    if 'omega' in PR_constants[gas]:
-        omega = PR_constants[gas]['omega']
-        L, M, N = get_LMN(PR_constants[gas]['omega'])
-    else:
+    omega = PR_constants[gas]['omega']
+    if 'L' in PR_constants[gas]:
         L = PR_constants[gas]['L']
         M = PR_constants[gas]['M']
         N = PR_constants[gas]['N']
+    else:
+        L, M, N = get_LMN(PR_constants[gas]['omega'])
+        if gas == "H2":
+            print(gas, L, M, N)
+            
+
     
     alpha1 = Tr ** (N*(M-1)) * np.exp(L*(1 - Tr**(M*N)))
     
@@ -213,16 +213,17 @@ def a_and_b(gas, T=298.15):
         
         # https://www.sciencedirect.com/science/article/abs/pii/S0378381218305041
         # 1978 Robinson and Peng
-        # if omega < blug: # omega for nC10
-            # kappa = 0.37464 + 1.54226 * omega - 0.26992 * omega**2
-        # else:
-            # kappa = 0.379642 + 1.48503 * omega - 0.164423 * omega**2 + 0.16666 * omega**3
+        if omega < 0.491: # omega for nC10, https://www.sciencedirect.com/science/article/abs/pii/S0378381205003493
+            kappa = 0.37464 + 1.54226 * omega - 0.26992 * omega**2
+        else:
+            kappa = 0.379642 + 1.48503 * omega - 0.164423 * omega**2 + 0.16666 * omega**3
         
 
         # Alpha function
         alpha = (1 + kappa * (1 - np.sqrt(Tr)))**2
 
     if T == 298.15 and gas.endswith("H2"):
+        # why is thins fine for everyhting except H2 ?
         print(gas, alpha/alpha1)
         pass
     # Coefficients for the cubic equation of state
