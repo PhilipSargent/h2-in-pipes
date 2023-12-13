@@ -1,5 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import pathlib as pl
+import sys
 
 """For general information, commercial natural gas typically contains 85 to 90 percent methane, with the remainder mainly nitrogen and ethane, and has a calorific value of approximately 38 megajoules (MJ) per cubic metre
 
@@ -48,17 +50,19 @@ PR_constants = {
 
 # Natural gas compositions (mole fractions)
 gas_mixtures = {
+    'GG': {'CH4': 0.827, 'C2H6': 0.03, 'C3H8': 0.003, 'CO2': 0, 'N2': 0.14}, # Groeningen gas
+
     'Wobbe mix': {'CH4': 0.9,  'C3H8': 0.04,  'N2': 0.06}, # wobbe central, not a real natural gas  https://www.gasgovernance.co.uk/sites/default/files/ggf/Impact%20of%20Natural%20Gas%20Composition%20-%20Paper_0.pdf
     
+    'NTS': {'CH4': 0.8, 'C2H6': 0.05, 'C3H8': 0.03, 'CO2': 0.02, 'N2': 0.10}, # ==mix6 from      https://backend.orbit.dtu.dk/ws/files/131796794/FPE_D_16_00902R1.pdf
+
     'Algerian': {'CH4': 0.86486, 'C2H6': 0.08788, 'C3H8': 0.01179, 'iC4': 0.00085,  'nC4': 0.00107,
          'iC5': 0.00021, 'nC5': 0.00015,'C6': 0.00017,'CO2': 0.01894, 'N2': 0.01323, 'He': 0.00085}, # Algerian NG, Romeo 2022, C6+
          
     'North Sea': {'CH4': 0.836, 'C2H6': 0.0748, 'C3H8':0.0392, 'nC4':0.0081, 'iC4':0.0081, 
         'nC5':0.0015, 'iC5':0.0014, 'CO2':0.0114, 'N2':0.0195}, # North Sea gas https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7347886/
         
-    'NTS': {'CH4': 0.8, 'C2H6': 0.05, 'C3H8': 0.03, 'CO2': 0.02, 'N2': 0.10}, # ==mix6 from      https://backend.orbit.dtu.dk/ws/files/131796794/FPE_D_16_00902R1.pdf
     
-    'GG': {'CH4': 0.827, 'C2H6': 0.03, 'C3H8': 0.003, 'CO2': 0, 'N2': 0.14}, # Groeningen gas
     
     # 'ethane': {'C2H6': 1.0}, # ethane, but using the mixing rules: software test check
     # 'propane': {'C3H8': 1.0}, # ethane, but using the mixing rules: software test check
@@ -277,6 +281,8 @@ def peng_robinson(T, P, gas):
     return Z
 
 # ---------- main program startes here ------------- #
+program = sys.argv[0]
+imagefile = pl.Path(program).with_suffix(".png")
 
 for mix in gas_mixtures:
     composition = gas_mixtures[mix]
@@ -334,5 +340,5 @@ plt.ylabel('Z Compressibility Factor')
 plt.legend()
 plt.grid(True)
 
-plt.savefig("peng1.png")
+plt.savefig(imagefile)
 #plt.show()
