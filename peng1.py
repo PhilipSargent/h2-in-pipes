@@ -22,41 +22,54 @@ R = 0.08314462  # l.bar/(mol.K)
 # 'L': 0.7189,'M': 2.5411,'N': 10.2,
 # for cryogenic vapour pressure. This FAILS for room temperature work, producing infinities. Use omega instead.
 
+# Hc is heat of combusiton in kJ/mol
+# HHV in mJ/M3
+# Wb is Wobbe index: MJ/m3
+# RD is relative density (air is  1)
+
 PR_constants = {
-    'H2': {'Tc': 33.2, 'Pc': 13.0, 'omega': -0.22},
-    'CH4': {'Tc': 190.6, 'Pc': 45.99, 'omega': 0.011},
-    'C2H6': {'Tc': 305.32, 'Pc': 48.72, 'omega': 0.099}, # 305.556, 48.299, 0.1064 for SRK eos
-    'C3H8': {'Tc': 369.8, 'Pc': 42.48, 'omega': 0.152},
-    'nC4': {'Tc': 306.152, 'Pc': 38,  'omega': 0.15}, # omega is WRONG, guessed. Tc Pc from https://www.engineeringtoolbox.com/butane-d_1415.html
-    'iC4': {'Tc': 407.7, 'Pc': 36.5, 'omega': 0.15}, # omega is WRONG, guessed. https://webbook.nist.gov/cgi/cbook.cgi?ID=C75285&Mask=1F
-    'CO2': {'Tc': 304.2, 'Pc': 73.8, 'omega': 0.225},
+    'H2': {'Tc': 33.2, 'Pc': 13.0, 'omega': -0.22, 'Mw':2.015},
+    'CH4': {'Tc': 190.56, 'Pc': 45.99, 'omega': 0.011},
+    'C2H6': {'Tc': 305.32, 'Pc': 48.72, 'omega': 0.099}, # 
+    'C3H8': {'Tc': 369.15, 'Pc': 42.48, 'omega': 0.152}, # https://www.engineeringtoolbox.com/propane-d_1423.html
+    'nC4': {'Tc': 425, 'Pc': 38,  'omega': 0.20081, 'Mw': 58.1222, 'Hc':2-877.5}, # omega http://www.coolprop.org/fluid_properties/fluids/n-Butane.html https://www.engineeringtoolbox.com/butane-d_1415.html 
+    'iC4': {'Tc': 407.7, 'Pc': 36.5, 'omega': 0.1835318, 'Mw': 58.1222}, # omega  http://www.coolprop.org/fluid_properties/fluids/IsoButane.html https://webbook.nist.gov/cgi/cbook.cgi?ID=C75285&Mask=1F https://webbook.nist.gov/cgi/cbook.cgi?Name=butane&Units=SI
+    'nC5': {'Tc': 469.8, 'Pc': 33.6, 'omega': 0.251032, 'Mw': 72.1488}, # omega http://www.coolprop.org/fluid_properties/fluids/n-Pentane.html     
+    'iC5': {'Tc': 461.0, 'Pc': 33.8, 'omega': 0.2274, 'Mw': 72.1488}, # omega http://www.coolprop.org/fluid_properties/fluids/Isopentane.html      
+    'C6':  {'Tc': 507.6, 'Pc': 30.2, 'omega': 0.1521, 'Mw': 86.1754}, # omega is 0.2797 isohexane    
+    'CO2': {'Tc': 304.2, 'Pc': 73.8, 'omega': 0.228}, # https://en.wikipedia.org/wiki/Acentric_factor
     'H2O': {'Tc': 647.1, 'Pc': 220.6, 'omega': 0.345}, # https://link.springer.com/article/10.1007/s10765-020-02643-6/tables/1
     'N2': {'Tc': 126.21, 'Pc': 33.9, 'omega': 0.0401}, 
+    'He': {'Tc': 5.2, 'Pc': 2.274, 'omega': -0.3836, 'Mw': 4.0026},  # omega http://www.coolprop.org/fluid_properties/fluids/Helium.html
+    # https://eng.libretexts.org/Bookshelves/Chemical_Engineering/Distillation_Science_(Coleman)/03%3A_Critical_Properties_and_Acentric_Factor
     # N2 https://pubs.acs.org/doi/suppl/10.1021/acs.iecr.2c00363/suppl_file/ie2c00363_si_001.pdf
     # N2 omega is from https://en.wikipedia.org/wiki/Acentric_factor
 }
 
 # Natural gas compositions (mole fractions)
-# Assuming hypothetical compositions for demonstration purposes
 natural_gas_compositions = {
-    'oH2': {'H2': 1}, # hydrogen, but using the mixing rules: software test check
-    'NG1': {'CH4': 0.9, 'C2H6': 0.05, 'C3H8': 0.03, 'CO2': 0.02},
-    'NG2': {'CH4': 0.85, 'C2H6': 0.07, 'C3H8': 0.05, 'CO2': 0.03},
-    'NG3': {'CH4': 0.8, 'C2H6': 0.1, 'C3H8': 0.05, 'CO2': 0.05},
-    'NSEA': {'CH4': 0.836, 'C2H6': 0.0748, 'C3H8':0.0392, 'nC4':0.0081, 'iC4':0.81, 
-        'CO2':0.0114, 'N2':0.0195},#  'nC5':0.15, 'iC5':0.14
-        # north sea gas https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7347886/
+    'Wobbe mix': {'CH4': 0.9,  'C3H8': 0.04,  'N2': 0.06}, # wobbe central, not a real natural gas  https://www.gasgovernance.co.uk/sites/default/files/ggf/Impact%20of%20Natural%20Gas%20Composition%20-%20Paper_0.pdf
+    'Algerian': {'CH4': 0.86486, 'C2H6': 0.08788, 'C3H8': 0.01179, 'iC4': 0.0085,  'nC4': 0.0107,
+         'iC5': 0.00015, 'C6': 0.00017,'CO2': 0.01894, 'N2': 0.01233, 'He': 0.00085}, # Algerian NG, Romeo 2022, C6+
+    'North Sea': {'CH4': 0.836, 'C2H6': 0.0748, 'C3H8':0.0392, 'nC4':0.0081, 'iC4':0.0081, 
+        'nC5':0.0015, 'iC5':0.0014, 'CO2':0.0114, 'N2':0.0195}, # North Sea gas https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7347886/
+    'NTS': {'CH4': 0.8, 'C2H6': 0.05, 'C3H8': 0.03, 'CO2': 0.02, 'N2': 0.10}, # mix6 from     
     'MIX6': {'CH4': 0.8, 'C2H6': 0.05, 'C3H8': 0.03, 'CO2': 0.02, 'N2': 0.10}, # mix6 from https://backend.orbit.dtu.dk/ws/files/131796794/FPE_D_16_00902R1.pdf
-    'GG': {'CH4': 0.827, 'C2H6': 0.03, 'C3H8': 0.003, 'CO2': 0, 'N2': 0.14},
-    'ethane': {'C2H6': 1.0}, # hydrogen, but using the mixing rules: software test check
+    'GG': {'CH4': 0.827, 'C2H6': 0.03, 'C3H8': 0.003, 'CO2': 0, 'N2': 0.14}, # Groeningen gas
+    'ethane': {'C2H6': 1.0}, # ethane, but using the mixing rules: software test check
 }
+
+gas_mixture_properties = {
+    'Algerian': {'Wb': 49.992, 'HHV': 39.841, 'RD': 0.6351} #Algerian NG, Romeo 2022, C6+
+}
+
 # 20% H2, remainder N.Sea gas
 fifth = {}
 fifth['H2'] = 0.2
-nsea = natural_gas_compositions['NSEA']
+nsea = natural_gas_compositions['North Sea']
 for g in nsea:
     fifth[g] = nsea[g]*0.8
-natural_gas_compositions['NG20H2'] = fifth
+natural_gas_compositions['20% H2'] = fifth
     
 # Binary interaction parameters for hydrocarbons for Peng-Robinson
 # based on the Chueh-Prausnitz correlation
@@ -70,10 +83,12 @@ k_ij = {
     'C3H8': {'iC4': 0.001, 'nC4': 0.001, 'iC5': 0.003, 'nC5': 0.003, 'C6': 0.004},
     'iC4': {'nC4': 0.0, 'iC5': 0.0, 'nC5': 0.0, 'C6': 0.001},
     'nC4': {'iC5': 0.001, 'nC5': 0.001, 'C6': 0.001},
-    'iC5': {'nC5': 0.0, 'C6': 0.0}, # placeholder
-    'nC5': {'C6': 0.0}, # placeholder
+    'iC5': {'C6': 0.0}, # placeholder
+    'nC5': {'C6': 0.0}, # placeholder    
+    'C6': {'C6': 0.0}, # placeholder
     'CO2': {'C6': 0.0}, # placeholder
     'N2': {'C6': 0.0}, # placeholder
+    'He': {'C6': 0.0}, # placeholder
     'H2': {'C6': 0.0}, # placeholder
 }
 
@@ -110,7 +125,7 @@ def calculate_PR_constants_for_mixture(name_mix):
         else:
             print(f"######### BAD gas mixture '{name_mix}', molar fractions add up to {x}")
 
-    for gas, xi in composition.items():
+    for gas, xi in composition.items(): # not just compositon now
         x += xi/norm
  
         Tc = PR_constants[gas]['Tc']
@@ -266,7 +281,7 @@ for mix in natural_gas_compositions:
     print(mixture_constants, " at T=298.15")
     
 # Plot Z compressibility factor for pure hydrogen and natural gases
-temperatures = np.linspace(273.15, 308.15, 100)  # 0°C to 35°C in Kelvin
+temperatures = np.linspace(233.15, 308.15, 100)  # 0°C to 35°C in Kelvin
 pressure = 1.075  # bar
 
 plt.figure(figsize=(10, 6))
@@ -282,11 +297,11 @@ plt.plot(temperatures - 273.15, Z_CH4, label='Pure methane', linestyle='dashed')
 Z_C2H6 = [peng_robinson(T, pressure, 'C2H6') for T in temperatures]
 plt.plot(temperatures - 273.15, Z_C2H6, label='Pure ethane', linestyle='dashed')
 
-Z_C3H8 = [peng_robinson(T, pressure, 'C3H8') for T in temperatures]
-plt.plot(temperatures - 273.15, Z_C3H8, label='Pure propane', linestyle='dashed')
+# Z_C3H8 = [peng_robinson(T, pressure, 'C3H8') for T in temperatures]
+# plt.plot(temperatures - 273.15, Z_C3H8, label='Pure propane', linestyle='dashed')
 
-Z_C3H8 = [peng_robinson(T, pressure, 'nC4') for T in temperatures]
-plt.plot(temperatures - 273.15, Z_C3H8, label='Pure nC4', linestyle='dashed')
+# Z_C4 = [peng_robinson(T, pressure, 'nC4') for T in temperatures]
+# plt.plot(temperatures - 273.15, Z_C4, label='Pure nC4', linestyle='dashed')
 
 # Plot for natural gas compositions
 for mix in natural_gas_compositions:
