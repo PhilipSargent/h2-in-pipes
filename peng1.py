@@ -296,13 +296,26 @@ def peng_robinson(T, P, gas):
     Z = solve_for_Z(T, P, a, b)
     return Z
 
+def calculate_viscosity(Mw, T, rho):
+
+   # Constants for the Lee, Gonzalez, and Eakin method 
+    kv = (7.77 + 0.0063 * Mw) * T**1.5 / (122.4 + 12.9 * Mw + T)
+    xv = (2.57 + 1914.5 / T + 0.0095 * Mw) # * np.exp(-0.025 * MWg) hallucination!
+    yv = 1.11 - 0.04 * xv
+
+    # Calculate the viscosity
+    mu = 1e-7 * kv * np.exp(xv * (rho / 1000)**yv)
+
+    return mu
 # ---------- main program startes here ------------- #
 program = sys.argv[0]
 stem = str(pl.Path(program).with_suffix(""))
 zf =  stem + "_z"
 rhof = stem  + "_rho"
+muf = stem  + "_mu"
 zfile = pl.Path(zf).with_suffix(".png") 
 rhofile = pl.Path(rhof).with_suffix(".png") 
+mufile = pl.Path(muf).with_suffix(".png") 
 
 for mix in gas_mixtures:
     composition = gas_mixtures[mix]
@@ -332,22 +345,15 @@ plt.plot(temperatures - 273.15, Z_H2, label='Pure hydrogen', linestyle='dashed')
 Z_CH4 = [peng_robinson(T, pressure, 'CH4') for T in temperatures]
 plt.plot(temperatures - 273.15, Z_CH4, label='Pure methane', linestyle='dashed')
 
-# Z_C2H6 = [peng_robinson(T, pressure, 'C2H6') for T in temperatures]
-# plt.plot(temperatures - 273.15, Z_C2H6, label='Pure ethane', linestyle='dashed')
-
-# Z_C3H8 = [peng_robinson(T, pressure, 'C3H8') for T in temperatures]
-# plt.plot(temperatures - 273.15, Z_C3H8, label='Pure propane', linestyle='dashed')
-
-# Z_ = [peng_robinson(T, pressure, 'Algerian') for T in temperatures]
-# plt.plot(temperatures - 273.15, Z_, label='Algerian', linestyle='dashed')
-
 
 # Plot for natural gas compositions. Now using correct temperature dependence of 'a'
 rho_ng = {}
+mu_ng = {}
 
 for mix in gas_mixtures:
     mm = do_mm_rules(mix) # mean molar mass
     rho_ng[mix] = []
+    mu_ng[mix] = []
 
     Z_ng = []
     for T in temperatures:
@@ -356,8 +362,13 @@ for mix in gas_mixtures:
         b = constants[mix]['b_mix']
         Z_mix = solve_for_Z(T, pressure, a, b)
         Z_ng.append(Z_mix)
+        
         rho_mix = pressure * mm / (Z_mix * R * T)
         rho_ng[mix].append(rho_mix)
+
+
+        mu_mix = calculate_viscosity(mm, T, rho_mix)
+        mu_ng[mix].append(mu_mix)
 
     if mix == "Air":
         continue 
@@ -372,15 +383,30 @@ plt.grid(True)
 plt.savefig(zfile)
 plt.close()
 
+# Viscosity plot
+for mix in gas_mixtures:
+   plt.plot(temperatures - 273.15, mu_ng[mix], label=mix)
+
+plt.title(f'Viscosity vs Temperature at {pressure} bar')
+plt.xlabel('Temperature (°C)')
+plt.ylabel('Viscosity')
+plt.legend()
+plt.grid(True)
+
+plt.savefig(mufile)
+plt.close()
+
 # Density plot for pure hydrogen
 mm_H2 = PR_constants['H2']['Mw']
 rho_H2 = [pressure * mm_H2 / (peng_robinson(T, pressure, 'H2') * R * T)  for T in temperatures]
 plt.plot(temperatures - 273.15, rho_H2, label='Pure hydrogen', linestyle='dashed')
 
+# Density plot for pure methane
 mm_CH4 = PR_constants['CH4']['Mw']
 rho_CH4 = [pressure * mm_CH4 / (peng_robinson(T, pressure, 'CH4') * R * T)  for T in temperatures]
 plt.plot(temperatures - 273.15, rho_CH4, label='Pure methane', linestyle='dashed')
 
+# Density plots for gas mixtures
 for mix in gas_mixtures:
     plt.plot(temperatures - 273.15, rho_ng[mix], label=mix)
 
@@ -391,3 +417,5 @@ plt.legend()
 plt.grid(True)
 
 plt.savefig(rhofile)
+plt.close()
+
