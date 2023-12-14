@@ -46,7 +46,9 @@ PR_constants = {
     # https://eng.libretexts.org/Bookshelves/Chemical_Engineering/Distillation_Science_(Coleman)/03%3A_Critical_Properties_and_Acentric_Factor
     # N2 https://pubs.acs.org/doi/suppl/10.1021/acs.iecr.2c00363/suppl_file/ie2c00363_si_001.pdf
     # N2 omega is from https://en.wikipedia.org/wiki/Acentric_factor
-}
+    'Ar': {'Tc': 5.2, 'Pc': 2.274, 'omega': 0, 'Mw': 4.0026},
+    'O2': {'Tc': 5.2, 'Pc': 2.274, 'omega': 0.022, 'Mw': 4.0026},
+    }
 
 # Natural gas compositions (mole fractions)
 gas_mixtures = {
@@ -62,10 +64,12 @@ gas_mixtures = {
     'North Sea': {'CH4': 0.836, 'C2H6': 0.0748, 'C3H8':0.0392, 'nC4':0.0081, 'iC4':0.0081, 
         'nC5':0.0015, 'iC5':0.0014, 'CO2':0.0114, 'N2':0.0195}, # North Sea gas https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7347886/
         
-    
-    
     # 'ethane': {'C2H6': 1.0}, # ethane, but using the mixing rules: software test check
     # 'propane': {'C3H8': 1.0}, # ethane, but using the mixing rules: software test check
+}
+
+air_mixture = {
+    'air': {'N2': 0.78084, 'O2': 0.209476, 'Ar': 0.00934}, # https://www.thoughtco.com/chemical-composition-of-air-604288
 }
 
 gas_mixture_properties = {
@@ -121,6 +125,17 @@ def check_composition(mix, composition):
     for gas, xi in composition.items(): 
         x = xi/norm
         gas_mixtures[mix][gas] = x
+        
+def do_mm_rules(mix):
+    """Calculate the mean molecular mass of the gas mixture"""
+    mm_mix = 0
+    composition = gas_mixtures[mix]
+    for gas, x in composition.items():
+        # Linear mixing rule for volume factor
+        mm_mix += x * PR_constants[gas]['Mw']
+    
+    return mm_mix
+
 
 def do_mixture_rules(mix, T):
     """
@@ -265,6 +280,7 @@ def solve_for_Z(T, P, a, b):
     # Filter out complex roots and select the appropriate real root
     real_roots = roots[np.isreal(roots)].real
     Z = np.max(real_roots)  # Assuming vapor phase 
+    
     return Z
 
     
@@ -282,7 +298,11 @@ def peng_robinson(T, P, gas):
 
 # ---------- main program startes here ------------- #
 program = sys.argv[0]
-imagefile = pl.Path(program).with_suffix(".png")
+stem = str(pl.Path(program).with_suffix(""))
+zf =  stem + "_z"
+rhof = stem  + "_rho"
+zfile = pl.Path(zf).with_suffix(".png") 
+rhofile = pl.Path(rhof).with_suffix(".png") 
 
 for mix in gas_mixtures:
     composition = gas_mixtures[mix]
@@ -290,12 +310,12 @@ for mix in gas_mixtures:
 
 for gas in PR_constants:
     a , b = a_and_b(gas, 298.15)
-    print(gas, a, b)
+    #print(gas, a, b)
 
 # test the P-R parameter mixtures rules
 for mix in gas_mixtures:
     mixture_constants = do_mixture_rules(mix, 298.15)
-    print(mixture_constants, " at T=298.15")
+    #print(mixture_constants, " at T=298.15")
     
 # Plot Z compressibility factor for pure hydrogen and natural gases
 temperatures = np.linspace(233.15, 308.15, 100)  # 0°C to 35°C in Kelvin
@@ -323,7 +343,11 @@ plt.plot(temperatures - 273.15, Z_CH4, label='Pure methane', linestyle='dashed')
 
 
 # Plot for natural gas compositions. Now using correct temperature dependence of 'a'
+rho_ng = {}
+
 for mix in gas_mixtures:
+    mm = do_mm_rules(mix) # mean molar mass
+    rho_ng[mix] = []
 
     Z_ng = []
     for T in temperatures:
@@ -332,6 +356,9 @@ for mix in gas_mixtures:
         b = constants[mix]['b_mix']
         Z_mix = solve_for_Z(T, pressure, a, b)
         Z_ng.append(Z_mix)
+        rho_mix = pressure * mm / (Z_mix * R * T)
+        rho_ng[mix].append(rho_mix)
+ 
     plt.plot(temperatures - 273.15, Z_ng, label=mix)
 
 plt.title(f'Z  Compressibility Factor vs Temperature at {pressure} bar')
@@ -340,5 +367,25 @@ plt.ylabel('Z Compressibility Factor')
 plt.legend()
 plt.grid(True)
 
-plt.savefig(imagefile)
-#plt.show()
+plt.savefig(zfile)
+plt.close()
+
+# Density plot for pure hydrogen
+mm_H2 = PR_constants['H2']['Mw']
+rho_H2 = [pressure * mm_H2 / (peng_robinson(T, pressure, 'H2') * R * T)  for T in temperatures]
+plt.plot(temperatures - 273.15, rho_H2, label='Pure hydrogen', linestyle='dashed')
+
+mm_CH4 = PR_constants['CH4']['Mw']
+rho_CH4 = [pressure * mm_CH4 / (peng_robinson(T, pressure, 'CH4') * R * T)  for T in temperatures]
+plt.plot(temperatures - 273.15, rho_CH4, label='Pure methane', linestyle='dashed')
+
+for mix in gas_mixtures:
+    plt.plot(temperatures - 273.15, rho_ng[mix], label=mix)
+
+plt.title(f'Relative Density vs Temperature at {pressure} bar')
+plt.xlabel('Temperature (°C)')
+plt.ylabel('Density (kg/m³)')
+plt.legend()
+plt.grid(True)
+
+plt.savefig(rhofile)
