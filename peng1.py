@@ -46,8 +46,8 @@ PR_constants = {
     # https://eng.libretexts.org/Bookshelves/Chemical_Engineering/Distillation_Science_(Coleman)/03%3A_Critical_Properties_and_Acentric_Factor
     # N2 https://pubs.acs.org/doi/suppl/10.1021/acs.iecr.2c00363/suppl_file/ie2c00363_si_001.pdf
     # N2 omega is from https://en.wikipedia.org/wiki/Acentric_factor
-    'Ar': {'Tc': 5.2, 'Pc': 2.274, 'omega': 0, 'Mw': 4.0026},
-    'O2': {'Tc': 5.2, 'Pc': 2.274, 'omega': 0.022, 'Mw': 4.0026},
+    'Ar': {'Tc': 150.687, 'Pc': 48.630, 'omega': 0, 'Mw': 39.948}, #https://en.wikipedia.org/wiki/Acentric_factor
+    'O2': {'Tc': 154.581, 'Pc': 50.43, 'omega': 0.022, 'Mw': 31.9988},# http://www.coolprop.org/fluid_properties/fluids/Oxygen.html
     }
 
 # Natural gas compositions (mole fractions)
@@ -66,11 +66,9 @@ gas_mixtures = {
         
     # 'ethane': {'C2H6': 1.0}, # ethane, but using the mixing rules: software test check
     # 'propane': {'C3H8': 1.0}, # ethane, but using the mixing rules: software test check
+    'Air': {'N2': 0.78084, 'O2': 0.209476, 'Ar': 0.00934}, # https://www.thoughtco.com/chemical-composition-of-air-604288
 }
 
-air_mixture = {
-    'air': {'N2': 0.78084, 'O2': 0.209476, 'Ar': 0.00934}, # https://www.thoughtco.com/chemical-composition-of-air-604288
-}
 
 gas_mixture_properties = {
     'Algerian': {'Wb': 49.992, 'HHV': 39.841, 'RD': 0.6351} #Algerian NG, Romeo 2022, C6+
@@ -103,6 +101,8 @@ k_ij = {
     'N2': {'C6': 0.0}, # placeholder
     'He': {'C6': 0.0}, # placeholder
     'H2': {'C6': 0.0}, # placeholder
+    'O2': {'C6': 0.0}, # placeholder
+    'Ar': {'C6': 0.0}, # placeholder
 }
 
 def check_composition(mix, composition):
@@ -358,7 +358,9 @@ for mix in gas_mixtures:
         Z_ng.append(Z_mix)
         rho_mix = pressure * mm / (Z_mix * R * T)
         rho_ng[mix].append(rho_mix)
- 
+
+    if mix == "Air":
+        continue 
     plt.plot(temperatures - 273.15, Z_ng, label=mix)
 
 plt.title(f'Z  Compressibility Factor vs Temperature at {pressure} bar')
@@ -382,7 +384,7 @@ plt.plot(temperatures - 273.15, rho_CH4, label='Pure methane', linestyle='dashed
 for mix in gas_mixtures:
     plt.plot(temperatures - 273.15, rho_ng[mix], label=mix)
 
-plt.title(f'Relative Density vs Temperature at {pressure} bar')
+plt.title(f'Density vs Temperature at {pressure} bar')
 plt.xlabel('Temperature (°C)')
 plt.ylabel('Density (kg/m³)')
 plt.legend()
