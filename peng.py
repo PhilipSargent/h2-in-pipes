@@ -139,6 +139,20 @@ def do_mm_rules(mix):
     
     return mm_mix
 
+def linear_mix_rule(mix, values):
+    """Calculate the mean value of a property for a mixture
+    
+    values: dict {gas1: v1, gas2: v2, gas3: v3 etc}
+                 where gas1 is one of the component gases in the mix, and v1 is value for that gas
+    """
+    value_mix = 0
+    composition = gas_mixtures[mix]
+    for gas, x in composition.items():
+        # Linear mixing rule for volume factor
+        value_mix += x * values[gas]
+    
+    return value_mix
+
         
 def do_notwilke_rules(mix):
     """Calculate the mean viscosity of the gas mixture"""
@@ -384,16 +398,18 @@ for mix in gas_mixtures:
 
     Z_ng = []
     for T in temperatures:
+        # for Z, the averaging across the mixture (a, b) is done before the calc. of Z
         constants = z_mixture_rules(mix, T)
         a = constants[mix]['a_mix']
         b = constants[mix]['b_mix']
         Z_mix = solve_for_Z(T, pressure, a, b)
         Z_ng.append(Z_mix)
         
+        # For density, the averaging across the mixture (Mw) is done before the calc. of rho
         rho_mix = pressure * mm / (Z_mix * R * T)
         rho_ng[mix].append(rho_mix)
 
-
+        # for LGE viscosity, the averaging across the mixture (Mw) is done before the calc. of rho
         μ_mix = viscosity_LGE(mm, T, rho_mix)
         μ_ng[mix].append(μ_mix)
 
