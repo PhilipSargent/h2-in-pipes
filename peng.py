@@ -128,7 +128,17 @@ def check_composition(mix, composition):
     for gas, xi in composition.items(): 
         x = xi/norm
         gas_mixtures[mix][gas] = x
-        
+
+def viscosity_values(mix, T):
+    # T ignored for the moment..
+    values = {}
+    composition = gas_mixtures[mix]
+    for gas, x in composition.items():
+        # this is where we call the function to calculate the viscosity
+        vs, _ = gas_data[gas]['Vs'] # ignore T, so value for hexane will be bad
+        values[gas] = vs
+    return values
+       
 def do_mm_rules(mix):
     """Calculate the mean molecular mass of the gas mixture"""
     mm_mix = 0
@@ -427,7 +437,9 @@ plt.savefig(fn["z"])
 plt.close()
 
 # Viscosity plot  LGE - - - - - - - - - - -
+
 # Vicosity for gas mixtures LGE
+# μ_ng[mix] was calculated earlier
 for mix in gas_mixtures:
    plt.plot(temperatures - 273.15, μ_ng[mix], label=mix)
 
@@ -457,9 +469,10 @@ plt.close()
 μ_g = {}
 for mix in gas_mixtures:
     μ_g[g] = []
-    vs = do_notwilke_rules(mix)
+    #vs = do_notwilke_rules(mix)
     for T in temperatures:
-        μ = vs
+        values = viscosity_values(mix, T)
+        μ = linear_mix_rule(mix, values)
         μ_g[g].append(μ)
     plt.plot(temperatures - 273.15, μ_g[g], label= mix)
   
