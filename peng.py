@@ -34,7 +34,7 @@ R = 0.08314462  # l.bar/(mol.K)
 
 gas_data = {
     'H2': {'Tc': 33.2, 'Pc': 13.0, 'omega': -0.22, 'Mw':2.015, 'Vs': (8.9,300)},
-    'CH4': {'Tc': 190.56, 'Pc': 45.99, 'omega': 0.01142, 'Mw': 16.0428, 'Vs': (11.,300)},
+    'CH4': {'Tc': 190.56, 'Pc': 45.99, 'omega': 0.01142, 'Mw': 16.0428, 'Vs': (11.1,300)},
     'C2H6': {'Tc': 305.32, 'Pc': 48.72, 'omega': 0.099, 'Mw': 30.07, 'Vs': (9.4,300)}, # 
     'C3H8': {'Tc': 369.15, 'Pc': 42.48, 'omega': 0.1521, 'Mw': 44.096, 'Vs': (8.2,300)}, # https://www.engineeringtoolbox.com/propane-d_1423.html
     'nC4': {'Tc': 425, 'Pc': 38,  'omega': 0.20081, 'Mw': 58.1222, 'Vs': (7.5,300), 'Hc':2-877.5}, # omega http://www.coolprop.org/fluid_properties/fluids/n-Butane.html https://www.engineeringtoolbox.com/butane-d_1415.html 
@@ -139,6 +139,17 @@ def do_mm_rules(mix):
     
     return mm_mix
 
+        
+def do_notwilke_rules(mix):
+    """Calculate the mean viscosity of the gas mixture"""
+    vs_mix = 0
+    composition = gas_mixtures[mix]
+    for gas, x in composition.items():
+        # Linear mixing rule for volume factor
+        vs, _ = gas_data[gas]['Vs'] # ignore T, so value for hexane will be bad
+        vs_mix += x * vs
+    
+    return vs_mix
 
 def z_mixture_rules(mix, T):
     """
@@ -323,7 +334,8 @@ def viscosity_LGE(Mw, T_k, rho):
 
     return mu 
     
-# ---------- main program startes here ------------- #
+# ---------- main program starts here ------------- #
+
 program = sys.argv[0]
 stem = str(pl.Path(program).with_suffix(""))
 fn={}
@@ -335,6 +347,7 @@ for mix in gas_mixtures:
     composition = gas_mixtures[mix]
     check_composition(mix, composition)
 
+# Plot the compressibility  - - - - - - - - - - -
 for gas in gas_data:
     a , b = a_and_b(gas, 298.15)
     #print(gas, a, b)
@@ -397,7 +410,8 @@ plt.grid(True)
 plt.savefig(fn["z"])
 plt.close()
 
-# Viscosity plot
+# Viscosity plot  LGE - - - - - - - - - - -
+# Vicosity for gas mixtures LGE
 for mix in gas_mixtures:
    plt.plot(temperatures - 273.15, μ_ng[mix], label=mix)
 
@@ -419,15 +433,49 @@ plt.ylabel('Dynamic Viscosity (μPa.s)')
 plt.legend()
 plt.grid(True)
 
+plt.savefig("peng_mu_LGE.png")
+plt.close()
+
+# Viscosity plot  FIX - - - - - - - - - - -
+# Vicosity for gas mixtures - data
+μ_g = {}
+for mix in gas_mixtures:
+    μ_g[g] = []
+    vs = do_notwilke_rules(mix)
+    for T in temperatures:
+        μ = vs
+        μ_g[g].append(μ)
+    plt.plot(temperatures - 273.15, μ_g[g], label= mix)
+  
+
+# Viscosity plots for pure gases
+μ_g = {}
+for g in ["H2", "CH4", "N2", "O2"]:
+    μ_g[g] = []
+    vs, t = gas_data[g]['Vs']
+    for T in temperatures:
+        μ = vs
+        μ_g[g].append(μ)
+    plt.plot(temperatures - 273.15, μ_g[g], label= "pure " + g, linestyle='dashed')
+
+
+plt.title(f'Dynamic Viscosity [data] vs Temperature at {pressure} bar')
+plt.xlabel('Temperature (°C)')
+plt.ylabel('Dynamic Viscosity (μPa.s) - molar fraction mixing rule')
+plt.legend()
+plt.grid(True)
+
 plt.savefig(fn["mu"])
 plt.close()
 
-# Density plot for pure hydrogen
+# Density plot  - - - - - - - - - - -
+
+# pure hydrogen
 mm_H2 = gas_data['H2']['Mw']
 rho_H2 = [pressure * mm_H2 / (peng_robinson(T, pressure, 'H2') * R * T)  for T in temperatures]
 plt.plot(temperatures - 273.15, rho_H2, label='Pure hydrogen', linestyle='dashed')
 
-# Density plot for pure methane
+# pure methane
 mm_CH4 = gas_data['CH4']['Mw']
 rho_CH4 = [pressure * mm_CH4 / (peng_robinson(T, pressure, 'CH4') * R * T)  for T in temperatures]
 plt.plot(temperatures - 273.15, rho_CH4, label='Pure methane', linestyle='dashed')
