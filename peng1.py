@@ -28,26 +28,29 @@ R = 0.08314462  # l.bar/(mol.K)
 # HHV in mJ/M3
 # Wb is Wobbe index: MJ/m3
 # RD is relative density (air is  1)
+# Vs is viscosity and temp. f measurement as tuple (microPa.s, K)
+# All viscosities from marcia l. huber and allan h. harvey,
+#https://tsapps.nist.gov/publication/get_pdf.cfm?pub_id=907539
 
-PR_constants = {
-    'H2': {'Tc': 33.2, 'Pc': 13.0, 'omega': -0.22, 'Mw':2.015},
-    'CH4': {'Tc': 190.56, 'Pc': 45.99, 'omega': 0.01142, 'Mw': 16.0428},
-    'C2H6': {'Tc': 305.32, 'Pc': 48.72, 'omega': 0.099, 'Mw': 30.07}, # 
-    'C3H8': {'Tc': 369.15, 'Pc': 42.48, 'omega': 0.1521, 'Mw': 44.096}, # https://www.engineeringtoolbox.com/propane-d_1423.html
-    'nC4': {'Tc': 425, 'Pc': 38,  'omega': 0.20081, 'Mw': 58.1222, 'Hc':2-877.5}, # omega http://www.coolprop.org/fluid_properties/fluids/n-Butane.html https://www.engineeringtoolbox.com/butane-d_1415.html 
-    'iC4': {'Tc': 407.7, 'Pc': 36.5, 'omega': 0.1835318, 'Mw': 58.1222}, # omega  http://www.coolprop.org/fluid_properties/fluids/IsoButane.html https://webbook.nist.gov/cgi/cbook.cgi?ID=C75285&Mask=1F https://webbook.nist.gov/cgi/cbook.cgi?Name=butane&Units=SI
-    'nC5': {'Tc': 469.8, 'Pc': 33.6, 'omega': 0.251032, 'Mw': 72.1488}, # omega http://www.coolprop.org/fluid_properties/fluids/n-Pentane.html     
-    'iC5': {'Tc': 461.0, 'Pc': 33.8, 'omega': 0.2274, 'Mw': 72.1488}, # omega http://www.coolprop.org/fluid_properties/fluids/Isopentane.html      
-    'C6':  {'Tc': 507.6, 'Pc': 30.2, 'omega': 0.1521, 'Mw': 86.1754}, # omega is 0.2797 isohexane    
-    'CO2': {'Tc': 304.2, 'Pc': 73.8, 'omega': 0.228, 'Mw': 44.01}, # https://en.wikipedia.org/wiki/Acentric_factor
-    'H2O': {'Tc': 647.1, 'Pc': 220.6, 'omega': 0.344292, "Mw": 18.015}, # https://link.springer.com/article/10.1007/s10765-020-02643-6/tables/1
-    'N2': {'Tc': 126.21, 'Pc': 33.958, 'omega': 0.0372, 'Mw':28.013}, #  omega http://www.coolprop.org/fluid_properties/fluids/Nitrogen.html
-    'He': {'Tc': 5.2, 'Pc': 2.274, 'omega': -0.3836, 'Mw': 4.0026},  # omega http://www.coolprop.org/fluid_properties/fluids/Helium.html
+gas_data = {
+    'H2': {'Tc': 33.2, 'Pc': 13.0, 'omega': -0.22, 'Mw':2.015, 'Vs': (8.9,300)},
+    'CH4': {'Tc': 190.56, 'Pc': 45.99, 'omega': 0.01142, 'Mw': 16.0428, 'Vs': (11.,300)},
+    'C2H6': {'Tc': 305.32, 'Pc': 48.72, 'omega': 0.099, 'Mw': 30.07, 'Vs': (9.4,300)}, # 
+    'C3H8': {'Tc': 369.15, 'Pc': 42.48, 'omega': 0.1521, 'Mw': 44.096, 'Vs': (8.2,300)}, # https://www.engineeringtoolbox.com/propane-d_1423.html
+    'nC4': {'Tc': 425, 'Pc': 38,  'omega': 0.20081, 'Mw': 58.1222, 'Vs': (7.5,300), 'Hc':2-877.5}, # omega http://www.coolprop.org/fluid_properties/fluids/n-Butane.html https://www.engineeringtoolbox.com/butane-d_1415.html 
+    'iC4': {'Tc': 407.7, 'Pc': 36.5, 'omega': 0.1835318, 'Mw': 58.1222, 'Vs': (7.5,300)}, # omega  http://www.coolprop.org/fluid_properties/fluids/IsoButane.html https://webbook.nist.gov/cgi/cbook.cgi?ID=C75285&Mask=1F https://webbook.nist.gov/cgi/cbook.cgi?Name=butane&Units=SI Viscocity assumed same as nC4
+    'nC5': {'Tc': 469.8, 'Pc': 33.6, 'omega': 0.251032, 'Mw': 72.1488, 'Vs': (6.7,300)}, # omega http://www.coolprop.org/fluid_properties/fluids/n-Pentane.html     
+    'iC5': {'Tc': 461.0, 'Pc': 33.8, 'omega': 0.2274, 'Mw': 72.1488, 'Vs': (6.7,300)}, # omega http://www.coolprop.org/fluid_properties/fluids/Isopentane.html  Viscocity assumed same as nC5    
+    'C6':  {'Tc': 507.6, 'Pc': 30.2, 'omega': 0.1521, 'Mw': 86.1754, 'Vs': (8.6,400)}, # omega is 0.2797 isohexane    
+    'CO2': {'Tc': 304.2, 'Pc': 73.8, 'omega': 0.228, 'Mw': 44.01, 'Vs': (15.0,300)}, # https://en.wikipedia.org/wiki/Acentric_factor
+    'H2O': {'Tc': 647.1, 'Pc': 220.6, 'omega': 0.344292, "Mw": 18.015, 'Vs': (9.8,300)}, # https://link.springer.com/article/10.1007/s10765-020-02643-6/tables/1
+    'N2': {'Tc': 126.21, 'Pc': 33.958, 'omega': 0.0372, 'Mw':28.013, 'Vs': (17.9,300)}, #  omega http://www.coolprop.org/fluid_properties/fluids/Nitrogen.html
+    'He': {'Tc': 5.2, 'Pc': 2.274, 'omega': -0.3836, 'Mw': 4.0026, 'Vs': (19.9,300)},  # omega http://www.coolprop.org/fluid_properties/fluids/Helium.html
     # https://eng.libretexts.org/Bookshelves/Chemical_Engineering/Distillation_Science_(Coleman)/03%3A_Critical_Properties_and_Acentric_Factor
     # N2 https://pubs.acs.org/doi/suppl/10.1021/acs.iecr.2c00363/suppl_file/ie2c00363_si_001.pdf
     # N2 omega is from https://en.wikipedia.org/wiki/Acentric_factor
-    'Ar': {'Tc': 150.687, 'Pc': 48.630, 'omega': 0, 'Mw': 39.948}, #https://en.wikipedia.org/wiki/Acentric_factor
-    'O2': {'Tc': 154.581, 'Pc': 50.43, 'omega': 0.022, 'Mw': 31.9988},# http://www.coolprop.org/fluid_properties/fluids/Oxygen.html
+    'Ar': {'Tc': 150.687, 'Pc': 48.630, 'omega': 0, 'Mw': 39.948, 'Vs': (22.7,300)}, #https://en.wikipedia.org/wiki/Acentric_factor
+    'O2': {'Tc': 154.581, 'Pc': 50.43, 'omega': 0.022, 'Mw': 31.9988, 'Vs': (20.7,300)},# http://www.coolprop.org/fluid_properties/fluids/Oxygen.html
     }
 
 # Natural gas compositions (mole fractions)
@@ -66,7 +69,7 @@ gas_mixtures = {
         
     # 'ethane': {'C2H6': 1.0}, # ethane, but using the mixing rules: software test check
     # 'propane': {'C3H8': 1.0}, # ethane, but using the mixing rules: software test check
-    'Air': {'N2': 0.78084, 'O2': 0.209476, 'Ar': 0.00934}, # https://www.thoughtco.com/chemical-composition-of-air-604288
+    'Air': {'N2': 0.78084, 'O2': 0.209476, 'CO2':0.0004,'Ar': 0.00934, 'He': 0.00000524}, # https://www.thoughtco.com/chemical-composition-of-air-604288
 }
 
 
@@ -132,12 +135,12 @@ def do_mm_rules(mix):
     composition = gas_mixtures[mix]
     for gas, x in composition.items():
         # Linear mixing rule for volume factor
-        mm_mix += x * PR_constants[gas]['Mw']
+        mm_mix += x * gas_data[gas]['Mw']
     
     return mm_mix
 
 
-def do_mixture_rules(mix, T):
+def z_mixture_rules(mix, T):
     """
     Calculate the Peng-Robinson constants for a mixture of hydrocarbon gases.
     
@@ -157,14 +160,14 @@ def do_mixture_rules(mix, T):
     # Calculate the critical volume and critical compressibility for the mixture
     # Vc_mix = 0
     # for gas, xi in composition.items(): 
-        # Tc = PR_constants[gas]['Tc']
-        # Pc = PR_constants[gas]['Pc']
+        # Tc = gas_data[gas]['Tc']
+        # Pc = gas_data[gas]['Pc']
         # Vc_mix += xi * (0.07780 * Tc / Pc)
    
     # Calculate the mixture critical temperature and pressure using mixing rules
     for gas1, x1 in composition.items():
-        Tc1 = PR_constants[gas1]['Tc']
-        Pc1 = PR_constants[gas1]['Pc']
+        Tc1 = gas_data[gas1]['Tc']
+        Pc1 = gas_data[gas1]['Pc']
          
         a1, b1 = a_and_b(gas1, T) 
         
@@ -173,9 +176,9 @@ def do_mixture_rules(mix, T):
            
         # Van der Waals mixing rules for 'a' factor
         for gas2, x2 in composition.items(): # pairwise, but also with itself.
-            Tc2 = PR_constants[gas2]['Tc']
-            Pc2 = PR_constants[gas2]['Pc']
-            #omega2 = PR_constants[gas2]['omega']
+            Tc2 = gas_data[gas2]['Tc']
+            Pc2 = gas_data[gas2]['Pc']
+            #omega2 = gas_data[gas2]['omega']
             a2, b2 = a_and_b(gas2, T) 
             
             # Use mixing rules for critical properties
@@ -224,22 +227,22 @@ def a_and_b(gas, T):
     Assume  temperature of 25 C if temp not given
     """
     # Reduced temperature and pressure
-    Tc = PR_constants[gas]['Tc']
-    Pc = PR_constants[gas]['Pc']
+    Tc = gas_data[gas]['Tc']
+    Pc = gas_data[gas]['Pc']
 
     Tr = T / Tc
-    omega = PR_constants[gas]['omega']
+    omega = gas_data[gas]['omega']
     
     
     # We do not use the L,M,N formulation as we have omega for
     # all our gases, and H2 just doesn't work with L,M,N at the pressures we use.
     if False:
-        if 'L' in PR_constants[gas]:
-            L = PR_constants[gas]['L']
-            M = PR_constants[gas]['M']
-            N = PR_constants[gas]['N']
+        if 'L' in gas_data[gas]:
+            L = gas_data[gas]['L']
+            M = gas_data[gas]['M']
+            N = gas_data[gas]['N']
         else:
-            L, M, N = get_LMN(PR_constants[gas]['omega'])            
+            L, M, N = get_LMN(gas_data[gas]['omega'])            
         
         alpha1 = Tr ** (N*(M-1)) * np.exp(L*(1 - Tr**(M*N)))
     
@@ -289,49 +292,60 @@ def peng_robinson(T, P, gas):
     if gas not in gas_mixtures:    
         a, b = a_and_b(gas, T)
     else:
-        constants = do_mixture_rules(gas, T)
+        constants = z_mixture_rules(gas, T)
         a = constants[gas]['a_mix']
         b = constants[gas]['b_mix'] 
         
     Z = solve_for_Z(T, P, a, b)
     return Z
 
-def calculate_viscosity(Mw, T, rho):
+def viscosity_LGE(Mw, T_k, rho):
+    """The  Lee, Gonzalez, and Eakin method, originally expressed in 'oilfield units'
+    of degrees Rankine and density in g/cc, with a result in centiPoise
+    doi.org/10.2118/1340-PA 1966
+    Updated to SI: PetroWiki. (2023). 
+    https://petrowiki.spe.org/Natural_gas_properties. 
+    """
 
-   # Constants for the Lee, Gonzalez, and Eakin method 
-    kv = (7.77 + 0.0063 * Mw) * T**1.5 / (122.4 + 12.9 * Mw + T)
-    xv = (2.57 + 1914.5 / T + 0.0095 * Mw) # * np.exp(-0.025 * MWg) hallucination!
-    yv = 1.11 - 0.04 * xv
+    T = T_k * 9/5 # convert Kelvins to Rankine
+   
+    # Constants for the Lee, Gonzalez, and Eakin #1
+    k = (7.77 + 0.0063 * Mw) * T**1.5 / (122.4 + 12.9 * Mw + T)
+    x = 2.57 + 1914.5 / T + 0.0095 * Mw # * np.exp(-0.025 * MWg) hallucination!
+    y = 1.11 - 0.04 * x
 
-    # Calculate the viscosity
-    mu = 1e-7 * kv * np.exp(xv * (rho / 1000)**yv)
+    # Constants for the Lee, Gonzalez, and Eakin #2
+    k = (9.4 + 0.02 * Mw) * T**1.5 / (209 + 19 * Mw + T)
+    x = 3.5 + 986 / T + 0.01 * Mw
+    y = 2.4 - 0.2 * x
 
-    return mu
+    mu = 0.1 * k * np.exp(x * (rho / 1000)**y) #microPa.s
+
+    return mu 
+    
 # ---------- main program startes here ------------- #
 program = sys.argv[0]
 stem = str(pl.Path(program).with_suffix(""))
-zf =  stem + "_z"
-rhof = stem  + "_rho"
-muf = stem  + "_mu"
-zfile = pl.Path(zf).with_suffix(".png") 
-rhofile = pl.Path(rhof).with_suffix(".png") 
-mufile = pl.Path(muf).with_suffix(".png") 
+fn={}
+for s in ["z", "rho", "mu"]:
+    f = stem  + "_" + s
+    fn[s] = pl.Path(f).with_suffix(".png") 
 
 for mix in gas_mixtures:
     composition = gas_mixtures[mix]
     check_composition(mix, composition)
 
-for gas in PR_constants:
+for gas in gas_data:
     a , b = a_and_b(gas, 298.15)
     #print(gas, a, b)
 
 # test the P-R parameter mixtures rules
 for mix in gas_mixtures:
-    mixture_constants = do_mixture_rules(mix, 298.15)
+    mixture_constants = z_mixture_rules(mix, 298.15)
     #print(mixture_constants, " at T=298.15")
     
 # Plot Z compressibility factor for pure hydrogen and natural gases
-temperatures = np.linspace(233.15, 308.15, 100)  # 0°C to 35°C in Kelvin
+temperatures = np.linspace(243.15, 323.15, 100)  
 pressure = 1.075  # bar
 
 plt.figure(figsize=(10, 6))
@@ -348,16 +362,16 @@ plt.plot(temperatures - 273.15, Z_CH4, label='Pure methane', linestyle='dashed')
 
 # Plot for natural gas compositions. Now using correct temperature dependence of 'a'
 rho_ng = {}
-mu_ng = {}
+μ_ng = {}
 
 for mix in gas_mixtures:
     mm = do_mm_rules(mix) # mean molar mass
     rho_ng[mix] = []
-    mu_ng[mix] = []
+    μ_ng[mix] = []
 
     Z_ng = []
     for T in temperatures:
-        constants = do_mixture_rules(mix, T)
+        constants = z_mixture_rules(mix, T)
         a = constants[mix]['a_mix']
         b = constants[mix]['b_mix']
         Z_mix = solve_for_Z(T, pressure, a, b)
@@ -367,8 +381,8 @@ for mix in gas_mixtures:
         rho_ng[mix].append(rho_mix)
 
 
-        mu_mix = calculate_viscosity(mm, T, rho_mix)
-        mu_ng[mix].append(mu_mix)
+        μ_mix = viscosity_LGE(mm, T, rho_mix)
+        μ_ng[mix].append(μ_mix)
 
     if mix == "Air":
         continue 
@@ -380,29 +394,41 @@ plt.ylabel('Z Compressibility Factor')
 plt.legend()
 plt.grid(True)
 
-plt.savefig(zfile)
+plt.savefig(fn["z"])
 plt.close()
 
 # Viscosity plot
 for mix in gas_mixtures:
-   plt.plot(temperatures - 273.15, mu_ng[mix], label=mix)
+   plt.plot(temperatures - 273.15, μ_ng[mix], label=mix)
 
-plt.title(f'Viscosity vs Temperature at {pressure} bar')
+# Viscosity plots for pure gases
+μ_g = {}
+for g in ["H2", "CH4", "N2"]:
+    μ_g[g] = []
+    mm_g = gas_data[g]['Mw']
+    for T in temperatures:
+        rho_g= pressure * mm / (peng_robinson(T, pressure, g) * R * T)
+        μ = viscosity_LGE(mm_g, T, rho_g)
+        μ_g[g].append(μ)
+    plt.plot(temperatures - 273.15, μ_g[g], label= "pure " + g, linestyle='dashed')
+
+
+plt.title(f'Dynamic Viscosity [LGE] vs Temperature at {pressure} bar')
 plt.xlabel('Temperature (°C)')
-plt.ylabel('Viscosity')
+plt.ylabel('Dynamic Viscosity (μPa.s)')
 plt.legend()
 plt.grid(True)
 
-plt.savefig(mufile)
+plt.savefig(fn["mu"])
 plt.close()
 
 # Density plot for pure hydrogen
-mm_H2 = PR_constants['H2']['Mw']
+mm_H2 = gas_data['H2']['Mw']
 rho_H2 = [pressure * mm_H2 / (peng_robinson(T, pressure, 'H2') * R * T)  for T in temperatures]
 plt.plot(temperatures - 273.15, rho_H2, label='Pure hydrogen', linestyle='dashed')
 
 # Density plot for pure methane
-mm_CH4 = PR_constants['CH4']['Mw']
+mm_CH4 = gas_data['CH4']['Mw']
 rho_CH4 = [pressure * mm_CH4 / (peng_robinson(T, pressure, 'CH4') * R * T)  for T in temperatures]
 plt.plot(temperatures - 273.15, rho_CH4, label='Pure methane', linestyle='dashed')
 
@@ -416,6 +442,6 @@ plt.ylabel('Density (kg/m³)')
 plt.legend()
 plt.grid(True)
 
-plt.savefig(rhofile)
+plt.savefig(fn["rho"])
 plt.close()
 
