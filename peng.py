@@ -69,7 +69,9 @@ gas_mixtures = {
         
     # 'ethane': {'C2H6': 1.0}, # ethane, but using the mixing rules: software test check
     # 'propane': {'C3H8': 1.0}, # ethane, but using the mixing rules: software test check
-    'Air': {'N2': 0.78084, 'O2': 0.209476, 'CO2':0.0004,'Ar': 0.00934, 'He': 0.00000524}, # https://www.thoughtco.com/chemical-composition-of-air-604288
+    #'Air': {'N2': 0.78084, 'O2': 0.209476,  'CO2': 0.0004,  'Ar': 0.00934,  'He': 5.24e-06, 'H2O': 0.025}, 
+    'Air':  {'N2': 0.76175, 'O2': 0.204355, 'CO2': 0.00039, 'Ar': 0.009112, 'He': 5.11e-06, 'H2O': 0.024389}, # https://www.thoughtco.com/chemical-composition-of-air-604288
+    # But ALSO adding 2.5% moisture to the air and normalising
 }
 
 
@@ -101,6 +103,7 @@ k_ij = {
     'nC5': {'C6': 0.0}, # placeholder    
     'C6': {'C6': 0.0}, # placeholder
     'CO2': {'C6': 0.0}, # placeholder
+    'H2O': {'C6': 0.0}, # placeholder
     'N2': {'C6': 0.0}, # placeholder
     'He': {'C6': 0.0}, # placeholder
     'H2': {'C6': 0.0}, # placeholder
@@ -118,16 +121,29 @@ def check_composition(mix, composition):
     for gas, xi in composition.items():
        x += xi
     norm = x
+
     if abs(x - 1.0) > eps:
         if abs(x - 1.0) < warn:
             print(f"--------- Warning gas mixture '{mix}', {100*(1-warn)}% > {100*x:.2f} > {100*(1+warn)}%. Normalizing.")
         else:
             print(f"######### BAD gas mixture '{mix}', molar fractions add up to {x} !!!")
-            
+            #for g, m in gas_mixtures[mix].items:
+            print(f"{mix} {gas_mixtures[mix]}") 
+            for g in gas_mixtures[mix]:
+                gas_mixtures[mix][g] = float(f"{gas_mixtures[mix][g]/norm:.6f}")
+            print(f"{mix} {gas_mixtures[mix]}") 
     # Normalise all the mixtures, even if they are close to 100%
     for gas, xi in composition.items(): 
         x = xi/norm
         gas_mixtures[mix][gas] = x
+           
+def viscosity_actual(gas, T):
+    """Calculate viscosity for a pure gas at temperature T and pressue = pressure
+    """
+    constant, _ = gas_data[gas]['Vs'] # ignore T, so value for hexane will be bad
+    vs = constant
+    
+    return constant
 
 def viscosity_values(mix, T):
     # T ignored for the moment..
@@ -135,7 +151,7 @@ def viscosity_values(mix, T):
     composition = gas_mixtures[mix]
     for gas, x in composition.items():
         # this is where we call the function to calculate the viscosity
-        vs, _ = gas_data[gas]['Vs'] # ignore T, so value for hexane will be bad
+        vs = viscosity_actual(gas, T) 
         values[gas] = vs
     return values
        
@@ -160,6 +176,28 @@ def linear_mix_rule(mix, values):
     for gas, x in composition.items():
         # Linear mixing rule for volume factor
         value_mix += x * values[gas]
+    
+    return value_mix
+
+
+def hernzip_mix_rule(mix, values):
+    """Calculate the mean value of a property for a mixture
+    using the Herning & Zipper mixing rule
+    
+    values: dict {gas1: v1, gas2: v2, gas3: v3 etc}
+                 where gas1 is one of the component gases in the mix, and v1 is value for that gas
+    """
+    composition = gas_mixtures[mix]
+    # sum_of_sqrt(Mw)
+    x = 0
+    sqrt_Mw = 0
+    for gas, x in composition.items():
+        sqrt_Mw += x * np.sqrt(gas_data[gas]['Mw'])
+ 
+    value_mix = 0
+    composition = gas_mixtures[mix]
+    for gas, x in composition.items():
+        value_mix += x * values[gas] * np.sqrt(gas_data[gas]['Mw']) / sqrt_Mw
     
     return value_mix
 
@@ -472,7 +510,8 @@ for mix in gas_mixtures:
     #vs = do_notwilke_rules(mix)
     for T in temperatures:
         values = viscosity_values(mix, T)
-        μ = linear_mix_rule(mix, values)
+        # μ = linear_mix_rule(mix, values)
+        μ = hernzip_mix_rule(mix, values) # Makes no visible difference !
         μ_g[g].append(μ)
     plt.plot(temperatures - 273.15, μ_g[g], label= mix)
   
