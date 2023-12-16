@@ -55,14 +55,14 @@ gas_data = {
 
 # Natural gas compositions (mole fractions)
 gas_mixtures = {
-    'GG': {'CH4': 0.827, 'C2H6': 0.03, 'C3H8': 0.003, 'CO2': 0, 'N2': 0.14}, # Groeningen gas
+    #'GG': {'CH4': 0.827, 'C2H6': 0.03, 'C3H8': 0.003, 'CO2': 0, 'N2': 0.14}, # Groeningen gas
 
-    'Wobbe mix': {'CH4': 0.9,  'C3H8': 0.04,  'N2': 0.06}, # wobbe central, not a real natural gas  https://www.gasgovernance.co.uk/sites/default/files/ggf/Impact%20of%20Natural%20Gas%20Composition%20-%20Paper_0.pdf
+    #'Wobbe mix': {'CH4': 0.9,  'C3H8': 0.04,  'N2': 0.06}, # wobbe central, not a real natural gas  https://www.gasgovernance.co.uk/sites/default/files/ggf/Impact%20of%20Natural%20Gas%20Composition%20-%20Paper_0.pdf
     
     'NTS': {'CH4': 0.8, 'C2H6': 0.05, 'C3H8': 0.03, 'CO2': 0.02, 'N2': 0.10}, # ==mix6 from      https://backend.orbit.dtu.dk/ws/files/131796794/FPE_D_16_00902R1.pdf
 
-    'Algerian': {'CH4': 0.86486, 'C2H6': 0.08788, 'C3H8': 0.01179, 'iC4': 0.00085,  'nC4': 0.00107,
-         'iC5': 0.00021, 'nC5': 0.00015,'C6': 0.00017,'CO2': 0.01894, 'N2': 0.01323, 'He': 0.00085}, # Algerian NG, Romeo 2022, C6+
+    #'Algerian': {'CH4': 0.86486, 'C2H6': 0.08788, 'C3H8': 0.01179, 'iC4': 0.00085,  'nC4': 0.00107,
+    #    'iC5': 0.00021, 'nC5': 0.00015,'C6': 0.00017,'CO2': 0.01894, 'N2': 0.01323, 'He': 0.00085}, # Algerian NG, Romeo 2022, C6+
          
     'North Sea': {'CH4': 0.836, 'C2H6': 0.0748, 'C3H8':0.0392, 'nC4':0.0081, 'iC4':0.0081, 
         'nC5':0.0015, 'iC5':0.0014, 'CO2':0.0114, 'N2':0.0195}, # North Sea gas https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7347886/
@@ -137,21 +137,35 @@ def check_composition(mix, composition):
         x = xi/norm
         gas_mixtures[mix][gas] = x
            
-def viscosity_actual(gas, T):
-    """Calculate viscosity for a pure gas at temperature T and pressue = pressure
+def density_actual(gas, T, P):
+    """Calculate density for a pure gas at temperature T and pressure = P
     """
-    constant, _ = gas_data[gas]['Vs'] # ignore T, so value for hexane will be bad
-    vs = constant
+    rho = P * gas_data[gas]['Mw'] / (peng_robinson(T, P, gas) * R * T)
+    return rho
     
-    return constant
+def viscosity_actual(gas, T, P):
+    """Calculate viscosity for a pure gas at temperature T and pressure = P
+    """
+    
+    vs0, t  = gas_data[gas]['Vs'] # at T=t
+    
+    vs = np.sqrt(T/t) * vs0 # at 1 atm
+    
+    # No do a very approximate fudge for viscosity dependence on pressure, which is small..
+    # by scaling it with inverse z (compressibility factor)
+    # this will only have a noticeable effect on ethane, in T < 373 and P < 100 bar
+    
+    z =  peng_robinson(T, P, gas)
+    vs = vs*z/Z0[gas]
+    return vs
 
-def viscosity_values(mix, T):
-    # T ignored for the moment..
+def viscosity_values(mix, T, P):
+
     values = {}
     composition = gas_mixtures[mix]
     for gas, x in composition.items():
         # this is where we call the function to calculate the viscosity
-        vs = viscosity_actual(gas, T) 
+        vs = viscosity_actual(gas, T, P) 
         values[gas] = vs
     return values
        
@@ -178,6 +192,22 @@ def linear_mix_rule(mix, values):
         value_mix += x * values[gas]
     
     return value_mix
+
+def explog_mix_rule(mix, values):
+    """Calculate the mean value of a property for a mixture
+    
+    values: dict {gas1: v1, gas2: v2, gas3: v3 etc}
+                 where gas1 is one of the component gases in the mix, and v1 is value for that gas
+                 
+    This exp(log()) mixing rue was used by Xiong 2023 for the Peng-Robinson FT case. eqn.(6).
+    """
+    ln_mix = 0
+    composition = gas_mixtures[mix]
+    for gas, x in composition.items():
+        # exp(ln()) mixing rule for volume factor
+        ln_mix += x * np.log(values[gas]) # natural log
+    
+    return np.exp(ln_mix)
 
 
 def hernzip_mix_rule(mix, values):
@@ -409,19 +439,23 @@ for mix in gas_mixtures:
     composition = gas_mixtures[mix]
     check_composition(mix, composition)
 
-# Plot the compressibility  - - - - - - - - - - -
-for gas in gas_data:
-    a , b = a_and_b(gas, 298.15)
-    #print(gas, a, b)
+# # test the P-R parameter mixtures rules
+# for mix in gas_mixtures:
+    # mixture_constants = z_mixture_rules(mix, 298.15)
+    # #print(mixture_constants, " at T=298.15")
 
-# test the P-R parameter mixtures rules
-for mix in gas_mixtures:
-    mixture_constants = z_mixture_rules(mix, 298.15)
-    #print(mixture_constants, " at T=298.15")
-    
+# Plot the compressibility  - - - - - - - - - - -
+
+pressure = 1.075
+
+# Calculate Z0 for each gas
+Z0 = {}
+for gas in gas_data:
+    Z0[gas] = peng_robinson(273.15+25, pressure, gas)
+
 # Plot Z compressibility factor for pure hydrogen and natural gases
 temperatures = np.linspace(243.15, 323.15, 100)  
-pressure = 1.075  # bar
+  # bar
 
 plt.figure(figsize=(10, 6))
 
@@ -477,76 +511,104 @@ plt.close()
 # Viscosity plot  LGE - - - - - - - - - - -
 
 # Vicosity for gas mixtures LGE
-# μ_ng[mix] was calculated earlier
+# μ_ng[mix] was calculated earlier, but not plotted earlier
 for mix in gas_mixtures:
    plt.plot(temperatures - 273.15, μ_ng[mix], label=mix)
 
 # Viscosity plots for pure gases
-μ_g = {}
+μ_pg = {}
 for g in ["H2", "CH4", "N2"]:
-    μ_g[g] = []
+    μ_pg[g] = []
     mm_g = gas_data[g]['Mw']
     for T in temperatures:
         rho_g= pressure * mm / (peng_robinson(T, pressure, g) * R * T)
         μ = viscosity_LGE(mm_g, T, rho_g)
-        μ_g[g].append(μ)
-    plt.plot(temperatures - 273.15, μ_g[g], label= "pure " + g, linestyle='dashed')
+        μ_pg[g].append(μ)
+    plt.plot(temperatures - 273.15, μ_pg[g], label= "pure " + g, linestyle='dashed')
 
 
 plt.title(f'Dynamic Viscosity [LGE] vs Temperature at {pressure} bar')
 plt.xlabel('Temperature (°C)')
-plt.ylabel('Dynamic Viscosity (μPa.s)')
+plt.ylabel('Dynamic Viscosity (μPa.s) - THIS IS ALL WRONG, mistake in LGE formula')
 plt.legend()
 plt.grid(True)
 
 plt.savefig("peng_mu_LGE.png")
 plt.close()
 
-# Viscosity plot  FIX - - - - - - - - - - -
-# Vicosity for gas mixtures - data
+# Viscosity plot  EXPTL values at 298K - - - - - - - - - - -
+
+P = pressure
 μ_g = {}
 for mix in gas_mixtures:
-    μ_g[g] = []
-    #vs = do_notwilke_rules(mix)
+    μ_g[mix] = []
     for T in temperatures:
-        values = viscosity_values(mix, T)
-        # μ = linear_mix_rule(mix, values)
-        μ = hernzip_mix_rule(mix, values) # Makes no visible difference !
-        μ_g[g].append(μ)
-    plt.plot(temperatures - 273.15, μ_g[g], label= mix)
+        values = viscosity_values(mix, T, P)
+        μ = linear_mix_rule(mix, values)
+        # μ = hernzip_mix_rule(mix, values) # Makes no visible difference wrt to linear!
+        #μ = explog_mix_rule(mix, values) # very slight change by eye
+        μ_g[mix].append(μ)
+    plt.plot(temperatures - 273.15, μ_g[mix], label= mix)
   
 
 # Viscosity plots for pure gases
-μ_g = {}
+P = pressure
+μ_pg = {}
 for g in ["H2", "CH4", "N2", "O2"]:
-    μ_g[g] = []
-    vs, t = gas_data[g]['Vs']
+    μ_pg[g] = []
+    #vs, t = gas_data[g]['Vs']
     for T in temperatures:
-        μ = vs
-        μ_g[g].append(μ)
-    plt.plot(temperatures - 273.15, μ_g[g], label= "pure " + g, linestyle='dashed')
+        μ = viscosity_actual(g, T, P)
+        μ_pg[g].append(μ)
+    plt.plot(temperatures - 273.15, μ_pg[g], label= "pure " + g, linestyle='dashed')
 
 
 plt.title(f'Dynamic Viscosity [data] vs Temperature at {pressure} bar')
 plt.xlabel('Temperature (°C)')
-plt.ylabel('Dynamic Viscosity (μPa.s) - molar fraction mixing rule')
+plt.ylabel('Dynamic Viscosity (μPa.s) - hernzip  mixing rule')
 plt.legend()
 plt.grid(True)
 
 plt.savefig(fn["mu"])
 plt.close()
 
+# rho/Viscosity plot Kinematic EXPTL values at 298K - - - - - - - - - - -
+
+P = pressure
+re_g = {}
+for mix in gas_mixtures:
+    re_g[mix] = []
+    for i in range(len(μ_g[mix])):
+        re_g[mix].append( rho_ng[mix][i] / μ_g[mix][i])
+    plt.plot(temperatures - 273.15, re_g[mix], label= mix)
+  
+
+# Viscosity plots for pure gases 
+P = pressure
+re_pg = {}
+for g in ["H2", "CH4", "N2", "O2"]: 
+    re_pg[g] = []
+    for T in temperatures:
+        re = density_actual(g, T, P) / viscosity_actual(g, T, P)
+        re_pg[g].append(re)
+    plt.plot(temperatures - 273.15, re_pg[g], label= "pure " + g, linestyle='dashed')
+
+
+plt.title(f'Density / Dynamic Viscosity vs Temperature at {pressure} bar')
+plt.xlabel('Temperature (°C)')
+plt.ylabel('Density/ Dynamic Viscosity (kg/m3)/(μPa.s) ')
+plt.legend()
+plt.grid(True)
+
+plt.savefig("peng_re.png")
+plt.close()
+
 # Density plot  - - - - - - - - - - -
 
-# pure hydrogen
-mm_H2 = gas_data['H2']['Mw']
-rho_H2 = [pressure * mm_H2 / (peng_robinson(T, pressure, 'H2') * R * T)  for T in temperatures]
-plt.plot(temperatures - 273.15, rho_H2, label='Pure hydrogen', linestyle='dashed')
-
-# pure methane
-mm_CH4 = gas_data['CH4']['Mw']
-rho_CH4 = [pressure * mm_CH4 / (peng_robinson(T, pressure, 'CH4') * R * T)  for T in temperatures]
-plt.plot(temperatures - 273.15, rho_CH4, label='Pure methane', linestyle='dashed')
+# pure gases
+for g in ["H2", "CH4", "N2", "O2"]: 
+    rho_pg = [pressure * gas_data[g]['Mw'] / (peng_robinson(T, pressure, g) * R * T)  for T in temperatures]
+    plt.plot(temperatures - 273.15, rho_pg, label = "pure " + g, linestyle='dashed')
 
 # Density plots for gas mixtures
 for mix in gas_mixtures:
@@ -561,3 +623,59 @@ plt.grid(True)
 plt.savefig(fn["rho"])
 plt.close()
 
+# Plot the compressibility  as a function of Pressure - - - - - - - - - - -
+T = 273.15+25
+
+    
+# Plot Z compressibility factor for pure hydrogen and natural gases
+pressures = np.linspace(0, 80, 100)  # bar
+
+plt.figure(figsize=(10, 6))
+
+# Plot for pure hydrogen
+Z_H2 = [peng_robinson(T, p, 'H2') for p in pressures]
+plt.plot(pressures, Z_H2, label='Pure hydrogen', linestyle='dashed')
+
+    
+# Plot for pure methane
+Z_CH4 = [peng_robinson(T, p, 'CH4') for  p in pressures]
+plt.plot(pressures, Z_CH4, label='Pure methane', linestyle='dashed')
+
+# Plot for pure ethane
+Z_C2H6 = [peng_robinson(T, p, 'C2H6') for  p in pressures]
+plt.plot(pressures, Z_C2H6, label='Pure ethane', linestyle='dashed')
+
+# Plot for natural gas compositions. Now using correct temperature dependence of 'a'
+rho_ng = {}
+μ_ng = {}
+
+for mix in gas_mixtures:
+    mm = do_mm_rules(mix) # mean molar mass
+    rho_ng[mix] = []
+    μ_ng[mix] = []
+
+    Z_ng = []
+    for p in pressures:
+        # for Z, the averaging across the mixture (a, b) is done before the calc. of Z
+        constants = z_mixture_rules(mix, T)
+        a = constants[mix]['a_mix']
+        b = constants[mix]['b_mix']
+        Z_mix = solve_for_Z(T, p, a, b)
+        Z_ng.append(Z_mix)
+        
+        # For density, the averaging across the mixture (Mw) is done before the calc. of rho
+        rho_mix = p * mm / (Z_mix * R * T)
+        rho_ng[mix].append(rho_mix)
+
+    # if mix == "Air":
+        # continue 
+    plt.plot(pressures , Z_ng, label=mix)
+
+plt.title(f'Z  Compressibility Factor vs Pressure at {T} K')
+plt.xlabel('Pressure (bar)')
+plt.ylabel('Z Compressibility Factor')
+plt.legend()
+plt.grid(True)
+
+plt.savefig("peng_z_p.png")
+plt.close()
