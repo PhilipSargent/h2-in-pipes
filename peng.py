@@ -32,8 +32,10 @@ R = 0.08314462  # l.bar/(mol.K)
 # All viscosities from marcia l. huber and allan h. harvey,
 #https://tsapps.nist.gov/publication/get_pdf.cfm?pub_id=907539
 
+# Viscosity temp ratameters calibrated by log-log fit to https://myengineeringtools.com/Data_Diagrams/Viscosity_Gas.html
+
 gas_data = {
-    'H2': {'Tc': 33.2, 'Pc': 13.0, 'omega': -0.22, 'Mw':2.015, 'Vs': (8.9,300)},
+    'H2': {'Tc': 33.2, 'Pc': 13.0, 'omega': -0.22, 'Mw':2.015, 'Vs': (8.9,300, 0.692)},
     'CH4': {'Tc': 190.56, 'Pc': 45.99, 'omega': 0.01142, 'Mw': 16.0428, 'Vs': (11.1,300)},
     'C2H6': {'Tc': 305.32, 'Pc': 48.72, 'omega': 0.099, 'Mw': 30.07, 'Vs': (9.4,300)}, # 
     'C3H8': {'Tc': 369.15, 'Pc': 42.48, 'omega': 0.1521, 'Mw': 44.096, 'Vs': (8.2,300)}, # https://www.engineeringtoolbox.com/propane-d_1423.html
@@ -42,9 +44,9 @@ gas_data = {
     'nC5': {'Tc': 469.8, 'Pc': 33.6, 'omega': 0.251032, 'Mw': 72.1488, 'Vs': (6.7,300)}, # omega http://www.coolprop.org/fluid_properties/fluids/n-Pentane.html     
     'iC5': {'Tc': 461.0, 'Pc': 33.8, 'omega': 0.2274, 'Mw': 72.1488, 'Vs': (6.7,300)}, # omega http://www.coolprop.org/fluid_properties/fluids/Isopentane.html  Viscocity assumed same as nC5    
     'C6':  {'Tc': 507.6, 'Pc': 30.2, 'omega': 0.1521, 'Mw': 86.1754, 'Vs': (8.6,400)}, # omega is 0.2797 isohexane    
-    'CO2': {'Tc': 304.2, 'Pc': 73.8, 'omega': 0.228, 'Mw': 44.01, 'Vs': (15.0,300)}, # https://en.wikipedia.org/wiki/Acentric_factor
-    'H2O': {'Tc': 647.1, 'Pc': 220.6, 'omega': 0.344292, "Mw": 18.015, 'Vs': (9.8,300)}, # https://link.springer.com/article/10.1007/s10765-020-02643-6/tables/1
-    'N2': {'Tc': 126.21, 'Pc': 33.958, 'omega': 0.0372, 'Mw':28.013, 'Vs': (17.9,300)}, #  omega http://www.coolprop.org/fluid_properties/fluids/Nitrogen.html
+    'CO2': {'Tc': 304.2, 'Pc': 73.8, 'omega': 0.228, 'Mw': 44.01, 'Vs': (15.0,300, 0.872)}, # https://en.wikipedia.org/wiki/Acentric_factor
+    'H2O': {'Tc': 647.1, 'Pc': 220.6, 'omega': 0.344292, "Mw": 18.015, 'Vs': (9.8,300, 1.081)}, # https://link.springer.com/article/10.1007/s10765-020-02643-6/tables/1
+    'N2': {'Tc': 126.21, 'Pc': 33.958, 'omega': 0.0372, 'Mw':28.013, 'Vs': (17.9,300, 0.658)}, #  omega http://www.coolprop.org/fluid_properties/fluids/Nitrogen.html
     'He': {'Tc': 5.2, 'Pc': 2.274, 'omega': -0.3836, 'Mw': 4.0026, 'Vs': (19.9,300)},  # omega http://www.coolprop.org/fluid_properties/fluids/Helium.html
     # https://eng.libretexts.org/Bookshelves/Chemical_Engineering/Distillation_Science_(Coleman)/03%3A_Critical_Properties_and_Acentric_Factor
     # N2 https://pubs.acs.org/doi/suppl/10.1021/acs.iecr.2c00363/suppl_file/ie2c00363_si_001.pdf
@@ -146,17 +148,14 @@ def density_actual(gas, T, P):
 def viscosity_actual(gas, T, P):
     """Calculate viscosity for a pure gas at temperature T and pressure = P
     """
-    
-    vs0, t  = gas_data[gas]['Vs'] # at T=t
-    
-    vs = np.sqrt(T/t) * vs0 # at 1 atm
-    
-    # No do a very approximate fudge for viscosity dependence on pressure, which is small..
-    # by scaling it with inverse z (compressibility factor)
-    # this will only have a noticeable effect on ethane, in T < 373 and P < 100 bar
-    
-    z =  peng_robinson(T, P, gas)
-    vs = vs*z/Z0[gas]
+    if len(gas_data[gas]['Vs']) == 3:
+        vs0, t, power  = gas_data[gas]['Vs'] # at T=t  
+    else:
+        vs0, t  = gas_data[gas]['Vs'] # at T=t 
+        power = 0.5
+
+    vs = pow(T/t, power) * vs0 # at 1 atm
+
     return vs
 
 def viscosity_values(mix, T, P):
