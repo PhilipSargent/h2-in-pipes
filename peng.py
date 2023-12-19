@@ -285,7 +285,7 @@ def z_mixture_rules(mix, T):
             a2, b2 = a_and_b(gas2, T) 
             
             # Use mixing rules for critical properties
-            k = 0
+            k = -0.019 # value for ideal solution Privat & Jaubert, 2023
             if gas2 in k_ij[gas1]:
                 k = k_ij[gas1][gas2]
             if gas1 in k_ij[gas2]:
