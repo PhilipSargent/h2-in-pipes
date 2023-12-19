@@ -1,3 +1,4 @@
+import functools 
 import numpy as np
 import matplotlib.pyplot as plt
 import pathlib as pl
@@ -100,7 +101,7 @@ gas_mixtures['NTS+20% H2'] = fifth
 # also from Privat & Jaubert, 2023 (quoting a 1987 paper).
 # Note that the default value (in the code) is -0.019 as this represents ideal gas behaviour.
 
-# We also have funciton estimate_k(g1, g2) which estimates these parameters from Tc and Pc for each pair.
+# These are used in function estimate_k_?(g1, g2) which estimates these parameters from gas data.
 k_ij = {
     'CH4': {'C2H6': 0.0021, 'C3H8': 0.007, 'iC4': 0.013, 'nC4': 0.012, 'iC5': 0.018, 'nC5': 0.018, 'C6': 0.021, 'CO2': 0},
     'C2H6': {'C3H8': 0.001, 'iC4': 0.005, 'nC4': 0.004, 'iC5': 0.008, 'nC5': 0.008, 'C6': 0.010},
@@ -119,21 +120,38 @@ k_ij = {
     'Ar': {'C6': -0.019}, # placeholder
 }
 
-def estimate_k(gas1, gas2):
-    """An estimate of teh temperature-independent binary interaction parameters, eq.(29) in 
+# We memoize some functions so that they do not get repeadtedly called with
+# the same arguments. Yet still be retain a more obvius way of writing the program.
+
+def memoize(func):
+    """Standard memoize function to use in a decorator, see
+    https://medium.com/@nkhaja/memoization-and-decorators-with-python-32f607439f84
+    """
+    cache = func.cache = {}
+    @functools.wraps(func)
+    def memoized_func(*args, **kwargs):
+        key = str(args) + str(kwargs)
+        if key not in cache:
+            cache[key] = func(*args, **kwargs)
+        return cache[key]
+    return memoized_func
+
+@memoize   
+def estimate_k_fixed(gas1, gas2, T=298):
+    """Using the data table for k_ij"""
+    k = -0.019 # value for ideal solution Privat & Jaubert, 2023
+    if gas2 in k_ij[gas1]:
+        k = k_ij[gas1][gas2]
+    if gas1 in k_ij[gas2]:
+        k = k_ij[gas2][gas1]
+    return k
+
+@memoize
+def estimate_k_gao(gas1, gas2, T=298):
+    """An estimate of the temperature-independent binary interaction parameters, eq.(29) in 
     Privat & Jaubert 2023, which is due to Gao reworking the method of Chueh & Prausnitz (1960s)
     
-    BUT temperature-independent BIPs are known to be inaccurate:
-    We should be using the temperature-dependent group-controbution method as described in
-    author = {Romain Privat and Jean-Nol Jaubert},
-    doi = {10.5772/35025},
-    book = {Crude Oil Emulsions- Composition Stability and Characterization},
-    pages = {71-106},
-    publisher = {InTech},
-    title = {Thermodynamic Models for the Prediction of Petroleum-Fluid Phase Behaviour},
-    year = {2012},
-    which has data for all the components we are dealing with (check this..)
-
+    BUT temperature-independent BIPs are known to be inaccurate.
 """
     Tc1 = gas_data[gas1]["Tc"]
     Tc2 = gas_data[gas2]["Tc"]
@@ -147,9 +165,28 @@ def estimate_k(gas1, gas2):
     power = 0.5*(Zc1 + Zc2)
     term = 2 * np.sqrt(Tc1*Tc2) / (Tc1 + Tc2)
     k = 1 - pow(term, power)
+    return k  
+    
+@memoize    
+def estimate_k(gas1, gas2, T=298):
+    """Courtinho method
+    BUT We should REALLY be using the temperature-dependent group-controbution method as described in
+    author = {Romain Privat and Jean-Nol Jaubert},
+    doi = {10.5772/35025},
+    book = {Crude Oil Emulsions- Composition Stability and Characterization},
+    pages = {71-106},
+    publisher = {InTech},
+    title = {Thermodynamic Models for the Prediction of Petroleum-Fluid Phase Behaviour},
+    year = {2012},
+    which has data for all the components we are dealing with (check this..)"""
 
+    a1, b1 = a_and_b(gas1, T)
+    a2, b2 = a_and_b(gas2, T)
+    term = 2 * np.sqrt(b1*b2) / (b1 + b2)
+    k = 1 - 0.885 * pow(term, -0.036)
+    
     return k
-
+    
 def check_composition(mix, composition):
     """Checks that the mole fractions add up to 100%"""
     eps = 0.00001
@@ -181,7 +218,8 @@ def density_actual(gas, T, P):
     """
     rho = P * gas_data[gas]['Mw'] / (peng_robinson(T, P, gas) * R * T)
     return rho
-    
+
+@memoize   
 def viscosity_actual(gas, T, P):
     """Calculate viscosity for a pure gas at temperature T and pressure = P
     """
@@ -204,7 +242,8 @@ def viscosity_values(mix, T, P):
         vs = viscosity_actual(gas, T, P) 
         values[gas] = vs
     return values
-       
+
+@memoize       
 def do_mm_rules(mix):
     """Calculate the mean molecular mass of the gas mixture"""
     mm_mix = 0
@@ -215,6 +254,7 @@ def do_mm_rules(mix):
     
     return mm_mix
 
+@memoize
 def linear_mix_rule(mix, values):
     """Calculate the mean value of a property for a mixture
     
@@ -228,7 +268,8 @@ def linear_mix_rule(mix, values):
         value_mix += x * values[gas]
     
     return value_mix
-
+    
+@memoize
 def explog_mix_rule(mix, values):
     """Calculate the mean value of a property for a mixture
     
@@ -245,7 +286,7 @@ def explog_mix_rule(mix, values):
     
     return np.exp(ln_mix)
 
-
+@memoize
 def hernzip_mix_rule(mix, values):
     """Calculate the mean value of a property for a mixture
     using the Herning & Zipper mixing rule
@@ -279,6 +320,7 @@ def do_notwilke_rules(mix):
     
     return vs_mix
 
+@memoize
 def z_mixture_rules(mix, T):
     """
     Calculate the Peng-Robinson constants for a mixture of hydrocarbon gases.
@@ -321,14 +363,8 @@ def z_mixture_rules(mix, T):
             a2, b2 = a_and_b(gas2, T) 
             
             # Use mixing rules for critical properties
-            k = -0.019 # value for ideal solution Privat & Jaubert, 2023
-            if gas2 in k_ij[gas1]:
-                k = k_ij[gas1][gas2]
-            if gas1 in k_ij[gas2]:
-                k = k_ij[gas2][gas1]
-            # or..
-            k = estimate_k(gas1,gas2) # This makes very little difference to our plots.
-            
+            k = estimate_k(gas1, gas2, T)
+             
             a_mix += x1 * x2 * (1 - k) * (a1 * a2)**0.5  
             
        # Return the mixture's parameters for the P-R law
@@ -357,6 +393,7 @@ def get_LMN(omega):
     
     return L, M, N
 
+@memoize
 def a_and_b(gas, T):
     """Calculate the a and b intermediate parameters in the Peng-Robinson forumula 
     a : attraction parameter
@@ -404,6 +441,7 @@ def a_and_b(gas, T):
 
     return a, b
 
+@memoize
 def solve_for_Z(T, P, a, b):
    
     # Solve cubic equation for Z the compressibility
@@ -424,9 +462,8 @@ def solve_for_Z(T, P, a, b):
     
     return Z
 
-    
-# Peng-Robinson Equation of State
-def peng_robinson(T, P, gas):
+@memoize
+def peng_robinson(T, P, gas): # Peng-Robinson Equation of State
     if gas not in gas_mixtures:    
         a, b = a_and_b(gas, T)
     else:
@@ -436,6 +473,7 @@ def peng_robinson(T, P, gas):
         
     Z = solve_for_Z(T, P, a, b)
     return Z
+
 
 def viscosity_LGE(Mw, T_k, rho):
     """The  Lee, Gonzalez, and Eakin method, originally expressed in 'oilfield units'
@@ -483,14 +521,15 @@ for g1 in gas_data:
     if g1 in k_ij:
         #print("")
         for g2 in gas_data:
-            if g2 in k_ij[g1]:
-                #print(f"{g1}:{g2} {k_ij[g1][g2]} {estimate_k(g1,g2):.3f} {k_ij[g1][g2]/estimate_k(g1,g2):.3f}", end="\n")
-        #print("")
+           if g2 in k_ij[g1]:
+            pass
+            print(f"{g1}:{g2} {k_ij[g1][g2]} - {estimate_k(g1,g2):.3f} {k_ij[g1][g2]/estimate_k(g1,g2):.3f}", end="\n")
+        print("")
 
 for g1 in gas_data:
     for g2 in gas_data:
-       #print(f"{g1}:{g2}  {estimate_k(g1,g2):.3f}  ", end="")
-    #print("")
+       print(f"{g1}:{g2}  {estimate_k(g1,g2):.3f}  ", end="")
+    print("")
 
 # Plot the compressibility  - - - - - - - - - - -
 
