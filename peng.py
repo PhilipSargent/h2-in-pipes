@@ -4,7 +4,10 @@ import matplotlib.pyplot as plt
 import pathlib as pl
 import sys
 
-"""For general information, commercial natural gas typically contains 85 to 90 percent methane, with the remainder mainly nitrogen and ethane, and has a calorific value of approximately 38 megajoules (MJ) per cubic metre
+"""This code written in December 2023 by Philip Sargent to support a paper on the replacement of natural
+gas in the UK distribution grid with hydrogen.
+
+For general information, commercial natural gas typically contains 85 to 90 percent methane, with the remainder mainly nitrogen and ethane, and has a calorific value of approximately 38 megajoules (MJ) per cubic metre
 
 Wobbe Number (WN) (i) ≤51.41 MJ/m3, and  (ii)  ≥47.20 MJ/m3
 https://www.nationalgas.com/data-and-operations/quality
@@ -28,8 +31,9 @@ T273 = 273.15
 # L M N for H2 from https://www.researchgate.net/figure/Coefficients-for-the-Twu-alpha-function_tbl3_306073867
 # 'L': 0.7189,'M': 2.5411,'N': 10.2,
 # for cryogenic vapour pressure. This FAILS for room temperature work, producing infinities. Use omega instead.
+# possibly re-visit using the data from Jaubert et al. on H2 + n-butane.
 
-# Hc is heat of combusiton in kJ/mol
+# Hc is heat of combustion in kJ/mol
 # HHV in mJ/M3
 # Wb is Wobbe index: MJ/m3
 # RD is relative density (air is  1)
@@ -87,7 +91,7 @@ gas_mixture_properties = {
     'Algerian': {'Wb': 49.992, 'HHV': 39.841, 'RD': 0.6351} #Algerian NG, Romeo 2022, C6+
 }
 
-# 20% H2, remainder N.Sea gas
+# 20% H2, remainder N.Sea gas. BUT may need adjusting to maintain Wobbe value, by adding N2 probably.
 fifth = {}
 fifth['H2'] = 0.2
 nsea = gas_mixtures['NTS']
@@ -102,6 +106,8 @@ gas_mixtures['NTS+20% H2'] = fifth
 # Note that the default value (in the code) is -0.019 as this represents ideal gas behaviour.
 
 # These are used in function estimate_k_?(g1, g2) which estimates these parameters from gas data.
+# NOT NOW USED, instead weuse the Courtinho estimation procedure in estimate_k()
+# The difference is undetectable in our use at ambient conditions.
 k_ij = {
     'CH4': {'C2H6': 0.0021, 'C3H8': 0.007, 'iC4': 0.013, 'nC4': 0.012, 'iC5': 0.018, 'nC5': 0.018, 'C6': 0.021, 'CO2': 0},
     'C2H6': {'C3H8': 0.001, 'iC4': 0.005, 'nC4': 0.004, 'iC5': 0.008, 'nC5': 0.008, 'C6': 0.010},
@@ -169,8 +175,9 @@ def estimate_k_gao(gas1, gas2, T=298):
     
 @memoize    
 def estimate_k(gas1, gas2, T=298):
-    """Courtinho method
-    BUT We should REALLY be using the temperature-dependent group-controbution method as described in
+    """Courtinho method implemented here.
+    
+    BUT We should REALLY be using the temperature-dependent group-contribution method as described in
     author = {Romain Privat and Jean-Nol Jaubert},
     doi = {10.5772/35025},
     book = {Crude Oil Emulsions- Composition Stability and Characterization},
@@ -184,7 +191,6 @@ def estimate_k(gas1, gas2, T=298):
     a2, b2 = a_and_b(gas2, T)
     term = 2 * np.sqrt(b1*b2) / (b1 + b2)
     k = 1 - 0.885 * pow(term, -0.036)
-    
     return k
     
 def check_composition(mix, composition):
@@ -376,14 +382,16 @@ def z_mixture_rules(mix, T):
     }
 
 """This function uses simple mixing rules to calculate the mixture’s critical properties. The kij parameter, which accounts for the interaction between different gases, is assumed to be 0 for simplicity. In practice, kij may need to be adjusted based on experimental data or literature values for more accurate results.
-
-Please note that this is a simplified approach and may not be accurate for all gas mixtures. For precise calculations, especially for complex mixtures or those under extreme conditions, it’s recommended to use specialized software or databases that provide more sophisticated mixing rules and interaction parameters. """
+ """
 
 
 def get_LMN(omega):
     """Twu (1991) suggested a replacement for the alpha function, which instead of depending
         only on T & omega, depends on T, L, M, N (new material constants)
         https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8851615/pdf/ao1c06519.pdf
+        
+        We now have the PDF for the H2 + n-butane Jaubert et al. 2013 paper which has 
+        all these parameters
     """
     # These equations are from Privat & Jaubert (2023)
     # https://www.sciencedirect.com/science/article/pii/S0378381222003168
