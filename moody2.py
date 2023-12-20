@@ -13,10 +13,12 @@ def laminar(reynolds):
     return f_laminar
     
 def blasius(reynolds):
-    if reynolds < 1e5:
-        return (0.316 / (reynolds**0.25))
-    else:
-        return None
+    f = (0.316 / (reynolds**0.25))
+    if f > 0.009 and reynolds < 1e10 : # to get diagram the right shape
+        return f
+    
+    return None
+     
     
 def smooth(reynolds):
     return colebrook(reynolds, 0.0)
@@ -55,7 +57,7 @@ def colebrook(reynolds, relative_roughness):
         f_solution = f_new
     return f_solution
 
-def plot_diagram(filename='moody2_diagram.png'):
+def plot_diagram(title, filename='moody_diagram.png'):
     # Calculate the friction factor for each relative roughness
     friction_factors = {}
     for rr in relative_roughness_values:
@@ -69,33 +71,35 @@ def plot_diagram(filename='moody2_diagram.png'):
     
     # Plot the Moody diagram
     plt.figure(figsize=(10, 6))
-    plt.loglog(reynolds_laminar, friction_laminars, label=f'Laminar')
-    plt.loglog(reynolds, friction_smooth, label=f'Smooth: ε/D = 0')
-    plt.loglog(reynolds, friction_blasius, label=f'Blasius')
+    plt.loglog(reynolds_laminar, friction_laminars, label=f'Laminar', linestyle='dotted')
+    # plt.loglog(reynolds, friction_smooth, label=f'Smooth: ε/D = 0')
+    plt.loglog(reynolds, friction_blasius, label=f'Blasius', linestyle='dashed')
 
     for rr, ff in friction_factors.items():
         plt.loglog(reynolds, ff, label=f'ε/D = {rr}')
 
     plt.xlabel('Reynolds number, Re')
     plt.ylabel('Darcy-Weisbach friction factor, f')
-    plt.title('Moody Diagram')
+    plt.title(title)
     plt.grid(True, which='both', ls='--')
     plt.legend()
     plt.savefig(filename)
     #plt.savefig('moody_diagram.eps')
     
 # Define the Reynolds number range and relative roughness values
-reynolds_laminar = np.logspace(2.7, 4.4, 1000) # 10^2.7 = 501, 10^3.4 = 2512
-reynolds = np.logspace(3.4, 7.7, 1000) # 10^7.7 = 5e7
-relative_roughness_values = [0.00003,  0.0001, 0.0003, 0.001, 0.003,  0.01, 0.03]
+# only need 10 points for the straight line
+reynolds_laminar = np.logspace(2.7, 3.9, 5) # 10^2.7 = 501, 10^3.4 = 2512
+reynolds = np.logspace(3.4, 7.7, 500) # 10^7.7 = 5e7
+relative_roughness_values = [0.01, 0.001, 0.0001, 0.00001]
 
-plot_diagram()
+plot_diagram('Moody Diagram')
 
-reynolds_laminar = np.logspace(2.7, 4.4, 1000) # 10^2.7 = 501, 10^3.4 = 2512
-reynolds = np.logspace(3.4, 4.7, 1000) 
-relative_roughness_values = [0.0003, 0.001, 0.003,  0.01, 0.03]
+# Plot enlarged diagram
+reynolds_laminar = np.logspace(2.9, 3.4, 5) # 10^2.7 = 501, 10^3.4 = 2512
+reynolds = np.logspace(3.4, 4.0, 500) 
+relative_roughness_values = [0.01, 0.001, 0.0001]
 
-plot_diagram('moody_enlarge.png')
+plot_diagram('Moody Diagram Transition region', 'moody_enlarge.png')
 
 
 
