@@ -507,6 +507,20 @@ def viscosity_LGE(Mw, T_k, rho):
 
     return mu 
     
+def print_density(g, p, T):
+    if g in gas_mixtures:
+        mix = g
+        constants = z_mixture_rules(mix, T)
+        a = constants[mix]['a_mix']
+        b = constants[mix]['b_mix']
+        Z_mix = solve_for_Z(T, p, a, b)
+        mm = do_mm_rules(mix) # mean molar mass
+        # For density, the averaging across the mixture (Mw) is done before the calc. of rho
+        rho = p * mm / (Z_mix * R * T)
+    else:
+        rho = density_actual(g, T, p)
+    print(f"{g:10} {rho:.5f}")
+    
 # ---------- ----------main program starts here---------- ------------- #
 
 program = sys.argv[0]
@@ -531,17 +545,30 @@ for g1 in gas_data:
         for g2 in gas_data:
            if g2 in k_ij[g1]:
             pass
-            print(f"{g1}:{g2} {k_ij[g1][g2]} - {estimate_k(g1,g2):.3f} {k_ij[g1][g2]/estimate_k(g1,g2):.3f}", end="\n")
-        print("")
+            # print(f"{g1}:{g2} {k_ij[g1][g2]} - {estimate_k(g1,g2):.3f} {k_ij[g1][g2]/estimate_k(g1,g2):.3f}", end="\n")
+        # print("")
 
 for g1 in gas_data:
     for g2 in gas_data:
-       print(f"{g1}:{g2}  {estimate_k(g1,g2):.3f}  ", end="")
-    print("")
+       pass
+       # print(f"{g1}:{g2}  {estimate_k(g1,g2):.3f}  ", end="")
+    # print("")
+
+
+dp = 47.5
+tp = 15
+pressure =  Atm + dp/1000 # 1atm + 47.5 mbar, halfway between 20 mbar and 75 mbar
+T = 273.15 + tp
+# Print the densities at 15 C  - - - - - - - - - - -
+
+print(f"Density of gases (kg/m³)at T={tp:.1f}°C and P={dp:.1f} mbar above 1 atm")
+for g in gas_mixtures:
+    print_density(g, pressure, T)
+for g in ["H2", "CH4"]:
+    print_density(g, pressure, T)
 
 # Plot the compressibility  - - - - - - - - - - -
 
-pressure =  Atm + 0.075 # 1atm + 75 mbar
 
 # Calculate Z0 for each gas
 Z0 = {}
