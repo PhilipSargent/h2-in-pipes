@@ -71,7 +71,9 @@ gas_mixtures = {
 
     #'Wobbe mix': {'CH4': 0.9,  'C3H8': 0.04,  'N2': 0.06}, # wobbe central, not a real natural gas  https://www.gasgovernance.co.uk/sites/default/files/ggf/Impact%20of%20Natural%20Gas%20Composition%20-%20Paper_0.pdf
     
-    'NTS': {'CH4': 0.8, 'C2H6': 0.05, 'C3H8': 0.03, 'CO2': 0.02, 'N2': 0.10}, # ==mix6 from      https://backend.orbit.dtu.dk/ws/files/131796794/FPE_D_16_00902R1.pdf
+    #'mix6': {'CH4': 0.8, 'C2H6': 0.05, 'C3H8': 0.03, 'CO2': 0.02, 'N2': 0.10}, # ==mix6 from      https://backend.orbit.dtu.dk/ws/files/131796794/FPE_D_16_00902R1.pdf
+
+    'NTS': {'CH4': 0.9363, 'C2H6': 0.0325, 'C3H8': 0.0069, 'nC4': 0.0027, 'CO2': 0.0013, 'N2': 0.0178, 'He': 0.0005, 'nC5': 0.002}, # https://en.wikipedia.org/wiki/National_Transmission_System
 
     #'Algerian': {'CH4': 0.86486, 'C2H6': 0.08788, 'C3H8': 0.01179, 'iC4': 0.00085,  'nC4': 0.00107,
     #    'iC5': 0.00021, 'nC5': 0.00015,'C6': 0.00017,'CO2': 0.01894, 'N2': 0.01323, 'He': 0.00085}, # Algerian NG, Romeo 2022, C6+
@@ -90,6 +92,11 @@ gas_mixtures = {
 gas_mixture_properties = {
     'Algerian': {'Wb': 49.992, 'HHV': 39.841, 'RD': 0.6351} #Algerian NG, Romeo 2022, C6+
 }
+
+print(f"NTS gas composition")
+nts = gas_mixtures["NTS"]
+for f in nts:
+    print(f"{f:5} {nts[f]*100:6.3f} %")
 
 # 20% H2, remainder N.Sea gas. BUT may need adjusting to maintain Wobbe value, by adding N2 probably.
 fifth = {}
@@ -518,8 +525,9 @@ def print_density(g, p, T):
         # For density, the averaging across the mixture (Mw) is done before the calc. of rho
         rho = p * mm / (Z_mix * R * T)
     else:
+        mm = gas_data[g]['Mw']
         rho = density_actual(g, T, p)
-    print(f"{g:10} {rho:.5f}")
+    print(f"{g:10} {mm:6.3f} {rho:.5f}")
     
 # ---------- ----------main program starts here---------- ------------- #
 
@@ -561,7 +569,7 @@ pressure =  Atm + dp/1000 # 1atm + 47.5 mbar, halfway between 20 mbar and 75 mba
 T = 273.15 + tp
 # Print the densities at 15 C  - - - - - - - - - - -
 
-print(f"Density of gases (kg/m³)at T={tp:.1f}°C and P={dp:.1f} mbar above 1 atm")
+print(f"Mw and density of gases (kg/m³)at T={tp:.1f}°C and P={dp:.1f} mbar above 1 atm, i.e. P={pressure:.5f} bar")
 for g in gas_mixtures:
     print_density(g, pressure, T)
 for g in ["H2", "CH4"]:
