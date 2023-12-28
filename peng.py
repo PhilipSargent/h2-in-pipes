@@ -67,8 +67,8 @@ gas_data = {
 
 # Natural gas compositions (mole fractions)
 gas_mixtures = {
-    #'GG': {'CH4': 0.827, 'C2H6': 0.03, 'C3H8': 0.003, 'CO2': 0, 'N2': 0.14}, # Groeningen gas
-
+    'GG': {'CH4': 0.81.3, 'C2H6': 0.0285, 'C3H8': 0.0037, 'nC4': 0.0014, , 'nC5': 0.0004, 'C6': 0.0006, 'CO2': 0.0089, 'N2': 0.1435, 'O2': 0.0001}, # Groeningen gas https://en.wikipedia.org/wiki/Groningen_gas_field
+    
     #'Wobbe mix': {'CH4': 0.9,  'C3H8': 0.04,  'N2': 0.06}, # wobbe central, not a real natural gas  https://www.gasgovernance.co.uk/sites/default/files/ggf/Impact%20of%20Natural%20Gas%20Composition%20-%20Paper_0.pdf
     
     #'mix6': {'CH4': 0.8, 'C2H6': 0.05, 'C3H8': 0.03, 'CO2': 0.02, 'N2': 0.10}, # ==mix6 from      https://backend.orbit.dtu.dk/ws/files/131796794/FPE_D_16_00902R1.pdf
