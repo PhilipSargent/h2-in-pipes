@@ -80,7 +80,7 @@ gas_mixtures = {
     #    'iC5': 0.00021, 'nC5': 0.00015,'C6': 0.00017,'CO2': 0.01894, 'N2': 0.01323, 'He': 0.00085}, # Algerian NG, Romeo 2022, C6+
          
     'North Sea': {'CH4': 0.836, 'C2H6': 0.0748, 'C3H8':0.0392, 'nC4':0.0081, 'iC4':0.0081, 
-        'nC5':0.0015, 'iC5':0.0014, 'CO2':0.0114, 'N2':0.0195}, # North Sea gas https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7347886/
+        'nC5':0.0015, 'iC5':0.0014, 'CO2':0.0114, 'N2':0.0195}, # North Sea gas [Hassanpou] https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7347886/
         
     # 'ethane': {'C2H6': 1.0}, # ethane, but using the mixing rules: software test check
     # 'propane': {'C3H8': 1.0}, # ethane, but using the mixing rules: software test check
@@ -89,7 +89,11 @@ gas_mixtures = {
     # But ALSO adding 2.5% moisture to the air and normalising
 }
 
-
+"""reduce the lower limit for Wobbe Index from 47.2 MJ/m3  to 46.50 MJ/m3 was approved by HSE. 
+This shall enter into force from 6 April 2025
+"Gas Ten Year Statement December 2023"
+https://www.nationalgas.com/document/144896/download
+"""
 gas_mixture_properties = {
     'Algerian': {'Wb': 49.992, 'HHV': 39.841, 'RD': 0.6351} #Algerian NG, Romeo 2022, C6+
 }
