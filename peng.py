@@ -524,21 +524,26 @@ def viscosity_LGE(Mw, T_k, rho):
     mu = 0.1 * k * np.exp(x * (rho / 1000)**y) #microPa.s
 
     return mu 
-    
+
+def get_density(mix, p, T):
+    constants = z_mixture_rules(mix, T)
+    a = constants[mix]['a_mix']
+    b = constants[mix]['b_mix']
+    Z_mix = solve_for_Z(T, p, a, b)
+    mm = do_mm_rules(mix) # mean molar mass
+    # For density, the averaging across the mixture (Mw) is done before the calc. of rho
+    return p * mm / (Z_mix * R * T)
+
 def print_density(g, p, T):
+    mm_air = do_mm_rules('Air')
     if g in gas_mixtures:
-        mix = g
-        constants = z_mixture_rules(mix, T)
-        a = constants[mix]['a_mix']
-        b = constants[mix]['b_mix']
-        Z_mix = solve_for_Z(T, p, a, b)
-        mm = do_mm_rules(mix) # mean molar mass
-        # For density, the averaging across the mixture (Mw) is done before the calc. of rho
-        rho = p * mm / (Z_mix * R * T)
+        mm = do_mm_rules(g) # mean molar mass
+        rho = get_density(g, p, T)
     else:
         mm = gas_data[g]['Mw']
         rho = density_actual(g, T, p)
-    print(f"{g:10} {mm:6.3f} {rho:.5f}")
+    wobbe_factor = 1/np.sqrt(mm/mm_air)
+    print(f"{g:15} {mm:6.3f} {rho:.5f}   {wobbe_factor:.5f}")
     
 # ---------- ----------main program starts here---------- ------------- #
 
@@ -586,6 +591,7 @@ for g in gas_mixtures:
 for g in ["H2", "CH4"]:
     print_density(g, pressure, T)
 
+print(f"Third column is wobbe factor = 1/(sqrt(Mw/Mw(air)))")
 # Plot the compressibility  - - - - - - - - - - -
 
 
