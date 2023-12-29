@@ -37,7 +37,7 @@ T273 = 273.15
 # HHV in mJ/M3
 # Wb is Wobbe index: MJ/m3
 # RD is relative density (air is  1)
-# Vs is viscosity and temp. f measurement as tuple (microPa.s, K)
+# Vs is viscosity and temp. f measurement as tuple (microPa.s, K, exponent(pressure))
 # All viscosities from marcia l. huber and allan h. harvey,
 #https://tsapps.nist.gov/publication/get_pdf.cfm?pub_id=907539
 
@@ -52,7 +52,12 @@ gas_data = {
     'nC4': {'Tc': 425, 'Pc': 38,  'omega': 0.20081, 'Mw': 58.1222, 'Vs': (7.5,300, 0.950), 'Hc':2-877.5}, # omega http://www.coolprop.org/fluid_properties/fluids/n-Butane.html https://www.engineeringtoolbox.com/butane-d_1415.html 
     'iC4': {'Tc': 407.7, 'Pc': 36.5, 'omega': 0.1835318, 'Mw': 58.1222, 'Vs': (7.5,300, 0.942)}, # omega  http://www.coolprop.org/fluid_properties/fluids/IsoButane.html https://webbook.nist.gov/cgi/cbook.cgi?ID=C75285&Mask=1F https://webbook.nist.gov/cgi/cbook.cgi?Name=butane&Units=SI Viscocity assumed same as nC4
     'nC5': {'Tc': 469.8, 'Pc': 33.6, 'omega': 0.251032, 'Mw': 72.1488, 'Vs': (6.7,300, 1.0)}, # omega http://www.coolprop.org/fluid_properties/fluids/n-Pentane.html     
-    'iC5': {'Tc': 461.0, 'Pc': 33.8, 'omega': 0.2274, 'Mw': 72.1488, 'Vs': (6.7,300, 0.94)}, # omega http://www.coolprop.org/fluid_properties/fluids/Isopentane.html  Viscocity assumed same as nC5    
+    'iC5': {'Tc': 461.0, 'Pc': 33.8, 'omega': 0.2274, 'Mw': 72.1488, 'Vs': (6.7,300, 0.94)}, # omega http://www.coolprop.org/fluid_properties/fluids/Isopentane.html  Viscocity assumed same as nC5 
+    
+    'neoC5': {'Tc': 433.8, 'Pc': 31.963, 'omega': 0.1961, 'Mw': 72.1488, 'Vs': (6.9326,300, 0.937)},
+    # https://webbook.nist.gov/cgi/cbook.cgi?ID=C463821&Units=SI&Mask=4#Thermo-Phase
+    # omega from http://www.coolprop.org/fluid_properties/fluids/Neopentane.html
+    
     'C6':  {'Tc': 507.6, 'Pc': 30.2, 'omega': 0.1521, 'Mw': 86.1754, 'Vs': (8.6,400, 1.03)}, # omega is 0.2797 isohexane    
     'CO2': {'Tc': 304.2, 'Pc': 73.8, 'omega': 0.228, 'Mw': 44.01, 'Vs': (15.0,300, 0.872)}, # https://en.wikipedia.org/wiki/Acentric_factor
     'H2O': {'Tc': 647.1, 'Pc': 220.6, 'omega': 0.344292, "Mw": 18.015, 'Vs': (9.8,300, 1.081)}, # https://link.springer.com/article/10.1007/s10765-020-02643-6/tables/1
@@ -67,25 +72,26 @@ gas_data = {
 
 # Natural gas compositions (mole fractions)
 gas_mixtures = {
-    'GG': {'CH4': 0.81.3, 'C2H6': 0.0285, 'C3H8': 0.0037, 'nC4': 0.0014, , 'nC5': 0.0004, 'C6': 0.0006, 'CO2': 0.0089, 'N2': 0.1435, 'O2': 0.0001}, # Groeningen gas https://en.wikipedia.org/wiki/Groningen_gas_field
+    'GG': {'CH4': 0.813, 'C2H6': 0.0285, 'C3H8': 0.0037, 'nC4': 0.0014, 'nC5': 0.0004, 'C6': 0.0006, 'CO2': 0.0089, 'N2': 0.1435, 'O2': 0.0001}, # Groeningen gas https://en.wikipedia.org/wiki/Groningen_gas_field
     
     #'Wobbe mix': {'CH4': 0.9,  'C3H8': 0.04,  'N2': 0.06}, # wobbe central, not a real natural gas  https://www.gasgovernance.co.uk/sites/default/files/ggf/Impact%20of%20Natural%20Gas%20Composition%20-%20Paper_0.pdf
     
-    #'mix6': {'CH4': 0.8, 'C2H6': 0.05, 'C3H8': 0.03, 'CO2': 0.02, 'N2': 0.10}, # ==mix6 from      https://backend.orbit.dtu.dk/ws/files/131796794/FPE_D_16_00902R1.pdf
+    #'mix6': {'CH4': 0.8, 'C2H6': 0.05, 'C3H8': 0.03, 'CO2': 0.02, 'N2': 0.10}, # ==mix6 from      https://backend.orbit.dtu.dk/ws/files/131796794/FPE_D_16_00902R1.pdf - no, somewhere else..
 
-    'NTS': {'CH4': 0.9363, 'C2H6': 0.0325, 'C3H8': 0.0069, 'nC4': 0.0027, 'CO2': 0.0013, 'N2': 0.0178, 'He': 0.0005, 'nC5': 0.002}, # https://en.wikipedia.org/wiki/National_Transmission_System
+    'NTS79': {'CH4': 0.9363, 'C2H6': 0.0325, 'C3H8': 0.0069, 'nC4': 0.0027, 'CO2': 0.0013, 'N2': 0.0178, 'He': 0.0005, 'nC5': 0.002}, # https://en.wikipedia.org/wiki/National_Transmission_System
     # This NTS composition from Wikipedia actually comes from 1979 !  Cassidy, Richard (1979). Gas: Natural Energy. London: Frederick Muller Limited. p. 14.
     
+    'NatGas': {'CH4': 0.88621, 'C2H6': 0.04046, 'C3H8': 0.009944, 'iC4': 0.002017, 'nC4': 0.002020, 'iC5': 0.000501, 'nC5': 0.0005, 'neoC5': 0.000502,  'C6': 0.000485, 'CO2': 0.015084, 'N2': 0.039866, 'He': 0}, # This is 11D gas from Duchowny22, doi:10.1016/j.egyr.2022.02.289
+   
     #'Algerian': {'CH4': 0.86486, 'C2H6': 0.08788, 'C3H8': 0.01179, 'iC4': 0.00085,  'nC4': 0.00107,
     #    'iC5': 0.00021, 'nC5': 0.00015,'C6': 0.00017,'CO2': 0.01894, 'N2': 0.01323, 'He': 0.00085}, # Algerian NG, Romeo 2022, C6+
          
-    'North Sea': {'CH4': 0.836, 'C2H6': 0.0748, 'C3H8':0.0392, 'nC4':0.0081, 'iC4':0.0081, 
-        'nC5':0.0015, 'iC5':0.0014, 'CO2':0.0114, 'N2':0.0195}, # North Sea gas [Hassanpou] https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7347886/
+    'North Sea': {'CH4': 0.836, 'C2H6': 0.0748, 'C3H8':0.0392, 'nC4':0.0081, 'iC4':0.0081, 'nC5':0.0015, 'iC5':0.0014, 'CO2':0.0114, 'N2':0.0195}, # North Sea gas [Hassanpou] https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7347886/
         
     # 'ethane': {'C2H6': 1.0}, # ethane, but using the mixing rules: software test check
     # 'propane': {'C3H8': 1.0}, # ethane, but using the mixing rules: software test check
     #'Air': {'N2': 0.78084, 'O2': 0.209476,  'CO2': 0.0004,  'Ar': 0.00934,  'He': 5.24e-06, 'H2O': 0.025}, 
-    'Air':  {'N2': 0.76175, 'O2': 0.204355, 'CO2': 0.00039, 'Ar': 0.009112, 'He': 5.11e-06, 'H2O': 0.024389}, # https://www.thoughtco.com/chemical-composition-of-air-604288
+    'Air':  {'N2': 0.76175, 'O2': 0.204355, 'CO2': 0.00039, 'Ar': 0.009112, 'He': 5.11e-06, 'H2O': 0.024389} # https://www.thoughtco.com/chemical-composition-of-air-604288
     # But ALSO adding 2.5% moisture to the air and normalising
 }
 
@@ -98,18 +104,18 @@ gas_mixture_properties = {
     'Algerian': {'Wb': 49.992, 'HHV': 39.841, 'RD': 0.6351} #Algerian NG, Romeo 2022, C6+
 }
 
-print(f"NTS gas composition")
-nts = gas_mixtures["NTS"]
+print(f"NTS79 gas composition")
+nts = gas_mixtures["NTS79"]
 for f in nts:
     print(f"{f:5} {nts[f]*100:6.3f} %")
 
 # 20% H2, remainder N.Sea gas. BUT may need adjusting to maintain Wobbe value, by adding N2 probably.
 fifth = {}
 fifth['H2'] = 0.2
-nsea = gas_mixtures['NTS']
-for g in nsea:
-    fifth[g] = nsea[g]*0.8
-gas_mixtures['NTS+20% H2'] = fifth
+ng = gas_mixtures['NatGas']
+for g in ng:
+    fifth[g] = ng[g]*0.8
+gas_mixtures['NatGas+20% H2'] = fifth
     
 # Binary interaction parameters for hydrocarbons for Peng-Robinson
 # based on the Chueh-Prausnitz correlation

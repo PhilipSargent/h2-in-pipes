@@ -31,6 +31,8 @@ viscosity2 = { # in microPa.s
     'iC4': np.array([ 7.5, 9.9, 12.2, 14.4]),
     'nC5': np.array([ 6.7, 9.2, 11.4, 13.4]),
     'iC5': np.array([ 7.5, 9.9, 12.2, 14.4]),
+    
+    
     'Ar': np.array([ 22.7, 28.6, 33.9, 38.8]),
     'He': np.array([ 19.9, 24.3, 28.3, 32.2]),
     'C6': np.array([ 6.29, 8.6, 10.8, 12.82]), # 300 K for gaseous not liquid C6, at 0.218 bar. Close enough.
@@ -39,6 +41,14 @@ for gas, vis in viscosity2.items():
     vis = vis / 1e6 # Convert microPa.s to Pa.s
     viscosity2[gas] = vis
 
+temperature3 = np.array([300, 400, 500]) #degrees K
+viscosity3 = { # in microPa.s
+   'neoC5': np.array([6.9326, 9.1783, 11.18]), # not same source. 
+ }
+
+for gas, vis in viscosity3.items():
+    vis = vis / 1e6 # Convert microPa.s to Pa.s
+    viscosity3[gas] = vis
 
 # Plotting
 plt.figure(figsize=(10, 6))
@@ -56,6 +66,13 @@ for gas, vis in viscosity2.items():
     print(f"{gas:6}    {slope:.3f}  {intercept:.2f}  ({1e6*pow(10, intercept):.3f} μK)")
     plt.plot(np.log10(temperature2), np.log10(vis), 'o', label=f'{gas}, slope: {slope:.2f}')
     plt.plot(np.log10(temperature2), slope * np.log10(temperature2) + intercept, '-')
+    
+for gas, vis in viscosity3.items():
+    mask = [value is not None for value in vis] 
+    slope, intercept = np.polyfit(np.log10(temperature3[mask]), np.log10(vis[mask]), 1)
+    print(f"{gas:6}    {slope:.3f}  {intercept:.2f}  ({1e6*pow(10, intercept):.3f} μK)")
+    plt.plot(np.log10(temperature3), np.log10(vis), 'o', label=f'{gas}, slope: {slope:.2f}')
+    plt.plot(np.log10(temperature3), slope * np.log10(temperature3) + intercept, '-')
     
 plt.xlabel('log10(Temperature) (K)')
 plt.ylabel('log10(Viscosity) (Pa.s)')
