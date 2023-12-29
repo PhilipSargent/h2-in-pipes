@@ -240,8 +240,8 @@ def check_composition(mix, composition):
 def density_actual(gas, T, P):
     """Calculate density for a pure gas at temperature T and pressure = P
     """
-    rho = P * gas_data[gas]['Mw'] / (peng_robinson(T, P, gas) * R * T)
-    return rho
+    ϱ = P * gas_data[gas]['Mw'] / (peng_robinson(T, P, gas) * R * T)
+    return ϱ
 
 @memoize   
 def viscosity_actual(gas, T, P):
@@ -501,7 +501,7 @@ def peng_robinson(T, P, gas): # Peng-Robinson Equation of State
     return Z
 
 
-def viscosity_LGE(Mw, T_k, rho):
+def viscosity_LGE(Mw, T_k, ϱ):
     """The  Lee, Gonzalez, and Eakin method, originally expressed in 'oilfield units'
     of degrees Rankine and density in g/cc, with a result in centiPoise
     doi.org/10.2118/1340-PA 1966
@@ -521,7 +521,7 @@ def viscosity_LGE(Mw, T_k, rho):
     x = 3.5 + 986 / T + 0.01 * Mw
     y = 2.4 - 0.2 * x
 
-    mu = 0.1 * k * np.exp(x * (rho / 1000)**y) #microPa.s
+    mu = 0.1 * k * np.exp(x * (ϱ / 1000)**y) #microPa.s
 
     return mu 
 
@@ -531,26 +531,28 @@ def get_density(mix, p, T):
     b = constants[mix]['b_mix']
     Z_mix = solve_for_Z(T, p, a, b)
     mm = do_mm_rules(mix) # mean molar mass
-    # For density, the averaging across the mixture (Mw) is done before the calc. of rho
+    # For density, the averaging across the mixture (Mw) is done before the calc. of ϱ
     return p * mm / (Z_mix * R * T)
 
 def print_density(g, p, T):
     mm_air = do_mm_rules('Air')
+    ϱ_air = get_density('Air', p, T)
     if g in gas_mixtures:
         mm = do_mm_rules(g) # mean molar mass
-        rho = get_density(g, p, T)
+        ϱ = get_density(g, p, T)
     else:
         mm = gas_data[g]['Mw']
-        rho = density_actual(g, T, p)
-    wobbe_factor = 1/np.sqrt(mm/mm_air)
-    print(f"{g:15} {mm:6.3f} {rho:.5f}   {wobbe_factor:.5f}")
+        ϱ = density_actual(g, T, p)
+    wobbe_factorMw = 1/np.sqrt(mm/mm_air)
+    wobbe_factorϱ = 1/np.sqrt(ϱ/ϱ_air)
+    print(f"{g:15} {mm:6.3f} {ϱ:.5f}   {wobbe_factorMw:.5f} {wobbe_factorϱ:.5f}")
     
 # ---------- ----------main program starts here---------- ------------- #
 
 program = sys.argv[0]
 stem = str(pl.Path(program).with_suffix(""))
 fn={}
-for s in ["z", "rho", "mu"]:
+for s in ["z", "ϱ", "mu"]:
     f = stem  + "_" + s
     fn[s] = pl.Path(f).with_suffix(".png") 
 
@@ -591,7 +593,7 @@ for g in gas_mixtures:
 for g in ["H2", "CH4"]:
     print_density(g, pressure, T)
 
-print(f"Third column is wobbe factor = 1/(sqrt(Mw/Mw(air)))")
+print(f"Third column is wobbe factor = 1/(sqrt(Mw/Mw(air))), 1/(sqrt(ϱ/ϱ(air)))")
 # Plot the compressibility  - - - - - - - - - - -
 
 
@@ -617,12 +619,12 @@ plt.plot(temperatures - T273, Z_CH4, label='Pure methane', linestyle='dashed')
 
 
 # Plot for natural gas compositions. Now using correct temperature dependence of 'a'
-rho_ng = {}
+ϱ_ng = {}
 μ_ng = {}
 
 for mix in gas_mixtures:
     mm = do_mm_rules(mix) # mean molar mass
-    rho_ng[mix] = []
+    ϱ_ng[mix] = []
     μ_ng[mix] = []
 
     Z_ng = []
@@ -634,12 +636,12 @@ for mix in gas_mixtures:
         Z_mix = solve_for_Z(T, pressure, a, b)
         Z_ng.append(Z_mix)
         
-        # For density, the averaging across the mixture (Mw) is done before the calc. of rho
-        rho_mix = pressure * mm / (Z_mix * R * T)
-        rho_ng[mix].append(rho_mix)
+        # For density, the averaging across the mixture (Mw) is done before the calc. of ϱ
+        ϱ_mix = pressure * mm / (Z_mix * R * T)
+        ϱ_ng[mix].append(ϱ_mix)
 
-        # for LGE viscosity, the averaging across the mixture (Mw) is done before the calc. of rho
-        μ_mix = viscosity_LGE(mm, T, rho_mix)
+        # for LGE viscosity, the averaging across the mixture (Mw) is done before the calc. of ϱ
+        μ_mix = viscosity_LGE(mm, T, ϱ_mix)
         μ_ng[mix].append(μ_mix)
 
     if mix == "Air":
@@ -668,8 +670,8 @@ for g in ["H2", "CH4", "N2"]:
     μ_pg[g] = []
     mm_g = gas_data[g]['Mw']
     for T in temperatures:
-        rho_g= pressure * mm / (peng_robinson(T, pressure, g) * R * T)
-        μ = viscosity_LGE(mm_g, T, rho_g)
+        ϱ_g= pressure * mm / (peng_robinson(T, pressure, g) * R * T)
+        μ = viscosity_LGE(mm_g, T, ϱ_g)
         μ_pg[g].append(μ)
     plt.plot(temperatures - T273, μ_pg[g], label= "pure " + g, linestyle='dashed')
 
@@ -719,14 +721,14 @@ plt.grid(True)
 plt.savefig(fn["mu"])
 plt.close()
 
-# rho/Viscosity plot Kinematic EXPTL values at 298K - - - - - - - - - - -
+# ϱ/Viscosity plot Kinematic EXPTL values at 298K - - - - - - - - - - -
 
 P = pressure
 re_g = {}
 for mix in gas_mixtures:
     re_g[mix] = []
     for i in range(len(μ_g[mix])):
-        re_g[mix].append( rho_ng[mix][i] / μ_g[mix][i])
+        re_g[mix].append( ϱ_ng[mix][i] / μ_g[mix][i])
     plt.plot(temperatures - T273, re_g[mix], label= mix)
   
 
@@ -754,12 +756,12 @@ plt.close()
 
 # pure gases
 for g in ["H2", "CH4", "N2", "O2"]: 
-    rho_pg = [pressure * gas_data[g]['Mw'] / (peng_robinson(T, pressure, g) * R * T)  for T in temperatures]
-    plt.plot(temperatures - T273, rho_pg, label = "pure " + g, linestyle='dashed')
+    ϱ_pg = [pressure * gas_data[g]['Mw'] / (peng_robinson(T, pressure, g) * R * T)  for T in temperatures]
+    plt.plot(temperatures - T273, ϱ_pg, label = "pure " + g, linestyle='dashed')
 
 # Density plots for gas mixtures
 for mix in gas_mixtures:
-    plt.plot(temperatures - T273, rho_ng[mix], label=mix)
+    plt.plot(temperatures - T273, ϱ_ng[mix], label=mix)
 
 plt.title(f'Density vs Temperature at {pressure} bar')
 plt.xlabel('Temperature (°C)')
@@ -767,7 +769,7 @@ plt.ylabel('Density (kg/m³)')
 plt.legend()
 plt.grid(True)
 
-plt.savefig(fn["rho"])
+plt.savefig(fn["ϱ"])
 plt.close()
 
 # Plot the compressibility  as a function of Pressure - - - - - - - - - - -
@@ -793,12 +795,12 @@ Z_C2H6 = [peng_robinson(T, p, 'C2H6') for  p in pressures]
 plt.plot(pressures, Z_C2H6, label='Pure ethane', linestyle='dashed')
 
 # Plot for natural gas compositions. Now using correct temperature dependence of 'a'
-rho_ng = {}
+ϱ_ng = {}
 μ_ng = {}
 
 for mix in gas_mixtures:
     mm = do_mm_rules(mix) # mean molar mass
-    rho_ng[mix] = []
+    ϱ_ng[mix] = []
     μ_ng[mix] = []
 
     Z_ng = []
@@ -810,9 +812,9 @@ for mix in gas_mixtures:
         Z_mix = solve_for_Z(T, p, a, b)
         Z_ng.append(Z_mix)
         
-        # For density, the averaging across the mixture (Mw) is done before the calc. of rho
-        rho_mix = p * mm / (Z_mix * R * T)
-        rho_ng[mix].append(rho_mix)
+        # For density, the averaging across the mixture (Mw) is done before the calc. of ϱ
+        ϱ_mix = p * mm / (Z_mix * R * T)
+        ϱ_ng[mix].append(ϱ_mix)
 
     # if mix == "Air":
         # continue 
