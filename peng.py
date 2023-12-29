@@ -706,7 +706,7 @@ for g in ["H2", "CH4", "N2", "O2"]:
 
 plt.title(f'Dynamic Viscosity [data] vs Temperature at {pressure} bar')
 plt.xlabel('Temperature (°C)')
-plt.ylabel('Dynamic Viscosity (μPa.s) - hernzip  mixing rule')
+plt.ylabel('Dynamic Viscosity (μPa.s) - linear Mw mixing rule')
 plt.legend()
 plt.grid(True)
 
