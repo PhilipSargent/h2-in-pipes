@@ -564,27 +564,25 @@ def get_Hc(g):
     return None
     
 def print_wobbe(g, p, T):
-    """HHV and Wobbe much be in MJ/m3
+    """HHV and Wobbe much be in MJ/m3, but at zero C and 1 atm, not p and T as given
     """
-    mm_air = do_mm_rules('Air')
-    ϱ_air = get_density('Air', p, T)
-    if g in gas_mixtures:
-        mm = do_mm_rules(g) # mean molar mass
-        ϱ = get_density(g, p, T)
-    else:
-        mm = gas_data[g]['Mw']
-        ϱ = density_actual(g, T, p)
-    wobbe_factorMw = 1/np.sqrt(mm/mm_air)
-    wobbe_factorϱ = 1/np.sqrt(ϱ/ϱ_air)
+    ϱ = get_density(g, p, T)
+    
+    # Wobbe is at STP
+    ϱ_0 = get_density(g, Atm, 273.15)
+    ϱ_air = get_density('Air', Atm, 273.15)
+ 
+    wobbe_factor_ϱ = 1/np.sqrt(ϱ_0/ϱ_air)
     
     hc = get_Hc(g)
     if hc:
-        w = wobbe_factorϱ * hc
+        w = wobbe_factor_ϱ * hc
         w = f"{w:.5f}"
     else:
-        w = ""        
-    
-    print(f"{g:15} {mm:6.3f} {ϱ:.5f}   {wobbe_factorMw:.5f} {wobbe_factorϱ:.5f}   {w}")
+        w = " - "      
+        
+    mm = do_mm_rules(g) # mean molar mass
+    print(f"{g:15} {mm:6.3f} {ϱ:.5f}   {wobbe_factor_ϱ:.5f}   {w}")
     
 # ---------- ----------main program starts here---------- ------------- #
 
@@ -624,12 +622,13 @@ T = 273.15 + tp
 # Print the densities at 15 C  - - - - - - - - - - -
 
 print(f"Mw and density of gases (kg/m³)at T={tp:.1f}°C and P={dp:.1f} mbar above 1 atm, i.e. P={pressure:.5f} bar")
+print(f"{'gas':15} {'Mw':6} {'ϱ':5}   {'W_factor_ϱ':5}   Wobbe No. ")
 for g in gas_mixtures:
     print_wobbe(g, pressure, T)
 for g in ["H2", "CH4"]:
     print_wobbe(g, pressure, T)
 
-print(f"3rd & 4th columns are wobbe factor = 1/(sqrt(Mw/Mw(air))), 1/(sqrt(ϱ/ϱ(air)))")
+print(f"3rd column is W_factor =  1/(sqrt(ϱ/ϱ(air))) at 0°C and 1 atm ({Atm} bar)")
 
 # Plot the compressibility  - - - - - - - - - - -
 
