@@ -23,7 +23,7 @@ UNITS: bar, K, litres
 # a higher acentric factor indicates greater deviation from spherical shape
 # PR constants data from ..aargh lost it.
 
-R = 0.083144626  # l.bar/(mol.K)  SI after 2019 redefinitin of Avagadro and Boltzmann constants
+R = 0.083144626  # l.bar/(mol.K)  SI after 2019 redefinition of Avagadro and Boltzmann constants
 # 1 bar is today defined as 100,000 Pa not 1atm
 
 Atm = 1.01325 # bar 
@@ -88,7 +88,8 @@ gas_mixtures = {
     # https://en.wikipedia.org/wiki/National_Transmission_System
     # This NTS composition from Wikipedia actually comes from 1979 !  Cassidy, Richard (1979). Gas: Natural Energy. London: Frederick Muller Limited. p. 14.
     
-    'Fourdon': { 'CH4':  0.88836, 'C2H6':  0.04056, 'C3H8':  0.00997, 'iC4':  0.00202, 'nC4':  0.00202, 'neoC5':  0.000020,'iC5':  0.000346, 'nC5':  0.003490,  'C6':  0.002390, 'CO2':  0.01512, 'N2':  0.03996, }, # email John Baldwin 30/12/2023
+   'Fordoun': {'CH4': 0.895514, 'C2H6': 0.051196, 'C3H8': 0.013549, 'iC4': 0.001269, 'nC4': 0.002162, 'neoC5': 2e-05, 'iC5': 0.000344, 'nC5': 0.003472, 'C6': 0.002377, 'CO2': 0.020743, 'N2': 0.009354}, # Normalized.email John Baldwin 30/12/2023
+    # 'Fordoun': { 'CH4':  0.900253, 'C2H6':  0.051467, 'C3H8':  0.013621, 'iC4':  0.001276, 'nC4':  0.002173, 'neoC5':  0.000020,'iC5':  0.000346, 'nC5':  0.003490,  'C6':  0.002390, 'CO2':  0.020853, 'N2':  0.009404, }, # original email John Baldwin 30/12/2023
 
     '11D': { 'CH4':  0.88836, 'C2H6':  0.04056, 'C3H8':  0.00997, 'iC4':  0.00202, 'nC4':  0.00202, 'iC5':  0.00050, 'nC5':  0.00050, 'neoC5':  0.00050, 'C6':  0.00049, 'CO2':  0.01512, 'N2':  0.03996, }, # normlized 11D gas from Duchowny22, doi:10.1016/j.egyr.2022.02.289
     
@@ -117,15 +118,15 @@ gas_mixture_properties = {
 # 20% H2, remainder N.Sea gas. BUT may need adjusting to maintain Wobbe value, by adding N2 probably.
 fifth = {}
 fifth['H2'] = 0.2
-ng = gas_mixtures['11D']
+ng = gas_mixtures['Fordoun']
 for g in ng:
     fifth[g] = ng[g]*0.8
-gas_mixtures['NatGas+20%H2'] = fifth
+gas_mixtures['Fordoun+20%H2'] = fifth
 
 
 #print(f"NatGas gas 11D composition: Duchowny22, doi:10.1016/j.egyr.2022.02.289")
-print(f"NatGas at Fourdon NTS 20th Jan.2021")
-nts = gas_mixtures["Fourdon"]
+print(f"NatGas at Fordoun NTS 20th Jan.2021")
+nts = gas_mixtures["Fordoun"]
 for f in nts:
     print(f"{f:5}\t{nts[f]*100:7.5f} %")
     
@@ -223,8 +224,12 @@ def estimate_k(gas1, gas2, T=298):
     k = 1 - 0.885 * pow(term, -0.036)
     return k
     
-def check_composition(mix, composition):
-    """Checks that the mole fractions add up to 100%"""
+def check_composition(mix, composition, n=0):
+    """Checks that the mole fractions add up to 100%
+    This gives warnings and prints out revised compositions for manual fixing,
+    but after doing that, it normalises everything perfectly using float division
+    so that all calculations on the data are using perfectly normalised compositions, even if they
+    don't quite match what the data declaration says."""
     eps = 0.000001
     warn = 0.02 # 2 %
     
@@ -239,14 +244,25 @@ def check_composition(mix, composition):
             print(f"--------- Warning gas mixture '{mix}', {100*(1-warn)}% > {100*x:.5f} > {100*(1+warn)}%. Normalizing.")
         else:
             print(f"######### BAD gas mixture '{mix}', molar fractions add up to {x} !!!")
-        #for g, m in gas_mixtures[mix].items:
-        print(f"'{mix}': {gas_mixtures[mix]},") 
+            
+        # Normalising is not done exactly, but with rounded numbers to 6 places of decimals.
+        print(f"Stated:\n   '{mix}': {gas_mixtures[mix]},") 
         for g in gas_mixtures[mix]:
             gas_mixtures[mix][g] = float(f"{gas_mixtures[mix][g]/norm:.6f}")
-        print(f"'{mix}': {gas_mixtures[mix]},") 
-        newcomp = gas_mixtures[mix]
-        check_composition(mix, newcomp)
-    # Normalise all the mixtures, even if they are close to 100%
+        print(f"Normed:\n   '{mix}': {gas_mixtures[mix]},") 
+        
+        # Recursive call to re-do normalization, still with 6 places of decimals.
+        n += 1
+        if n < 5:
+            newcomp = gas_mixtures[mix]
+            check_composition(mix, newcomp, n)
+        else:
+            print(f"Cannot normalise using rounded 6 places of decimals, doing it exactly:") 
+            gas_mixtures[mix][g] = gas_mixtures[mix][g]/norm
+            print(f"Normed:\n   '{mix}': {gas_mixtures[mix]},") 
+        
+        
+    # Normalise all the mixtures perfectly, however close they already are to 100%
     for gas, xi in composition.items(): 
         x = xi/norm
         gas_mixtures[mix][gas] = x
@@ -578,7 +594,8 @@ def get_density(mix, p, T):
 
 def get_Hc(g):
     """If the data is there, return the standard heat of combustion, 
-    but in MJ/m³ not MJ/mol"""
+    but in MJ/m³ not MJ/mol
+    Uses molar volume at (15 degrees C, 1 atm) even though reference T for Hc is 25 C"""
     if g in gas_mixture_properties and 'Hc' in gas_mixture_properties[g]:
         hc = gas_mixture_properties[g]['Hc']
     elif g in gas_data and 'Hc' in gas_data[g]:
@@ -589,9 +606,9 @@ def get_Hc(g):
         for pure_gas, x in composition.items():
             # Linear mixing rule for volume factor
             hc += x * gas_data[pure_gas]['Hc']
-    # hc is in MJ/mol, so we need to divide by the molar volume at STP (0 degrees C, 1 atm) in m³
+    # hc is in MJ/mol, so we need to divide by the molar volume at  (25 degrees C, 1 atm) in m³
     Mw = do_mm_rules(g)/1000 # Mw now in kg/mol not g/mol
-    ϱ_0 = get_density(g, 1.01325, 273.15) # in kg/m³
+    ϱ_0 = get_density(g, Atm, T15C) # in kg/m³
     molar_volume = Mw / ϱ_0  # in m³/mol
     
     if hc:
@@ -599,30 +616,46 @@ def get_Hc(g):
     else:
         return molar_volume, None, None
     
-def print_wobbe(g, p, T):
-    """HHV and Wobbe much be in MJ/m³, but at zero C and 1 atm, not p and T as given
+def print_density(g, p, T):
+    ϱ = get_density(g, p, T)
+    mm = do_mm_rules(g) # mean molar mass
+    print(f"{g:15} {mm:6.3f}  {ϱ:.5f} ")
+ 
+def print_wobbe(g):
+    """HHV and Wobbe much be in MJ/m³, but at 15 C and 1 atm, not p and T as given
     UK NTS WObbe limits from     https://www.nationalgas.com/data-and-operations/quality
+    
+    "gas that is permitted in gas networks in Great Britain must have a relative density of ≤0.700"
+    https://www.hse.gov.uk/gas/gas-safety-management-regulation-changes.htm
     also, relative density must be >0.7 and CO2 less than 2.5 mol.%
     """
-    best = (47.20 + 51.41) / 2
-    ϱ = get_density(g, p, T)
+    too_light = ""
+    best = (47.20 + 51.41) / 2 # wobbe limits
+    lowest = 47.20
+    highest = 51.41
+    width = 51.41 - 47.20
     
-    # Wobbe is at STP
-    ϱ_0 = get_density(g, Atm, 273.15)
-    ϱ_air = get_density('Air', Atm, 273.15)
+    # Wobbe is at STP: 15 C and 1 atm
+    ϱ_0 = get_density(g, Atm, T15C)
+    ϱ_air = get_density('Air', Atm, T15C)
+    
+    relative_ϱ = (ϱ_0/ϱ_air)
  
     wobbe_factor_ϱ = 1/np.sqrt(ϱ_0/ϱ_air)
     
-    mv, hcmv, hc = get_Hc(g)
-    
+    mv, hcmv, hc = get_Hc(g) 
+
+    if relative_ϱ > 0.7:
+        too_light = f"Rϱ > 0.7 ({relative_ϱ:.3f} = {ϱ_0:.3f} kg/m³)"
+        
     # yeah, yeah: 'f' strings are great
     if hc:
         w = wobbe_factor_ϱ * hcmv
-        niceness = 100*w/best - 100
+        niceness = 100*(w - best)/width  # 100*w/best - 100
         flag = f"{'nice':^8} {niceness:+.1f} %"
-        if w < 47.20:
+        if w < lowest:
             flag = f"{'LOW':^8}"
-        if w  > 51.41:
+        if w  > highest:
             flag = f"{'HIGH':^8}"
 
         w = f"{w:>.5f}"
@@ -632,11 +665,10 @@ def print_wobbe(g, p, T):
         w = f"{'-':^10}"
         hc = f"{'-':^11}"
         hcmv = f"{'-':^11}"
-        flag = f"{'-':^8}"
+        flag = f"{'  -            '}"
    
     
-    mm = do_mm_rules(g) # mean molar mass
-    print(f"{g:15} {mm:6.3f}  {ϱ:.5f}   {hc} {mv:.7f} {hcmv}{wobbe_factor_ϱ:11.5f}   {w} {flag}")
+    print(f"{g:15} {hc} {mv:.7f} {hcmv}{wobbe_factor_ϱ:>11.5f}   {w} {flag} {too_light}")
     
 # ---------- ----------main program starts here---------- ------------- #
 
@@ -662,14 +694,24 @@ T15C = T273 + tp # K
 # Print the densities at 15 C  - - - - - - - - - - -
 
 print(f"\nDensity of gas at (kg/m³)at T={tp:.1f}°C and P={dp:.1f} mbar above 1 atm, i.e. P={pressure:.5f} bar")
-print(f"Hc etc. all at 0°C and 1 atm = {Atm} bar. Wobbe limit is  47.20 to 51.41")
-print(f"W_factor_ϱ =  1/(sqrt(ϱ/ϱ(air))) ")
-print(f"{'gas':13}{'Mw(g/mol)':6}  {'ϱ(kg/m³)':5} {'Hc(MJ/mol)':11} {'MV₀(m³/mol)':11} {'Hc(MJ/m³)':11}{'W_factor_ϱ':11} Wobbe(MJ/m³) ")
-for g in gas_mixtures:
-    print_wobbe(g, pressure, T15C)
-for g in ["H2", "CH4"]:
-    print_wobbe(g, pressure, T15C)
 
+gases = []
+for g in gas_mixtures:
+    gases.append(g)
+for g in ["H2", "CH4"]:
+    gases.append(g)
+
+print(f"{'gas':13}{'Mw(g/mol)':6}  {'ϱ(kg/m³)':5} ")
+for g in gases:
+    print_density(g, pressure, T15C)
+    
+print(f"\nHc etc. all at 15°C and 1 atm = {Atm} bar. Wobbe limit is  47.20 to 51.41 MJ/m³")
+print(f"W_factor_ϱ =  1/(sqrt(ϱ/ϱ(air))) ")
+
+print(f"{'gas':13} {'Hc(MJ/mol)':11} {'MV₀(m³/mol)':11} {'Hc(MJ/m³)':11}{'W_factor_ϱ':11} Wobbe(MJ/m³) ")
+for g in gases:
+    print_wobbe(g)
+ 
 
 # Plot the compressibility  - - - - - - - - - - -
 
