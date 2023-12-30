@@ -11,6 +11,7 @@ For general information, commercial natural gas typically contains 85 to 90 perc
 
 Wobbe Number (WN) (i) ≤51.41 MJ/m³, and  (ii)  ≥47.20 MJ/m³
 https://www.nationalgas.com/data-and-operations/quality
+≥46.5MJ/m3 after 6 April 2025 https://www.hse.gov.uk/gas/gas-safety-management-regulation-changes.htm
 
 UNITS: bar, K, litres
 """
@@ -22,11 +23,16 @@ UNITS: bar, K, litres
 # a higher acentric factor indicates greater deviation from spherical shape
 # PR constants data from ..aargh lost it.
 
-R = 0.08314462  # l.bar/(mol.K)
+R = 0.083144626  # l.bar/(mol.K)  SI after 2019 redefinitin of Avagadro and Boltzmann constants
 # 1 bar is today defined as 100,000 Pa not 1atm
 
 Atm = 1.01325 # bar 
-T273 = 273.15 
+T273 = 273.15 # K
+
+
+# "In this Schedule, the reference conditions are 15C and 1.01325 bar"
+# UK law for legal Wobbe limits and their calculation.
+# https://www.legislation.gov.uk/uksi/2023/284/made
 
 # L M N for H2 from https://www.researchgate.net/figure/Coefficients-for-the-Twu-alpha-function_tbl3_306073867
 # 'L': 0.7189,'M': 2.5411,'N': 10.2,
@@ -46,7 +52,7 @@ T273 = 273.15
 
 gas_data = {
     'H2': {'Tc': 33.2, 'Pc': 13.0, 'omega': -0.22, 'Mw':2.015, 'Vs': (8.9,300, 0.692), 'Hc':0.286},
-    'CH4': {'Tc': 190.56, 'Pc': 45.99, 'omega': 0.01142, 'Mw': 16.0428, 'Vs': (11.1,300, 1.03), 'Hc':0.891},
+    'CH4': {'Tc': 190.56, 'Pc': 45.99, 'omega': 0.01142, 'Mw': 16.04246, 'Vs': (11.1,300, 1.03), 'Hc':0.89058}, # Hc from ISO_6976
     'C2H6': {'Tc': 305.32, 'Pc': 48.72, 'omega': 0.099, 'Mw': 30.07, 'Vs': (9.4,300, 0.87), 'Hc':1.561}, # 
     'C3H8': {'Tc': 369.15, 'Pc': 42.48, 'omega': 0.1521, 'Mw': 44.096, 'Vs': (8.2,300, 0.93), 'Hc':2.22}, # https://www.engineeringtoolbox.com/propane-d_1423.html
     'nC4': {'Tc': 425, 'Pc': 38,  'omega': 0.20081, 'Mw': 58.1222, 'Vs': (7.5,300, 0.950), 'Hc':2.8781}, # omega http://www.coolprop.org/fluid_properties/fluids/n-Butane.html https://www.engineeringtoolbox.com/butane-d_1415.html 
@@ -74,23 +80,26 @@ gas_data = {
 gas_mixtures = {
     'GG': {'CH4': 0.813, 'C2H6': 0.0285, 'C3H8': 0.0037, 'nC4': 0.0014, 'nC5': 0.0004, 'C6': 0.0006, 'CO2': 0.0089, 'N2': 0.1435, 'O2': 0}, # Groeningen gas https://en.wikipedia.org/wiki/Groningen_gas_field
     
-    'Our mix': {'CH4': 0.92,  'C3H8': 0.04, 'CO2': 0.04 }, # wobbe central, not a real natural gas  https://www.gasgovernance.co.uk/sites/default/files/ggf/Impact%20of%20Natural%20Gas%20Composition%20-%20Paper_0.pdf
+    'Biomethane': {'CH4': 0.92,  'C3H8': 0.04, 'CO2': 0.04 }, # wobbe central, not a real natural gas  https://www.gasgovernance.co.uk/sites/default/files/ggf/Impact%20of%20Natural%20Gas%20Composition%20-%20Paper_0.pdf
     
     'mix6': {'CH4': 0.8, 'C2H6': 0.05, 'C3H8': 0.03, 'CO2': 0.02, 'N2': 0.10}, # ==mix6 from      https://backend.orbit.dtu.dk/ws/files/131796794/FPE_D_16_00902R1.pdf - no, somewhere else..
 
     'NTS79': {'CH4': 0.9363, 'C2H6': 0.0325, 'C3H8': 0.0069, 'nC4': 0.0027, 'CO2': 0.0013, 'N2': 0.0178, 'He': 0.0005, 'nC5': 0.002}, # https://en.wikipedia.org/wiki/National_Transmission_System
+    # https://en.wikipedia.org/wiki/National_Transmission_System
     # This NTS composition from Wikipedia actually comes from 1979 !  Cassidy, Richard (1979). Gas: Natural Energy. London: Frederick Muller Limited. p. 14.
     
-    'NatGas': {'CH4': 0.88621, 'C2H6': 0.04046, 'C3H8': 0.009944, 'iC4': 0.002017, 'nC4': 0.002020, 'iC5': 0.000501, 'nC5': 0.0005, 'neoC5': 0.000502,  'C6': 0.000485, 'CO2': 0.015084, 'N2': 0.039866, 'He': 0.00241}, # This is 11D gas from Duchowny22, doi:10.1016/j.egyr.2022.02.289
-   
-    'Algerian': {'CH4': 0.86486, 'C2H6': 0.08788, 'C3H8': 0.01179, 'iC4': 0.00085,  'nC4': 0.00107, 'iC5': 0.00021, 'nC5': 0.00015,'C6': 0.00017,'CO2': 0.01894, 'N2': 0.01323, 'He': 0.00085}, # Algerian NG, Romeo 2022, C6+
-         
+    'Fourdon': { 'CH4':  0.88836, 'C2H6':  0.04056, 'C3H8':  0.00997, 'iC4':  0.00202, 'nC4':  0.00202, 'neoC5':  0.000020,'iC5':  0.000346, 'nC5':  0.003490,  'C6':  0.002390, 'CO2':  0.01512, 'N2':  0.03996, }, # email John Baldwin 30/12/2023
+
+    '11D': { 'CH4':  0.88836, 'C2H6':  0.04056, 'C3H8':  0.00997, 'iC4':  0.00202, 'nC4':  0.00202, 'iC5':  0.00050, 'nC5':  0.00050, 'neoC5':  0.00050, 'C6':  0.00049, 'CO2':  0.01512, 'N2':  0.03996, }, # normlized 11D gas from Duchowny22, doi:10.1016/j.egyr.2022.02.289
+    
+    'Algerian': {'CH4': 0.867977, 'C2H6': 0.085862, 'C3H8': 0.011514, 'iC4': 0.000829, 'nC4': 0.001044, 'iC5': 0.000205, 'nC5': 0.000143, 'C6': 0.000164, 'CO2': 0.018505, 'N2': 0.012927, 'He': 0.000829}, # NORMALIZED # Algerian NG, Romeo 2022, C6+
+ 
     'North Sea': {'CH4': 0.836, 'C2H6': 0.0748, 'C3H8':0.0392, 'nC4':0.0081, 'iC4':0.0081, 'nC5':0.0015, 'iC5':0.0014, 'CO2':0.0114, 'N2':0.0195}, # North Sea gas [Hassanpou] https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7347886/
         
     # 'ethane': {'C2H6': 1.0}, # ethane, but using the mixing rules: software test check
     # 'propane': {'C3H8': 1.0}, # ethane, but using the mixing rules: software test check
     #'Air': {'N2': 0.78084, 'O2': 0.209476,  'CO2': 0.0004,  'Ar': 0.00934,  'He': 5.24e-06, 'H2O': 0.025}, 
-    'Air':  {'N2': 0.76175, 'O2': 0.204355, 'CO2': 0.00039, 'Ar': 0.009112, 'He': 5.11e-06, 'H2O': 0.024389} # https://www.thoughtco.com/chemical-composition-of-air-604288
+    'Air':  {'N2': 0.761749, 'O2': 0.204355, 'CO2': 0.00039, 'Ar': 0.009112, 'He': 5.0e-06, 'H2O': 0.024389} # https://www.thoughtco.com/chemical-composition-of-air-604288
     # But ALSO adding 2.5% moisture to the air and normalising
 }
 
@@ -100,7 +109,7 @@ This shall enter into force from 6 April 2025
 https://www.nationalgas.com/document/144896/download
 """
 gas_mixture_properties = {
-    'Algerian': {'Wb': 49.992, 'HHV': 39.841, 'RD': 0.6351}, #Algerian NG, Romeo 2022, C6+
+    'Algerian': {'Wb': 49.992, 'HHV': 39.841, 'RD': 0.6351}, #Algerian NG, Romeo 2022, C6+ BUT not according to my calcs. for Hc and wobbe.
     'Air': {'Hc': 0} 
 }
 
@@ -108,16 +117,17 @@ gas_mixture_properties = {
 # 20% H2, remainder N.Sea gas. BUT may need adjusting to maintain Wobbe value, by adding N2 probably.
 fifth = {}
 fifth['H2'] = 0.2
-ng = gas_mixtures['NatGas']
+ng = gas_mixtures['11D']
 for g in ng:
     fifth[g] = ng[g]*0.8
 gas_mixtures['NatGas+20%H2'] = fifth
 
 
-print(f"NatGas gas composition: Duchowny22, doi:10.1016/j.egyr.2022.02.289")
-nts = gas_mixtures["NatGas"]
+#print(f"NatGas gas 11D composition: Duchowny22, doi:10.1016/j.egyr.2022.02.289")
+print(f"NatGas at Fourdon NTS 20th Jan.2021")
+nts = gas_mixtures["Fourdon"]
 for f in nts:
-    print(f"{f:5} {nts[f]*100:7.4f} %")
+    print(f"{f:5}\t{nts[f]*100:7.5f} %")
     
 # Binary interaction parameters for hydrocarbons for Peng-Robinson
 # based on the Chueh-Prausnitz correlation
@@ -215,7 +225,7 @@ def estimate_k(gas1, gas2, T=298):
     
 def check_composition(mix, composition):
     """Checks that the mole fractions add up to 100%"""
-    eps = 0.00001
+    eps = 0.000001
     warn = 0.02 # 2 %
     
     x = 0
@@ -226,14 +236,16 @@ def check_composition(mix, composition):
 
     if abs(x - 1.0) > eps:
         if abs(x - 1.0) < warn:
-            print(f"--------- Warning gas mixture '{mix}', {100*(1-warn)}% > {100*x:.3f} > {100*(1+warn)}%. Normalizing.")
+            print(f"--------- Warning gas mixture '{mix}', {100*(1-warn)}% > {100*x:.5f} > {100*(1+warn)}%. Normalizing.")
         else:
             print(f"######### BAD gas mixture '{mix}', molar fractions add up to {x} !!!")
-            #for g, m in gas_mixtures[mix].items:
-            print(f"{mix} {gas_mixtures[mix]}") 
-            for g in gas_mixtures[mix]:
-                gas_mixtures[mix][g] = float(f"{gas_mixtures[mix][g]/norm:.6f}")
-            print(f"{mix} {gas_mixtures[mix]}") 
+        #for g, m in gas_mixtures[mix].items:
+        print(f"'{mix}': {gas_mixtures[mix]},") 
+        for g in gas_mixtures[mix]:
+            gas_mixtures[mix][g] = float(f"{gas_mixtures[mix][g]/norm:.6f}")
+        print(f"'{mix}': {gas_mixtures[mix]},") 
+        newcomp = gas_mixtures[mix]
+        check_composition(mix, newcomp)
     # Normalise all the mixtures, even if they are close to 100%
     for gas, xi in composition.items(): 
         x = xi/norm
@@ -532,6 +544,24 @@ def viscosity_LGE(Mw, T_k, ϱ):
 
     return mu 
 
+def print_bip():
+    """Print out the binary interaction parameters
+    """
+    for g1 in gas_data:
+        if g1 in k_ij:
+            print("")
+            for g2 in gas_data:
+               if g2 in k_ij[g1]:
+                pass
+                print(f"{g1}:{g2} {k_ij[g1][g2]} - {estimate_k(g1,g2):.3f} {k_ij[g1][g2]/estimate_k(g1,g2):.3f}", end="\n")
+            print("")
+
+    for g1 in gas_data:
+        for g2 in gas_data:
+           pass
+           print(f"{g1}:{g2}  {estimate_k(g1,g2):.3f}  ", end="")
+        print("")
+
 @memoize
 def get_density(mix, p, T):
     if g in gas_data:
@@ -572,6 +602,7 @@ def get_Hc(g):
 def print_wobbe(g, p, T):
     """HHV and Wobbe much be in MJ/m³, but at zero C and 1 atm, not p and T as given
     UK NTS WObbe limits from     https://www.nationalgas.com/data-and-operations/quality
+    also, relative density must be >0.7 and CO2 less than 2.5 mol.%
     """
     best = (47.20 + 51.41) / 2
     ϱ = get_density(g, p, T)
@@ -590,9 +621,9 @@ def print_wobbe(g, p, T):
         niceness = 100*w/best - 100
         flag = f"{'nice':^8} {niceness:+.1f} %"
         if w < 47.20:
-            flag = "TOO LOW"
+            flag = f"{'LOW':^8}"
         if w  > 51.41:
-            flag = "TOO HIGH"
+            flag = f"{'HIGH':^8}"
 
         w = f"{w:>.5f}"
         hc = f"{hc:^11.3f}"
@@ -620,28 +651,14 @@ for mix in gas_mixtures:
     composition = gas_mixtures[mix]
     check_composition(mix, composition)
 
-
     
-for g1 in gas_data:
-    if g1 in k_ij:
-        #print("")
-        for g2 in gas_data:
-           if g2 in k_ij[g1]:
-            pass
-            # print(f"{g1}:{g2} {k_ij[g1][g2]} - {estimate_k(g1,g2):.3f} {k_ij[g1][g2]/estimate_k(g1,g2):.3f}", end="\n")
-        # print("")
-
-for g1 in gas_data:
-    for g2 in gas_data:
-       pass
-       # print(f"{g1}:{g2}  {estimate_k(g1,g2):.3f}  ", end="")
-    # print("")
-
+# print_bip() # binary interaction parameters
 
 dp = 47.5
-tp = 15
+tp = 15 # C
 pressure =  Atm + dp/1000 # 1atm + 47.5 mbar, halfway between 20 mbar and 75 mbar
-T = 273.15 + tp
+T15C = T273 + tp # K
+
 # Print the densities at 15 C  - - - - - - - - - - -
 
 print(f"\nDensity of gas at (kg/m³)at T={tp:.1f}°C and P={dp:.1f} mbar above 1 atm, i.e. P={pressure:.5f} bar")
@@ -649,9 +666,9 @@ print(f"Hc etc. all at 0°C and 1 atm = {Atm} bar. Wobbe limit is  47.20 to 51.4
 print(f"W_factor_ϱ =  1/(sqrt(ϱ/ϱ(air))) ")
 print(f"{'gas':13}{'Mw(g/mol)':6}  {'ϱ(kg/m³)':5} {'Hc(MJ/mol)':11} {'MV₀(m³/mol)':11} {'Hc(MJ/m³)':11}{'W_factor_ϱ':11} Wobbe(MJ/m³) ")
 for g in gas_mixtures:
-    print_wobbe(g, pressure, T)
+    print_wobbe(g, pressure, T15C)
 for g in ["H2", "CH4"]:
-    print_wobbe(g, pressure, T)
+    print_wobbe(g, pressure, T15C)
 
 
 # Plot the compressibility  - - - - - - - - - - -
