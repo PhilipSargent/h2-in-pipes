@@ -203,8 +203,8 @@ def plot_diagram(title, filename, plot="loglog"):
     
 # Define the Reynolds number range and relative roughness values
 # only need 10 points for the straight line
-reynolds_laminar = np.logspace(2.7, 3.9, 5) # 10^2.7 = 501, 10^3.4 = 2512
-reynolds = np.logspace(3.4, 7.7, 500) # 10^7.7 = 5e7
+reynolds_laminar = np.logspace(2.9, 3.9, 5) # 10^2.7 = 501, 10^3.4 = 2512
+reynolds = np.logspace(3.4, 9.0, 500) # 10^7.7 = 5e7
 relative_roughness_values = [0.01, 0.001, 0.0001, 0.00001]
 
 fp = piggot()
@@ -213,7 +213,7 @@ plot_diagram('Moody Diagram', 'moody_diagram.png', plot="loglog")
 
 # Plot enlarged diagram
 reynolds_laminar = np.logspace(2.9, 3.4, 5) # 10^2.7 = 501, 10^3.4 = 2512
-reynolds = np.logspace(3.4, 4.0, 500) 
+reynolds = np.logspace(3.4, 5.0, 500) 
 relative_roughness_values = [0.01, 0.003, 0.001]
 
 # fp = piggot() # not in view on the enlarged plot
