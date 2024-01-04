@@ -78,10 +78,13 @@ gas_data = {
 
 # Natural gas compositions (mole fractions)
 gas_mixtures = {
-    'GG': {'CH4': 0.813, 'C2H6': 0.0285, 'C3H8': 0.0037, 'nC4': 0.0014, 'nC5': 0.0004, 'C6': 0.0006, 'CO2': 0.0089, 'N2': 0.1435, 'O2': 0}, # Groeningen gas https://en.wikipedia.org/wiki/Groningen_gas_field
+    'Groening': {'CH4': 0.813, 'C2H6': 0.0285, 'C3H8': 0.0037, 'nC4': 0.0014, 'nC5': 0.0004, 'C6': 0.0006, 'CO2': 0.0089, 'N2': 0.1435, 'O2': 0}, # Groeningen gas https://en.wikipedia.org/wiki/Groningen_gas_field
     
     'Biomethane': {'CH4': 0.92,  'C3H8': 0.04, 'CO2': 0.04 }, # wobbe central, not a real natural gas  https://www.gasgovernance.co.uk/sites/default/files/ggf/Impact%20of%20Natural%20Gas%20Composition%20-%20Paper_0.pdf
-    
+ 
+    '10C2-10N': {'CH4': 0.80,  'C3H8': 0.1, 'N2': 0.1 }, # RH corner of allowable wobbe polygon ?
+    '7C2-2N': {'CH4': 0.91,  'C3H8': 0.07, 'N2': 0.02 }, # top corner of allowable wobbe polygon ?
+  
     'mix6': {'CH4': 0.8, 'C2H6': 0.05, 'C3H8': 0.03, 'CO2': 0.02, 'N2': 0.10}, # ==mix6 from      https://backend.orbit.dtu.dk/ws/files/131796794/FPE_D_16_00902R1.pdf - no, somewhere else..
 
     'NTS79': {'CH4': 0.9363, 'C2H6': 0.0325, 'C3H8': 0.0069, 'nC4': 0.0027, 'CO2': 0.0013, 'N2': 0.0178, 'He': 0.0005, 'nC5': 0.002}, # https://en.wikipedia.org/wiki/National_Transmission_System
@@ -99,8 +102,10 @@ gas_mixtures = {
         
     # 'ethane': {'C2H6': 1.0}, # ethane, but using the mixing rules: software test check
     # 'propane': {'C3H8': 1.0}, # ethane, but using the mixing rules: software test check
-    #'Air': {'N2': 0.78084, 'O2': 0.209476,  'CO2': 0.0004,  'Ar': 0.00934,  'He': 5.24e-06, 'H2O': 0.025}, 
-    'Air':  {'N2': 0.761749, 'O2': 0.204355, 'CO2': 0.00039, 'Ar': 0.009112, 'He': 5.0e-06, 'H2O': 0.024389} # https://www.thoughtco.com/chemical-composition-of-air-604288
+    
+    # dry air from Picard2008, who is quoting 
+    'dryAir':  {'N2': 0.780848, 'O2': 0.209390, 'CO2': 0.00040, 'Ar': 0.009332},
+    #'Air':  {'N2': 0.761749, 'O2': 0.204355, 'CO2': 0.00039, 'Ar': 0.009112, 'He': 5.0e-06, 'H2O': 0.024389} # https://www.thoughtco.com/chemical-composition-of-air-604288
     # But ALSO adding 2.5% moisture to the air and normalising
 }
 
@@ -123,6 +128,12 @@ for g in ng:
     fifth[g] = ng[g]*0.8
 gas_mixtures['Fordoun+20%H2'] = fifth
 
+air = {}
+air['H2O'] = 0.0084 # 50% RH at 15
+ag = gas_mixtures['dryAir']
+for g in ag:
+    air[g] = ag[g]*(1 - air['H2O'])
+gas_mixtures['Air'] = air
 
 #print(f"NatGas gas 11D composition: Duchowny22, doi:10.1016/j.egyr.2022.02.289")
 print(f"NatGas at Fordoun NTS 20th Jan.2021")
@@ -712,7 +723,7 @@ print(f"{'gas':13} {'Hc(MJ/mol)':11} {'MV₀(m³/mol)':11} {'Hc(MJ/m³)':11}{'W_
 for g in gases:
     print_wobbe(g)
  
-
+print("'nice' values range from -50% to +50% from the centre of the valid Wobbe range.")
 # Plot the compressibility  - - - - - - - - - - -
 
 # Calculate Z0 for each gas
@@ -721,7 +732,7 @@ for gas in gas_data:
     Z0[gas] = peng_robinson(T273+25, pressure, gas)
 
 # Plot Z compressibility factor for pure hydrogen and natural gases
-temperatures = np.linspace(243.15, 323.15, 100)  
+temperatures = np.linspace(233.15, 323.15, 100)  
   # bar
 
 plt.figure(figsize=(10, 6))
