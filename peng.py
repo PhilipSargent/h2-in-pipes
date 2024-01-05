@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import pathlib as pl
 import sys
 
-"""This code written in December 2023 by Philip Sargent to support a paper on the replacement of natural
+"""This code written Philip Sargent, starting in December 2023, by  to support a paper on the replacement of natural
 gas in the UK distribution grid with hydrogen.
 
 For general information, commercial natural gas typically contains 85 to 90 percent methane, with the remainder mainly nitrogen and ethane, and has a calorific value of approximately 38 megajoules (MJ) per cubic metre
