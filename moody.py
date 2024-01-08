@@ -209,6 +209,14 @@ relative_roughness_values = [0.01, 0.001, 0.0001, 0.00001]
 
 fp = piggot()
 
+params = {'legend.fontsize': 'x-large',
+          'figure.figsize': (10, 6),
+         'axes.labelsize': 'x-large',
+         'axes.titlesize':'x-large',
+         'xtick.labelsize':'x-large',
+         'ytick.labelsize':'x-large'}
+plt.rcParams.update(params)
+
 plot_diagram('Moody Diagram', 'moody_diagram.png', plot="loglog")
 
 # Plot enlarged diagram

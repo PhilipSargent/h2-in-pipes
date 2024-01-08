@@ -91,8 +91,8 @@ gas_mixtures = {
     # https://en.wikipedia.org/wiki/National_Transmission_System
     # This NTS composition from Wikipedia actually comes from 1979 !  Cassidy, Richard (1979). Gas: Natural Energy. London: Frederick Muller Limited. p. 14.
     
-   'Fordoun': {'CH4': 0.895514, 'C2H6': 0.051196, 'C3H8': 0.013549, 'iC4': 0.001269, 'nC4': 0.002162, 'neoC5': 2e-05, 'iC5': 0.000344, 'nC5': 0.003472, 'C6': 0.002377, 'CO2': 0.020743, 'N2': 0.009354}, # Normalized.email John Baldwin 30/12/2023
-    # 'Fordoun': { 'CH4':  0.900253, 'C2H6':  0.051467, 'C3H8':  0.013621, 'iC4':  0.001276, 'nC4':  0.002173, 'neoC5':  0.000020,'iC5':  0.000346, 'nC5':  0.003490,  'C6':  0.002390, 'CO2':  0.020853, 'N2':  0.009404, }, # original email John Baldwin 30/12/2023
+   'NG': {'CH4': 0.895514, 'C2H6': 0.051196, 'C3H8': 0.013549, 'iC4': 0.001269, 'nC4': 0.002162, 'neoC5': 2e-05, 'iC5': 0.000344, 'nC5': 0.003472, 'C6': 0.002377, 'CO2': 0.020743, 'N2': 0.009354}, # Normalized.email John Baldwin 30/12/2023 - Fordoun
+    # 'Fordoun': { 'CH4':  0.900253, 'C2H6':  0.051467, 'C3H8':  0.013621, 'iC4':  0.001276, 'nC4':  0.002173, 'neoC5':  0.000020,'iC5':  0.000346, 'nC5':  0.003490,  'C6':  0.002390, 'CO2':  0.020853, 'N2':  0.009404, }, # original email John Baldwin 30/12/2023, unnormalized
 
     '11D': { 'CH4':  0.88836, 'C2H6':  0.04056, 'C3H8':  0.00997, 'iC4':  0.00202, 'nC4':  0.00202, 'iC5':  0.00050, 'nC5':  0.00050, 'neoC5':  0.00050, 'C6':  0.00049, 'CO2':  0.01512, 'N2':  0.03996, }, # normlized 11D gas from Duchowny22, doi:10.1016/j.egyr.2022.02.289
     
@@ -123,10 +123,10 @@ gas_mixture_properties = {
 # 20% H2, remainder N.Sea gas. BUT may need adjusting to maintain Wobbe value, by adding N2 probably.
 fifth = {}
 fifth['H2'] = 0.2
-ng = gas_mixtures['Fordoun']
+ng = gas_mixtures['NG']
 for g in ng:
     fifth[g] = ng[g]*0.8
-gas_mixtures['Fordoun+20%H2'] = fifth
+gas_mixtures['NG+20%H2'] = fifth
 
 air = {}
 air['H2O'] = 0.0084 # 50% RH at 15
@@ -137,11 +137,11 @@ gas_mixtures['Air'] = air
 
 #print(f"NatGas gas 11D composition: Duchowny22, doi:10.1016/j.egyr.2022.02.289")
 print(f"NatGas at Fordoun NTS 20th Jan.2021")
-nts = gas_mixtures["Fordoun"]
+nts = gas_mixtures["NG"]
 for f in nts:
     print(f"{f:5}\t{nts[f]*100:7.5f} %")
     
-display_gases = ["Fordoun", "Fordoun+20%H2", "GG"]
+display_gases = ["NG", "NG+20%H2"]
 # Binary interaction parameters for hydrocarbons for Peng-Robinson
 # based on the Chueh-Prausnitz correlation
 # from https://wiki.whitson.com/eos/cubic_eos/
@@ -722,7 +722,13 @@ print(f"W_factor_ϱ =  1/(sqrt(ϱ/ϱ(air))) ")
 
 
 # Plot defaults
-plt.rcParams.update({'axes.titlesize': 'x-large', 'figure.titlesize': 'large', 'legend.fontsize': 'large',})
+params = {'legend.fontsize': 'x-large',
+          'figure.figsize': (10, 6),
+         'axes.labelsize': 'x-large',
+         'axes.titlesize':'x-large',
+         'xtick.labelsize':'x-large',
+         'ytick.labelsize':'x-large'}
+plt.rcParams.update(params)
 
 print(f"{'gas':13} {'Hc(MJ/mol)':11} {'MV₀(m³/mol)':11} {'Hc(MJ/m³)':11}{'W_factor_ϱ':11} Wobbe(MJ/m³) ")
 for g in gases:
@@ -795,7 +801,7 @@ plt.close()
 
 # Vicosity for gas mixtures LGE
 # μ_ng[mix] was calculated earlier, but not plotted earlier
-for mix in gas_mixtures:
+for mix in display_gases:
    plt.plot(temperatures - T273, μ_ng[mix], label=mix)
 
 # Viscosity plots for pure gases
