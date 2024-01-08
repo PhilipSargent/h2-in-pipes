@@ -141,6 +141,7 @@ nts = gas_mixtures["Fordoun"]
 for f in nts:
     print(f"{f:5}\t{nts[f]*100:7.5f} %")
     
+display_gases = ["Fordoun", "Fordoun+20%H2", "GG"]
 # Binary interaction parameters for hydrocarbons for Peng-Robinson
 # based on the Chueh-Prausnitz correlation
 # from https://wiki.whitson.com/eos/cubic_eos/
@@ -707,7 +708,7 @@ T15C = T273 + tp # K
 print(f"\nDensity of gas at (kg/m³)at T={tp:.1f}°C and P={dp:.1f} mbar above 1 atm, i.e. P={pressure:.5f} bar")
 
 gases = []
-for g in gas_mixtures:
+for g in display_gases:
     gases.append(g)
 for g in ["H2", "CH4"]:
     gases.append(g)
@@ -715,9 +716,13 @@ for g in ["H2", "CH4"]:
 print(f"{'gas':13}{'Mw(g/mol)':6}  {'ϱ(kg/m³)':5} ")
 for g in gases:
     print_density(g, pressure, T15C)
-    
+
 print(f"\nHc etc. all at 15°C and 1 atm = {Atm} bar. Wobbe limit is  47.20 to 51.41 MJ/m³")
 print(f"W_factor_ϱ =  1/(sqrt(ϱ/ϱ(air))) ")
+
+
+# Plot defaults
+plt.rcParams.update({'axes.titlesize': 'x-large', 'figure.titlesize': 'large', 'legend.fontsize': 'large',})
 
 print(f"{'gas':13} {'Hc(MJ/mol)':11} {'MV₀(m³/mol)':11} {'Hc(MJ/m³)':11}{'W_factor_ϱ':11} Wobbe(MJ/m³) ")
 for g in gases:
@@ -751,7 +756,7 @@ plt.plot(temperatures - T273, Z_CH4, label='Pure methane', linestyle='dashed')
 ϱ_ng = {}
 μ_ng = {}
 
-for mix in gas_mixtures:
+for mix in display_gases:
     mm = do_mm_rules(mix) # mean molar mass
     ϱ_ng[mix] = []
     μ_ng[mix] = []
@@ -854,7 +859,7 @@ plt.close()
 
 P = pressure
 re_g = {}
-for mix in gas_mixtures:
+for mix in display_gases:
     re_g[mix] = []
     for i in range(len(μ_g[mix])):
         re_g[mix].append( ϱ_ng[mix][i] / μ_g[mix][i])
@@ -864,7 +869,7 @@ for mix in gas_mixtures:
 # Viscosity plots for pure gases 
 P = pressure
 re_pg = {}
-for g in ["H2", "CH4", "N2", "O2"]: 
+for g in ["H2", "CH4"]: 
     re_pg[g] = []
     for T in temperatures:
         re = density_actual(g, T, P) / viscosity_actual(g, T, P)
@@ -884,12 +889,12 @@ plt.close()
 # Density plot  - - - - - - - - - - -
 
 # pure gases
-for g in ["H2", "CH4", "N2", "O2"]: 
+for g in ["H2", "CH4"]: 
     ϱ_pg = [pressure * gas_data[g]['Mw'] / (peng_robinson(T, pressure, g) * R * T)  for T in temperatures]
     plt.plot(temperatures - T273, ϱ_pg, label = "pure " + g, linestyle='dashed')
 
 # Density plots for gas mixtures
-for mix in gas_mixtures:
+for mix in display_gases:
     plt.plot(temperatures - T273, ϱ_ng[mix], label=mix)
 
 plt.title(f'Density vs Temperature at {pressure} bar')
@@ -927,7 +932,7 @@ plt.plot(pressures, Z_C2H6, label='Pure ethane', linestyle='dashed')
 ϱ_ng = {}
 μ_ng = {}
 
-for mix in gas_mixtures:
+for mix in display_gases:
     mm = do_mm_rules(mix) # mean molar mass
     ϱ_ng[mix] = []
     μ_ng[mix] = []
@@ -945,8 +950,6 @@ for mix in gas_mixtures:
         ϱ_mix = p * mm / (Z_mix * R * T)
         ϱ_ng[mix].append(ϱ_mix)
 
-    # if mix == "Air":
-        # continue 
     plt.plot(pressures , Z_ng, label=mix)
 
 plt.title(f'Z  Compressibility Factor vs Pressure at {T} K')
