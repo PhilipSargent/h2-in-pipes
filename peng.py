@@ -768,7 +768,7 @@ for gas in gas_data:
     Z0[gas] = peng_robinson(T273+25, pressure, gas)
 
 # Plot Z compressibility factor for pure hydrogen and natural gases
-temperatures = np.linspace(233.15, 923.15, 100)  
+temperatures = np.linspace(233.15, 323.15, 100)  
   # bar
 
 plt.figure(figsize=(10, 6))
@@ -821,33 +821,6 @@ plt.grid(True)
 
 plt.savefig(fn["z"])
 plt.close()
-
-# Viscosity plot  LGE - - - - - - - - - - -
-
-# Vicosity for gas mixtures LGE
-# μ_ng[mix] was calculated earlier, but not plotted earlier
-# for mix in display_gases:
-   # plt.plot(temperatures - T273, μ_ng[mix], label=mix)
-
-# Viscosity plots for pure gases
-# μ_pg = {}
-# for g in ["H2", "CH4", "N2"]:
-    # μ_pg[g] = []
-    # mm_g = gas_data[g]['Mw']
-    # for T in temperatures:
-        # ϱ_g= pressure * mm / (peng_robinson(T, pressure, g) * R * T)
-        # μ = viscosity_LGE(mm_g, T, ϱ_g)
-        # μ_pg[g].append(μ)
-    # plt.plot(temperatures - T273, μ_pg[g], label= "pure " + g, linestyle='dashed')
-
-# plt.title(f'BAD! Dynamic Viscosity [LGE] vs Temperature at {pressure} bar')
-# plt.xlabel('Temperature (°C)')
-# plt.ylabel('Dynamic Viscosity (μPa.s) - THIS IS ALL WRONG, mistake in LGE formula')
-# plt.legend()
-# plt.grid(True)
-
-# plt.savefig("peng_mu_LGE.png")
-# plt.close()
 
 # Viscosity plot  EXPTL values at 298K - - - - - - - - - - -
 
@@ -990,17 +963,10 @@ pressures = np.linspace(0, 80, 100)  # bar
 
 plt.figure(figsize=(10, 6))
 
-# Plot for pure hydrogen
-Z_H2 = [peng_robinson(T, p, 'H2') for p in pressures]
-plt.plot(pressures, Z_H2, label='Pure hydrogen', linestyle='dashed')
+for g, txt in [('H2','Pure hydrogen'), ('CH4','Pure methane'), ('C2H6','Pure ethane')]:
+    Z = [peng_robinson(T, p, g) for p in pressures]
+    plt.plot(pressures, Z, label=txt, linestyle='dashed')
 
-# Plot for pure methane
-Z_CH4 = [peng_robinson(T, p, 'CH4') for  p in pressures]
-plt.plot(pressures, Z_CH4, label='Pure methane', linestyle='dashed')
-
-# Plot for pure ethane
-Z_C2H6 = [peng_robinson(T, p, 'C2H6') for  p in pressures]
-plt.plot(pressures, Z_C2H6, label='Pure ethane', linestyle='dashed')
 
 # Plot for natural gas compositions. Now using correct temperature dependence of 'a'
 ϱ_ng = {}
@@ -1034,3 +1000,37 @@ plt.grid(True)
 
 plt.savefig("peng_z_p.png")
 plt.close()
+
+# Plot Blasius factor for pure hydrogen and natural gases
+pressures = np.linspace(0, 80, 100)  # bar
+T = T273+25
+
+plt.figure(figsize=(10, 6))
+
+for g, txt in [('H2','Pure hydrogen'), ('CH4','Pure methane'), ('C2H6','Pure ethane')]:
+    BF = [get_blasius_factor(g,P,T) for p in pressures]
+    plt.plot(pressures, BF, label=txt, linestyle='dashed')
+
+
+# Plot for natural gas compositions. Now using correct temperature dependence of 'a'
+bf_g = {}
+
+for g in bf_gases:
+    bf_g[g] = []
+
+    for p in pressures:
+        # for Z, the averaging across the mixture (a, b) is done before the calc. of Z
+        bf = get_blasius_factor(g,P,T)
+        bf_g[g].append(bf)
+
+    plt.plot(pressures , bf_g[g], label=g)
+
+plt.title(f'Blasius Factor vs Pressure at {T} K')
+plt.xlabel('Pressure (bar)')
+plt.ylabel('Blasius Factor ϱ^3/4.μ^1/4')
+plt.legend()
+plt.grid(True)
+
+plt.savefig("peng_bf_p.png")
+plt.close()
+
