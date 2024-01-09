@@ -631,7 +631,12 @@ def get_Hc(g):
 def print_density(g, p, T):
     ϱ = get_density(g, p, T)
     mm = do_mm_rules(g) # mean molar mass
-    print(f"{g:15} {mm:6.3f}  {ϱ:.5f} ")
+    if g in gas_data:
+        μ = viscosity_actual(g, T, p)
+    else:
+        values = viscosity_values(g, T, p)
+        μ = linear_mix_rule(g, values)
+    print(f"{g:15} {mm:6.3f}  {ϱ:.5f}   {μ:.5f}")
  
 def print_wobbe(g):
     """HHV and Wobbe much be in MJ/m³, but at 15 C and 1 atm, not p and T as given
@@ -713,7 +718,7 @@ for g in display_gases:
 for g in ["H2", "CH4"]:
     gases.append(g)
 
-print(f"{'gas':13}{'Mw(g/mol)':6}  {'ϱ(kg/m³)':5} ")
+print(f"{'gas':13}{'Mw(g/mol)':6}  {'ϱ(kg/m³)':5}  {'μ(Pa.s)':5} ")
 for g in gases:
     print_density(g, pressure, T15C)
 
