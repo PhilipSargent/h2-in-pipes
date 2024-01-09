@@ -515,11 +515,11 @@ def a_and_b(gas, T):
     return a, b
 
 @memoize
-def solve_for_Z(T, P, a, b):
+def solve_for_Z(T, p, a, b):
    
     # Solve cubic equation for Z the compressibility
-    A = a * P / (R * T)**2 # should have alpha in here? No..
-    B = b * P / (R * T)
+    A = a * p / (R * T)**2 # should have alpha in here? No..
+    B = b * p / (R * T)
     
     c3 = 1
     c2 = -1 +B
@@ -604,7 +604,8 @@ def get_density(mix, p, T):
     Z_mix = solve_for_Z(T, p, a, b)
     mm = do_mm_rules(mix) # mean molar mass
     # For density, the averaging across the mixture (Mw) is done before the calc. of ϱ
-    return p * mm / (Z_mix * R * T)
+    ϱ = p * mm / (Z_mix * R * T)
+    return ϱ
 
 @memoize
 def get_blasius_factor(g, p, T):
@@ -702,12 +703,18 @@ def print_wobbe(g):
     
     print(f"{g:15} {hc} {mv:.7f} {hcmv}{wobbe_factor_ϱ:>11.5f}   {w} {flag} {too_light}")
     
+def linestyle(mix):
+    if mix in gas_data:
+        return 'dashed'
+    else:
+        return 'solid'
+
 # ---------- ----------main program starts here---------- ------------- #
 
 program = sys.argv[0]
 stem = str(pl.Path(program).with_suffix(""))
 fn={}
-for s in ["z", "ϱ", "mu", "bf", "bf_NG"]:
+for s in ["z", "ϱ", "μ", "bf", "bf_NG"]:
     f = stem  + "_" + s
     fn[s] = pl.Path(f).with_suffix(".png") 
 
@@ -775,12 +782,12 @@ plt.figure(figsize=(10, 6))
 
 # Plot for pure hydrogen
 Z_H2 = [peng_robinson(T, pressure, 'H2') for T in temperatures]
-plt.plot(temperatures - T273, Z_H2, label='Pure hydrogen', linestyle='dashed')
+plt.plot(temperatures - T273, Z_H2, label='Pure hydrogen', linestyle=linestyle('H2'))
 
     
 # Plot for pure methane
 Z_CH4 = [peng_robinson(T, pressure, 'CH4') for T in temperatures]
-plt.plot(temperatures - T273, Z_CH4, label='Pure methane', linestyle='dashed')
+plt.plot(temperatures - T273, Z_CH4, label='Pure methane', linestyle=linestyle('CH4'))
 
 
 # Plot for natural gas compositions. Now using correct temperature dependence of 'a'
@@ -833,10 +840,7 @@ for mix in plot_gases:
         # μ = hernzip_mix_rule(mix, values) # Makes no visible difference wrt to linear!
         # μ = explog_mix_rule(mix, values) # very slight change by eye
         μ_g[mix].append(μ)
-    if mix in gas_data:
-        plt.plot(temperatures - T273, μ_g[mix], label= mix, linestyle='dashed')
-    else:
-        plt.plot(temperatures - T273, μ_g[mix], label= mix)
+    plt.plot(temperatures - T273, μ_g[mix], label= mix, linestyle=linestyle(mix))
 
 plt.title(f'Dynamic Viscosity [data] vs Temperature at {pressure} bar')
 plt.xlabel('Temperature (°C)')
@@ -844,7 +848,7 @@ plt.ylabel('Dynamic Viscosity (μPa.s) - linear Mw mixing rule')
 plt.legend()
 plt.grid(True)
 
-plt.savefig(fn["mu"])
+plt.savefig(fn["μ"])
 plt.close()
 
 # Blasius Factor plot  - - - - - - - - - - -
@@ -861,10 +865,8 @@ for mix in bf_gases:
     for T in temperatures:
         bf = get_blasius_factor(mix,P,T)
         bf_g[mix].append(bf)
-    if mix in gas_data:
-        plt.plot(temperatures - T273, bf_g[mix], label= mix, linestyle='dashed')
-    else:
-        plt.plot(temperatures - T273, bf_g[mix], label= mix)
+    plt.plot(temperatures - T273, bf_g[mix], label= mix, linestyle=linestyle(mix))
+
 
 plt.title(f'Blasius Factor ϱ^3/4.μ^1/4 vs Temperature at {pressure} bar')
 plt.xlabel('Temperature (°C)')
@@ -921,11 +923,8 @@ for mix in plot_gases:
     re_g[mix] = []
     for i in range(len(μ_g[mix])):
         re_g[mix].append( ϱ_ng[mix][i] / μ_g[mix][i])
-    if mix in gas_data:
-        plt.plot(temperatures - T273, re_g[mix], label= mix, linestyle='dashed')
-    else:
-        plt.plot(temperatures - T273, re_g[mix], label= mix)
-
+    plt.plot(temperatures - T273, re_g[mix], label= mix, linestyle=linestyle(mix))
+    
 plt.title(f'Density / Dynamic Viscosity vs Temperature at {pressure} bar')
 plt.xlabel('Temperature (°C)')
 plt.ylabel('Density/ Dynamic Viscosity (kg/m³)/(μPa.s) ')
@@ -940,7 +939,7 @@ plt.close()
 # pure gases
 for g in ["H2", "CH4"]: 
     ϱ_pg = [pressure * gas_data[g]['Mw'] / (peng_robinson(T, pressure, g) * R * T)  for T in temperatures]
-    plt.plot(temperatures - T273, ϱ_pg, label = "pure " + g, linestyle='dashed')
+    plt.plot(temperatures - T273, ϱ_pg, label = "pure " + g, linestyle=linestyle(g))
 
 # Density plots for gas mixtures
 for mix in display_gases:
@@ -957,6 +956,7 @@ plt.close()
 
 # Plot the compressibility  as a function of Pressure - - - - - - - - - - -
 T = T273+25
+P= None
 
 # Plot Z compressibility factor for pure hydrogen and natural gases
 pressures = np.linspace(0, 80, 100)  # bar
@@ -965,7 +965,7 @@ plt.figure(figsize=(10, 6))
 
 for g, txt in [('H2','Pure hydrogen'), ('CH4','Pure methane'), ('C2H6','Pure ethane')]:
     Z = [peng_robinson(T, p, g) for p in pressures]
-    plt.plot(pressures, Z, label=txt, linestyle='dashed')
+    plt.plot(pressures, Z, label=txt, linestyle=linestyle(g))
 
 
 # Plot for natural gas compositions. Now using correct temperature dependence of 'a'
@@ -1002,25 +1002,23 @@ plt.savefig("peng_z_p.png")
 plt.close()
 
 # Plot Blasius factor for pure hydrogen and natural gases
-pressures = np.linspace(0, 80, 100)  # bar
+pressures = np.linspace(0, 4.5, 100)  # bar
 T = T273+25
 
 plt.figure(figsize=(10, 6))
 
 for g, txt in [('H2','Pure hydrogen'), ('CH4','Pure methane'), ('C2H6','Pure ethane')]:
-    BF = [get_blasius_factor(g,P,T) for p in pressures]
+    BF = [get_blasius_factor(g,p,T) for p in pressures]
     plt.plot(pressures, BF, label=txt, linestyle='dashed')
 
 
-# Plot for natural gas compositions. Now using correct temperature dependence of 'a'
 bf_g = {}
 
 for g in bf_gases:
     bf_g[g] = []
 
     for p in pressures:
-        # for Z, the averaging across the mixture (a, b) is done before the calc. of Z
-        bf = get_blasius_factor(g,P,T)
+        bf = get_blasius_factor(g,p,T)
         bf_g[g].append(bf)
 
     plt.plot(pressures , bf_g[g], label=g)
@@ -1032,5 +1030,67 @@ plt.legend()
 plt.grid(True)
 
 plt.savefig("peng_bf_p.png")
+plt.close()
+
+# Plot viscosity as a function of pressure - looking for bugs
+pressures = np.linspace(0, 80, 100)  # bar
+T = T273+25
+
+plt.figure(figsize=(10, 6))
+
+for g, txt in [('H2','Pure hydrogen'), ('CH4','Pure methane'), ('C2H6','Pure ethane')]:
+    BF = [get_viscosity(g,p,T) for p in pressures]
+    plt.plot(pressures, BF, label=txt, linestyle=linestyle(g))
+
+
+bf_g = {}
+
+for g in bf_gases:
+    bf_g[g] = []
+
+    for p in pressures:
+        bf = get_viscosity(g,P,T)
+        bf_g[g].append(bf)
+
+    plt.plot(pressures , bf_g[g], label=g)
+
+plt.title(f'Viscosity vs Pressure at {T} K')
+plt.xlabel('Pressure (bar)')
+plt.ylabel('Dynamic Viscosity (μPa.s)')
+plt.legend()
+plt.grid(True)
+
+plt.savefig("peng_μ_p.png")
+plt.close()
+
+# Plot density as a function of pressure - looking for bugs
+pressures = np.linspace(0, 4.5, 100)  # bar
+T = T273+25
+
+plt.figure(figsize=(10, 6))
+
+# for g, txt in [('H2','Pure hydrogen'), ('CH4','Pure methane'), ('C2H6','Pure ethane')]:
+    # BF = [get_density(g,p,T) for p in pressures]
+    # plt.plot(pressures, BF, label=txt, linestyle='dashed')
+
+
+bf_g = {}
+
+for g in plot_gases:
+    bf_g[g] = []
+
+    for p in pressures:
+        bf = get_density(g,p,T)
+        bf_g[g].append(bf)
+
+    plt.plot(pressures , bf_g[g], label=g, linestyle=linestyle(g))
+
+plt.title(f'Density vs Pressure at {T} K')
+plt.xlabel('Pressure (bar)')
+plt.ylabel('Density')
+plt.legend()
+plt.grid(True)
+
+plt.savefig("peng_ϱ_p.png")
 plt.close()
 
