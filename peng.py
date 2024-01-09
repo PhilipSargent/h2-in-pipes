@@ -707,6 +707,7 @@ dp = 47.5
 tp = 15 # C
 pressure =  Atm + dp/1000 # 1atm + 47.5 mbar, halfway between 20 mbar and 75 mbar
 T15C = T273 + tp # K
+T8C = T273 + 8 # K
 
 # Print the densities at 15 C  - - - - - - - - - - -
 
@@ -718,9 +719,13 @@ for g in display_gases:
 for g in ["H2", "CH4"]:
     gases.append(g)
 
-print(f"{'gas':13}{'Mw(g/mol)':6}  {'ϱ(kg/m³)':5}  {'μ(Pa.s)':5} ")
+print(f"{'gas':13}{'Mw(g/mol)':6}  {'ϱ(kg/m³)':5}  {'μ(Pa.s)':5} T={tp:.1f}°C ")
 for g in gases:
     print_density(g, pressure, T15C)
+
+print(f"\n{'gas':13}{'Mw(g/mol)':6}  {'ϱ(kg/m³)':5}  {'μ(Pa.s)':5} T={8:.1f}°C ")
+for g in gases:
+    print_density(g, pressure, T8C)
 
 print(f"\nHc etc. all at 15°C and 1 atm = {Atm} bar. Wobbe limit is  47.20 to 51.41 MJ/m³")
 print(f"W_factor_ϱ =  1/(sqrt(ϱ/ϱ(air))) ")
