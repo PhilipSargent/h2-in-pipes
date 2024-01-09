@@ -768,7 +768,7 @@ for gas in gas_data:
     Z0[gas] = peng_robinson(T273+25, pressure, gas)
 
 # Plot Z compressibility factor for pure hydrogen and natural gases
-temperatures = np.linspace(233.15, 323.15, 100)  
+temperatures = np.linspace(233.15, 923.15, 100)  
   # bar
 
 plt.figure(figsize=(10, 6))
@@ -875,10 +875,15 @@ plt.savefig(fn["mu"])
 plt.close()
 
 # Blasius Factor plot  - - - - - - - - - - -
-
+bf_gases = []
+for g in display_gases:
+    bf_gases.append(g)
+for g in gas_data:
+    bf_gases.append(g)
+    
 P = pressure
 bf_g = {}
-for mix in plot_gases:
+for mix in bf_gases:
     bf_g[mix] = []
     for T in temperatures:
         bf = get_blasius_factor(mix,P,T)
@@ -902,18 +907,18 @@ plt.close()
 
 P = pressure
 bf_g = {}
-for mix in plot_gases:
+for mix in bf_gases:
     bf_g[mix] = []
     for T in temperatures:
         bf = get_blasius_factor(mix,P,T)
         bf_g[mix].append(bf)
  
-for mix in plot_gases:
+for mix in bf_gases:
     if mix == "NG":
          continue
     for i in range(len(temperatures)):
         T = temperatures[i]
-        print(mix, T, bf_g[mix][i]/ bf_g['NG'][i], bf_g[mix][i], bf_g['NG'][i])
+        #print(mix, T, bf_g[mix][i]/ bf_g['NG'][i], bf_g[mix][i], bf_g['NG'][i])
         bf_g[mix][i] = bf_g[mix][i]/ bf_g['NG'][i]
     if mix in gas_data:
         plt.plot(temperatures - T273, bf_g[mix], label= mix, linestyle='dashed')
