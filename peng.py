@@ -707,7 +707,7 @@ def print_wobbe(g):
 program = sys.argv[0]
 stem = str(pl.Path(program).with_suffix(""))
 fn={}
-for s in ["z", "ϱ", "mu", "bf"]:
+for s in ["z", "ϱ", "mu", "bf", "bf_NG"]:
     f = stem  + "_" + s
     fn[s] = pl.Path(f).with_suffix(".png") 
 
@@ -896,6 +896,39 @@ plt.grid(True)
 
 plt.savefig(fn["bf"])
 plt.close()
+
+
+# Blasius Factor plot NORMALIZED wrt NG  - - - - - - - - - - -
+
+P = pressure
+bf_g = {}
+for mix in plot_gases:
+    bf_g[mix] = []
+    for T in temperatures:
+        bf = get_blasius_factor(mix,P,T)
+        bf_g[mix].append(bf)
+ 
+for mix in plot_gases:
+    if mix == "NG":
+         continue
+    for i in range(len(temperatures)):
+        T = temperatures[i]
+        print(mix, T, bf_g[mix][i]/ bf_g['NG'][i], bf_g[mix][i], bf_g['NG'][i])
+        bf_g[mix][i] = bf_g[mix][i]/ bf_g['NG'][i]
+    if mix in gas_data:
+        plt.plot(temperatures - T273, bf_g[mix], label= mix, linestyle='dashed')
+    else:
+        plt.plot(temperatures - T273, bf_g[mix], label= mix)
+
+plt.title(f'Blasius Factor ϱ^3/4.μ^1/4  normalised to NG value at {pressure} bar')
+plt.xlabel('Temperature (°C)')
+plt.ylabel('Blasius Factor ')
+plt.legend()
+plt.grid(True)
+
+plt.savefig(fn["bf_NG"])
+plt.close()
+
 
 # ϱ/Viscosity plot Kinematic EXPTL values at 298K - - - - - - - - - - -
 
