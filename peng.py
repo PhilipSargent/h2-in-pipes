@@ -851,11 +851,11 @@ plt.grid(True)
 plt.savefig(fn["μ"])
 plt.close()
 
-# Blasius Factor plot  - - - - - - - - - - -
+# Blasius Parameter plot  - - - - - - - - - - -
 bf_gases = []
 for g in display_gases:
     bf_gases.append(g)
-for g in gas_data:
+for g in ["H2", "CH4", "C2H6"]:
     bf_gases.append(g)
     
 P = pressure
@@ -868,9 +868,9 @@ for mix in bf_gases:
     plt.plot(temperatures - T273, bf_g[mix], label= mix, linestyle=linestyle(mix))
 
 
-plt.title(f'Blasius Factor ϱ^3/4.μ^1/4 vs Temperature at {pressure} bar')
+plt.title(f'Blasius Parameter ϱ^3/4.μ^1/4 vs Temperature at {pressure} bar')
 plt.xlabel('Temperature (°C)')
-plt.ylabel('Blasius Factor ')
+plt.ylabel('Blasius Parameter ')
 plt.legend()
 plt.grid(True)
 
@@ -878,7 +878,7 @@ plt.savefig(fn["bf"])
 plt.close()
 
 
-# Blasius Factor plot NORMALIZED wrt NG  - - - - - - - - - - -
+# Blasius Parameter plot NORMALIZED wrt NG  - - - - - - - - - - -
 
 P = pressure
 bf_g = {}
@@ -900,9 +900,9 @@ for mix in bf_gases:
     else:
         plt.plot(temperatures - T273, bf_g[mix], label= mix)
 
-plt.title(f'Blasius Factor ϱ^3/4.μ^1/4  normalised to NG value at {pressure} bar')
+plt.title(f'Blasius Parameter ϱ^3/4.μ^1/4  normalised to NG value at {pressure} bar')
 plt.xlabel('Temperature (°C)')
-plt.ylabel('Blasius Factor ')
+plt.ylabel('Blasius Parameter ')
 plt.legend()
 plt.grid(True)
 
@@ -1001,7 +1001,7 @@ plt.grid(True)
 plt.savefig("peng_z_p.png")
 plt.close()
 
-# Plot Blasius factor for pure hydrogen and natural gases
+# Plot Blasius Parameter for pure hydrogen and natural gases
 pressures = np.linspace(0, 4.5, 100)  # bar
 T = T273+25
 
@@ -1023,9 +1023,9 @@ for g in bf_gases:
 
     plt.plot(pressures , bf_g[g], label=g)
 
-plt.title(f'Blasius Factor vs Pressure at {T} K')
+plt.title(f'Blasius Parameter vs Pressure at {T} K')
 plt.xlabel('Pressure (bar)')
-plt.ylabel('Blasius Factor ϱ^3/4.μ^1/4')
+plt.ylabel('Blasius Parameter ϱ^3/4.μ^1/4')
 plt.legend()
 plt.grid(True)
 
@@ -1068,10 +1068,6 @@ pressures = np.linspace(0, 4.5, 100)  # bar
 T = T273+25
 
 plt.figure(figsize=(10, 6))
-
-# for g, txt in [('H2','Pure hydrogen'), ('CH4','Pure methane'), ('C2H6','Pure ethane')]:
-    # BF = [get_density(g,p,T) for p in pressures]
-    # plt.plot(pressures, BF, label=txt, linestyle='dashed')
 
 
 bf_g = {}
