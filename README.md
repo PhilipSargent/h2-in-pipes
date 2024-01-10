@@ -10,3 +10,4 @@ If you would like a preprint of this paper, please email me using my GitHub id.
 ![peng_z](https://github.com/PhilipSargent/h2-in-pipes/assets/5623885/8c38150c-cf02-49b9-98d4-5269e28eb2ca)
 
 ![peng_bf](https://github.com/PhilipSargent/h2-in-pipes/assets/5623885/92a911eb-c0ea-41dc-91c2-0f80a38c8f22)
+![visc-temp](https://github.com/PhilipSargent/h2-in-pipes/assets/5623885/9883a784-3bf2-4557-86d8-043a891bf011)
