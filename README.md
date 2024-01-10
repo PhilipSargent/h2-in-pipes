@@ -3,8 +3,8 @@ Equation of state for natural gas (several varieties) and mixtures with hydrogen
 
 To cite this work, please click on "Cite this repository" on the right-hand menu.
 
-We have a paper in preapration which documents and uses these calculations for the case where UK distribution gas pipes are repurposed to carry hydrogen.
-If you would like a preprint of this paper, please email me using my GitHub id.
+We have a paper in preparation which documents and uses these calculations for the case where UK distribution gas pipes are repurposed to carry hydrogen.
+If you would like a preprint of this paper, please email me or post an Issue on this project to contact me.
 
 ![moody_diagram](https://github.com/PhilipSargent/h2-in-pipes/assets/5623885/f41ea2ca-c12e-4c8f-a717-df9572b54eea)
 ![peng_z](https://github.com/PhilipSargent/h2-in-pipes/assets/5623885/8c38150c-cf02-49b9-98d4-5269e28eb2ca)
