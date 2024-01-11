@@ -124,7 +124,7 @@ def smooth_piggot(points):
         if not k:
            print(f"All None from {j} to end ")
            return points # No more valid values left
-        print(f"at {j} invalid   found next valid {k} {f:.4f}")
+        # print(f"at {j} invalid   found next valid {k} {f:.4f}")
         v = j-1
         # valid points at j-1 and at k
         
