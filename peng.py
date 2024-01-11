@@ -692,11 +692,11 @@ def print_wobbe(g):
             flag = f"{'HIGH':^8}"
 
         w = f"{w:>.5f}"
-        hc = f"{hc:^11.3f}"
+        hc = f"{hc:^12.4f}"
         hcmv = f"{hcmv:^11.4f}"
     else:
         w = f"{'-':^10}"
-        hc = f"{'-':^11}"
+        hc = f"{'-':^12}"
         hcmv = f"{'-':^11}"
         flag = f"{'  -            '}"
    
@@ -762,7 +762,7 @@ params = {'legend.fontsize': 'x-large',
          'ytick.labelsize':'x-large'}
 plt.rcParams.update(params)
 
-print(f"{'gas':13} {'Hc(MJ/mol)':11} {'MV₀(m³/mol)':11} {'Hc(MJ/m³)':11}{'W_factor_ϱ':11} Wobbe(MJ/m³) ")
+print(f"{'gas':13} {'Hc(MJ/mol)':12} {'MV₀(m³/mol)':11} {'Hc(MJ/m³)':11}{'W_factor_ϱ':11} Wobbe(MJ/m³) ")
 for g in plot_gases:
     print_wobbe(g)
  
@@ -902,7 +902,7 @@ for mix in bf_gases:
 
 plt.title(f'Blasius Parameter ϱ^3/4.μ^1/4  normalised to NG value at {pressure} bar')
 plt.xlabel('Temperature (°C)')
-plt.ylabel('Blasius Parameter ')
+plt.ylabel('Blasius Parameter ratio ')
 plt.legend()
 plt.grid(True)
 

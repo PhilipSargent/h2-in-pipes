@@ -182,7 +182,7 @@ def plot_diagram(title, filename, plot="loglog"):
         plt.loglog(reynolds_laminar, friction_laminars, label=f'Laminar', linestyle='dotted')
         plt.loglog(reynolds, friction_blasius, label=f'Blasius', linestyle='dashed')
         if fp:
-            plt.loglog(reynolds, fp, label='Piggot', linestyle='dashdot')
+            plt.loglog(reynolds, fp, label='Piggot line', linestyle='dashdot')
         for rr, ff in friction_factors.items():
             plt.loglog(reynolds, ff, label=f'ε/D = {rr}')
     if plot == "linear":
