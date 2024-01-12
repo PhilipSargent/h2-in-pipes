@@ -141,7 +141,7 @@ nts = gas_mixtures["NG"]
 for f in nts:
     print(f"{f:5}\t{nts[f]*100:7.5f} %")
     
-display_gases = ["NG", "NG+20%H2"]
+display_gases = ["NG"]
 # Binary interaction parameters for hydrocarbons for Peng-Robinson
 # based on the Chueh-Prausnitz correlation
 # from https://wiki.whitson.com/eos/cubic_eos/
@@ -975,7 +975,7 @@ pressures = np.linspace(0, 80, 100)  # bar
 
 plt.figure(figsize=(10, 6))
 
-for g, txt in [('H2','Pure hydrogen'), ('CH4','Pure methane'), ('C2H6','Pure ethane')]:
+for g, txt in [('H2','Pure hydrogen'), ('CH4','Pure methane')]:
     Z = [peng_robinson(T, p, g) for p in pressures]
     plt.plot(pressures, Z, label=txt, linestyle=linestyle(g))
 
