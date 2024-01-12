@@ -737,7 +737,7 @@ for mix in gas_mixtures:
     
 # print_bip() # binary interaction parameters
 
-dp = 47.5
+dp = 40
 tp = 15 # C
 pressure =  Atm + dp/1000 # 1atm + 47.5 mbar, halfway between 20 mbar and 75 mbar
 T15C = T273 + tp # K
@@ -967,7 +967,7 @@ plt.savefig(fn["ϱ"])
 plt.close()
 
 # Plot the compressibility  as a function of Pressure - - - - - - - - - - -
-T = T273+25
+T = T273+8
 P= None
 
 # Plot Z compressibility factor for pure hydrogen and natural gases
@@ -1014,8 +1014,8 @@ plt.savefig("peng_z_p.png")
 plt.close()
 
 # Plot Blasius Parameter for pure hydrogen and natural gases
-pressures = np.linspace(0, 4.5, 100)  # bar
-T = T273+25
+pressures = np.linspace(1, 7, 100)  # bar
+T = T273+8
 
 plt.figure(figsize=(10, 6))
 
