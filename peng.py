@@ -592,6 +592,17 @@ def print_bip():
         print("")
 
 @memoize
+def get_z(g, p, T):
+    if g in gas_data:
+        return peng_robinson(T, p, g)
+        
+    constants = z_mixture_rules(g, T)
+    a = constants[g]['a_mix']
+    b = constants[g]['b_mix']
+    Z_mix = solve_for_Z(T, p, a, b)
+    return Z_mix
+    
+@memoize
 def get_density(mix, p, T):
     if mix in gas_data:
         g = mix
@@ -652,7 +663,8 @@ def print_density(g, p, T):
     ϱ = get_density(g, p, T)
     mm = do_mm_rules(g) # mean molar mass
     μ =  get_viscosity(g, p, T)
-    print(f"{g:15} {mm:6.3f}  {ϱ:.5f}   {μ:.5f}")
+    z =  get_z(g, p, T)
+    print(f"{g:15} {mm:6.3f}  {ϱ:.5f}   {μ:8.5f} {z:9.6f}")
  
 def print_wobbe(g):
     """HHV and Wobbe much be in MJ/m³, but at 15 C and 1 atm, not p and T as given
@@ -741,11 +753,11 @@ for g in display_gases:
 for g in ["H2", "CH4"]:
     plot_gases.append(g)
 
-print(f"{'gas':13}{'Mw(g/mol)':6}  {'ϱ(kg/m³)':5}  {'μ(Pa.s)':5} T={tp:.1f}°C ")
+print(f"{'gas':13}{'Mw(g/mol)':6}  {'ϱ(kg/m³)':5}  {'μ(Pa.s)':5} {'z (-)':5} T={tp:.1f}°C ")
 for g in plot_gases:
     print_density(g, pressure, T15C)
 
-print(f"\n{'gas':13}{'Mw(g/mol)':6}  {'ϱ(kg/m³)':5}  {'μ(Pa.s)':5} T={8:.1f}°C ")
+print(f"\n{'gas':13}{'Mw(g/mol)':6}  {'ϱ(kg/m³)':5}  {'μ(Pa.s)':5}  {'z (-)':5} T={8:.1f}°C ")
 for g in plot_gases:
     print_density(g, pressure, T8C)
 
