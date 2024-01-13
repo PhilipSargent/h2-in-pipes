@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 import pathlib as pl
 import sys
 
+from cycler import cycler
+
 """This code written Philip Sargent, starting in December 2023, by  to support a paper on the replacement of natural
 gas in the UK distribution grid with hydrogen.
 
@@ -80,6 +82,8 @@ gas_data = {
 gas_mixtures = {
     'Groening': {'CH4': 0.813, 'C2H6': 0.0285, 'C3H8': 0.0037, 'nC4': 0.0014, 'nC5': 0.0004, 'C6': 0.0006, 'CO2': 0.0089, 'N2': 0.1435, 'O2': 0}, # Groeningen gas https://en.wikipedia.org/wiki/Groningen_gas_field
     
+    'Tokyo': {'CH4': 0.896, 'C2H6': 0.056, 'C3H8': 0.0034, 'iC4': 0.0007, 'nC4': 0.0007, 'N2': 0.0432 }, # Tokyo town gas, with assumed missing gas all N2 http://members.igu.org/html/wgc2009/papers/docs/wgcFinal00580.pdf
+    
     'Biomethane': {'CH4': 0.92,  'C3H8': 0.04, 'CO2': 0.04 }, # wobbe central, not a real natural gas  https://www.gasgovernance.co.uk/sites/default/files/ggf/Impact%20of%20Natural%20Gas%20Composition%20-%20Paper_0.pdf
  
     '10C2-10N': {'CH4': 0.80,  'C3H8': 0.1, 'N2': 0.1 }, # RH corner of allowable wobbe polygon ?
@@ -149,7 +153,7 @@ display_gases = ["NG"]
 # Note that the default value (in the code) is -0.019 as this represents ideal gas behaviour.
 
 # These are used in function estimate_k_?(g1, g2) which estimates these parameters from gas data.
-# NOT NOW USED, instead weuse the Courtinho estimation procedure in estimate_k()
+# NOT NOW USED, instead weuse the Coutinho estimation procedure in estimate_k()
 # The difference is undetectable in our use at ambient conditions.
 k_ij = {
     'CH4': {'C2H6': 0.0021, 'C3H8': 0.007, 'iC4': 0.013, 'nC4': 0.012, 'iC5': 0.018, 'nC5': 0.018, 'C6': 0.021, 'CO2': 0},
@@ -715,12 +719,32 @@ def print_wobbe(g):
     
     print(f"{g:15} {hc} {mv:.7f} {hcmv}{wobbe_factor_ϱ:>11.5f}   {w} {flag} {too_light}")
     
-def linestyle(mix):
+def style(mix):
     if mix in gas_data:
         return 'dashed'
     else:
         return 'solid'
 
+colours =  {'H2': 'xkcd:red',
+   'CH4': 'xkcd:azure',
+   'C2H6': 'xkcd:orchid',
+   'NG+20%H2': 'xkcd:gold',
+   'NG': 'xkcd:violet'}
+   
+colour_cycle = cycler('color', ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'])
+
+def colour(g):
+    if g in colours:
+        return colours[g]
+    
+    splat = colour_cycle # called as a generator
+    
+    
+def plot_kwargs(g):
+    linestyle=style(g)
+    color=colour(g)
+
+    return  {'color': color, 'linestyle': linestyle}
 # ---------- ----------main program starts here---------- ------------- #
 
 program = sys.argv[0]
@@ -792,14 +816,17 @@ temperatures = np.linspace(233.15, 323.15, 100)
 
 plt.figure(figsize=(10, 6))
 
+
 # Plot for pure hydrogen
 Z_H2 = [peng_robinson(T, pressure, 'H2') for T in temperatures]
-plt.plot(temperatures - T273, Z_H2, label='Pure hydrogen', linestyle=linestyle('H2'))
+
+
+plt.plot(temperatures - T273, Z_H2, label='Pure hydrogen', **plot_kwargs('H2'))
 
     
 # Plot for pure methane
 Z_CH4 = [peng_robinson(T, pressure, 'CH4') for T in temperatures]
-plt.plot(temperatures - T273, Z_CH4, label='Pure methane', linestyle=linestyle('CH4'))
+plt.plot(temperatures - T273, Z_CH4, label='Pure methane', **plot_kwargs('CH4'))
 
 
 # Plot for natural gas compositions. Now using correct temperature dependence of 'a'
@@ -830,7 +857,7 @@ for mix in plot_gases:
         μ_mix = get_viscosity(mix, pressure, T)
         μ_ng[mix].append(μ_mix)
 
-    plt.plot(temperatures - T273, Z_ng, label=mix)
+    plt.plot(temperatures - T273, Z_ng, label=mix, **plot_kwargs(mix))
 
 plt.title(f'Z  Compressibility Factor vs Temperature at {pressure} bar')
 plt.xlabel('Temperature (°C)')
@@ -852,7 +879,7 @@ for mix in plot_gases:
         # μ = hernzip_mix_rule(mix, values) # Makes no visible difference wrt to linear!
         # μ = explog_mix_rule(mix, values) # very slight change by eye
         μ_g[mix].append(μ)
-    plt.plot(temperatures - T273, μ_g[mix], label= mix, linestyle=linestyle(mix))
+    plt.plot(temperatures - T273, μ_g[mix], label= mix, **plot_kwargs(mix))
 
 plt.title(f'Dynamic Viscosity [data] vs Temperature at {pressure} bar')
 plt.xlabel('Temperature (°C)')
@@ -877,7 +904,7 @@ for mix in bf_gases:
     for T in temperatures:
         bf = get_blasius_factor(mix,P,T)
         bf_g[mix].append(bf)
-    plt.plot(temperatures - T273, bf_g[mix], label= mix, linestyle=linestyle(mix))
+    plt.plot(temperatures - T273, bf_g[mix], label= mix, **plot_kwargs(mix))
 
 
 plt.title(f'Blasius Parameter ϱ^3/4.μ^1/4 vs Temperature at {pressure} bar')
@@ -907,10 +934,7 @@ for mix in bf_gases:
         T = temperatures[i]
         #print(mix, T, bf_g[mix][i]/ bf_g['NG'][i], bf_g[mix][i], bf_g['NG'][i])
         bf_g[mix][i] = bf_g[mix][i]/ bf_g['NG'][i]
-    if mix in gas_data:
-        plt.plot(temperatures - T273, bf_g[mix], label= mix, linestyle='dashed')
-    else:
-        plt.plot(temperatures - T273, bf_g[mix], label= mix)
+    plt.plot(temperatures - T273, bf_g[mix], label= mix, **plot_kwargs(mix))
 
 plt.title(f'Blasius Parameter ϱ^3/4.μ^1/4  normalised to NG value at {pressure} bar')
 plt.xlabel('Temperature (°C)')
@@ -935,7 +959,7 @@ for mix in plot_gases:
     re_g[mix] = []
     for i in range(len(μ_g[mix])):
         re_g[mix].append( ϱ_ng[mix][i] / μ_g[mix][i])
-    plt.plot(temperatures - T273, re_g[mix], label= mix, linestyle=linestyle(mix))
+    plt.plot(temperatures - T273, re_g[mix], label= mix, **plot_kwargs(mix))
     
 plt.title(f'Density / Dynamic Viscosity vs Temperature at {pressure} bar')
 plt.xlabel('Temperature (°C)')
@@ -951,11 +975,11 @@ plt.close()
 # pure gases
 for g in ["H2", "CH4"]: 
     ϱ_pg = [pressure * gas_data[g]['Mw'] / (peng_robinson(T, pressure, g) * R * T)  for T in temperatures]
-    plt.plot(temperatures - T273, ϱ_pg, label = "pure " + g, linestyle=linestyle(g))
+    plt.plot(temperatures - T273, ϱ_pg, label = "pure " + g, **plot_kwargs(g))
 
 # Density plots for gas mixtures
 for mix in display_gases:
-    plt.plot(temperatures - T273, ϱ_ng[mix], label=mix)
+    plt.plot(temperatures - T273, ϱ_ng[mix], label=mix, **plot_kwargs(mix))
 
 plt.title(f'Density vs Temperature at {pressure} bar')
 plt.xlabel('Temperature (°C)')
@@ -975,16 +999,16 @@ pressures = np.linspace(0, 80, 100)  # bar
 
 plt.figure(figsize=(10, 6))
 
-for g, txt in [('H2','Pure hydrogen'), ('CH4','Pure methane')]:
+for g, txt in [('H2','Pure hydrogen'), ('CH4','Pure methane'),('He','Pure helium')]:
     Z = [peng_robinson(T, p, g) for p in pressures]
-    plt.plot(pressures, Z, label=txt, linestyle=linestyle(g))
+    plt.plot(pressures, Z, label=txt, **plot_kwargs(g))
 
 
 # Plot for natural gas compositions. Now using correct temperature dependence of 'a'
 ϱ_ng = {}
 μ_ng = {}
 
-for mix in display_gases:
+for mix in gas_mixtures:
     mm = do_mm_rules(mix) # mean molar mass
     ϱ_ng[mix] = []
     μ_ng[mix] = []
@@ -1002,7 +1026,7 @@ for mix in display_gases:
         ϱ_mix = p * mm / (Z_mix * R * T)
         ϱ_ng[mix].append(ϱ_mix)
 
-    plt.plot(pressures , Z_ng, label=mix)
+    plt.plot(pressures , Z_ng, label=mix, **plot_kwargs(mix))
 
 plt.title(f'Z  Compressibility Factor vs Pressure at {T} K')
 plt.xlabel('Pressure (bar)')
@@ -1019,21 +1043,16 @@ T = T273+8
 
 plt.figure(figsize=(10, 6))
 
-for g, txt in [('H2','Pure hydrogen'), ('CH4','Pure methane'), ('C2H6','Pure ethane')]:
-    BF = [get_blasius_factor(g,p,T) for p in pressures]
-    plt.plot(pressures, BF, label=txt, linestyle='dashed')
-
-
 bf_g = {}
 
-for g in bf_gases:
+for g in plot_gases:
     bf_g[g] = []
 
     for p in pressures:
         bf = get_blasius_factor(g,p,T)
         bf_g[g].append(bf)
 
-    plt.plot(pressures , bf_g[g], label=g)
+    plt.plot(pressures , bf_g[g], label=g, **plot_kwargs(g))
 
 plt.title(f'Blasius Parameter vs Pressure at {T} K')
 plt.xlabel('Pressure (bar)')
@@ -1050,10 +1069,6 @@ T = T273+25
 
 plt.figure(figsize=(10, 6))
 
-for g, txt in [('H2','Pure hydrogen'), ('CH4','Pure methane'), ('C2H6','Pure ethane')]:
-    BF = [get_viscosity(g,p,T) for p in pressures]
-    plt.plot(pressures, BF, label=txt, linestyle=linestyle(g))
-
 
 bf_g = {}
 
@@ -1064,7 +1079,7 @@ for g in bf_gases:
         bf = get_viscosity(g,P,T)
         bf_g[g].append(bf)
 
-    plt.plot(pressures , bf_g[g], label=g)
+    plt.plot(pressures , bf_g[g], label=g, **plot_kwargs(g))
 
 plt.title(f'Viscosity vs Pressure at {T} K')
 plt.xlabel('Pressure (bar)')
@@ -1091,7 +1106,7 @@ for g in plot_gases:
         bf = get_density(g,p,T)
         bf_g[g].append(bf)
 
-    plt.plot(pressures , bf_g[g], label=g, linestyle=linestyle(g))
+    plt.plot(pressures , bf_g[g], label=g, **plot_kwargs(g))
 
 plt.title(f'Density vs Pressure at {T} K')
 plt.xlabel('Pressure (bar)')
