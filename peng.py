@@ -730,15 +730,21 @@ colours =  {'H2': 'xkcd:red',
    'C2H6': 'xkcd:orchid',
    'NG+20%H2': 'xkcd:gold',
    'NG': 'xkcd:violet'}
-   
+
+# see https://matplotlib.org/cycler/
 colour_cycle = cycler('color', ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'])
 
 def colour(g):
     if g in colours:
         return colours[g]
-    
-    splat = colour_cycle # called as a generator
-    
+    return None # default behavior
+    splat = colour_cycle() # called as a generator
+    for c in splat:
+       print(c)
+       break
+    print(g, c)
+    print(c['color'])
+    return c['color']
     
 def plot_kwargs(g):
     linestyle=style(g)
