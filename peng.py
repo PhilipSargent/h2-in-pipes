@@ -152,6 +152,9 @@ display_gases = ["NG"]
 # also from Privat & Jaubert, 2023 (quoting a 1987 paper).
 # Note that the default value (in the code) is -0.019 as this represents ideal gas behaviour.
 
+# There is a full table of BIP using teh GCM method on https://wiki.whitson.com/eos/bips/index.html#coutinho-et-al-correlation
+# using these might be better than teh Coutinho equation - future work.
+
 # These are used in function estimate_k_?(g1, g2) which estimates these parameters from gas data.
 # NOT NOW USED, instead weuse the Coutinho estimation procedure in estimate_k()
 # The difference is undetectable in our use at ambient conditions.
@@ -725,6 +728,7 @@ def style(mix):
     else:
         return 'solid'
 
+# see https://matplotlib.org/stable/users/explain/colors/colors.html (bottom of page)
 colours =  {'H2': 'xkcd:red',
    'CH4': 'xkcd:azure',
    'C2H6': 'xkcd:orchid',
@@ -732,18 +736,16 @@ colours =  {'H2': 'xkcd:red',
    'NG': 'xkcd:violet'}
 
 # see https://matplotlib.org/cycler/
-colour_cycle = cycler('color', ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'])
+#colour_cycle = cycler('color', ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'])
 
 def colour(g):
     if g in colours:
         return colours[g]
     return None # default behavior
-    splat = colour_cycle() # called as a generator
+    splat = colour_cycle() # called as a generator, but always returns first item
     for c in splat:
-       print(c)
        break
     print(g, c)
-    print(c['color'])
     return c['color']
     
 def plot_kwargs(g):
@@ -773,7 +775,7 @@ pressure =  Atm + dp/1000 # 1atm + 47.5 mbar, halfway between 20 mbar and 75 mba
 T15C = T273 + tp # K
 T8C = T273 + 8 # K
 
-# Print the densities at 15 C  - - - - - - - - - - -
+# Print the densities at 8 C and 15 C  - - - - - - - - - - -
 
 print(f"\nDensity of gas at (kg/m³)at T={tp:.1f}°C and P={dp:.1f} mbar above 1 atm, i.e. P={pressure:.5f} bar")
 
@@ -787,6 +789,13 @@ print(f"{'gas':13}{'Mw(g/mol)':6}  {'ϱ(kg/m³)':5}  {'μ(Pa.s)':5} {'z (-)':5} 
 for g in plot_gases:
     print_density(g, pressure, T15C)
 
+print(f"\n{'gas':13}{'Mw(g/mol)':6}  {'ϱ(kg/m³)':5}  {'μ(Pa.s)':5}  {'z (-)':5} T={8:.1f}°C ")
+for g in plot_gases:
+    print_density(g, pressure, T8C)
+
+dp = 55
+pressure =  Atm + dp/1000
+print(f"\nDensity of gas at (kg/m³)at T={8:.1f}°C and P={dp:.1f} mbar above 1 atm, i.e. P={pressure:.5f} bar")
 print(f"\n{'gas':13}{'Mw(g/mol)':6}  {'ϱ(kg/m³)':5}  {'μ(Pa.s)':5}  {'z (-)':5} T={8:.1f}°C ")
 for g in plot_gases:
     print_density(g, pressure, T8C)
