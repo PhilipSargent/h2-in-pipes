@@ -163,11 +163,15 @@ def piggot():
             # print(f"{i}:{p[i]:.5f} {p[i]-p[i+1]:.5f}")
     return p
     
-def plot_diagram(title, filename, plot="loglog"):
-    # Calculate the friction factor for each relative roughness
+def plot_diagram(title, filename, plot="loglog", fff=colebrook):
+    """Calculate the friction factor for each relative roughness
+    
+    fff : the friction factor function
+    """
+        
     friction_factors = {}
     for rr in relative_roughness_values:
-        friction_factors[rr] = [colebrook(re, rr) for re in reynolds]
+        friction_factors[rr] = [fff(re, rr) for re in reynolds]
         # [print(re, rr, haarland(re, rr)) for re in reynolds]
 
 
@@ -200,7 +204,8 @@ def plot_diagram(title, filename, plot="loglog"):
     plt.grid(True, which='both', ls='--')
     plt.legend()
     plt.savefig(filename)
-    
+
+# - - -- - - - -- - - - -- - - - -- - - - -- - - - -- - - - -- - - - -- - - - -- - 
 # Define the Reynolds number range and relative roughness values
 # only need 10 points for the straight line
 reynolds_laminar = np.logspace(2.9, 3.9, 5) # 10^2.7 = 501, 10^3.4 = 2512
