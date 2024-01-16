@@ -34,7 +34,7 @@ def laminar(reynolds):
     
 def blasius(reynolds):
     f = (0.316 / (reynolds**0.25))
-    if f > 0.009 and reynolds < 1e10 : # to get diagram the right shape
+    if f > 0.005 and reynolds < 1e10 : # to get diagram the right shape
         return f
     
     return None
@@ -115,7 +115,8 @@ def azfal(reynolds, relative_roughness):
         f_solution = f_new
     return f_solution
 
-rr_piggot = np.logspace(-1.3, -5, 100) # roughness values between 0.01 and 0.00001
+# roughness range for piggot line
+rr_piggot = np.logspace(-1.3, -6.1, 100) # roughness values between 0.01 and 0.00001
 
 def piggot_point(rr):
     """The Piggot line is where the Colebrook curve flattens out as a function of Re
@@ -143,10 +144,10 @@ def smooth_piggot(points):
 
     i, f = find_next_valid()  
     if not i:
-        print("All None")
+        # print("All None")
         return points # give up: a list entirely of None values
     
-    print(f"First OK at {i}")
+    # print(f"First OK at {i}")
     j = i
     while j < len(points) - 1:
         j = j+1
@@ -155,7 +156,7 @@ def smooth_piggot(points):
             continue
         k, f = find_next_valid(j)  
         if not k:
-           print(f"All None from {j} to end ")
+           # print(f"All None from {j} to end ")
            return points # No more valid values left
         # print(f"at {j} invalid   found next valid {k} {f:.4f}")
         v = j-1
@@ -170,7 +171,7 @@ def smooth_piggot(points):
             #print(f"  Averaging: {j} to {k}  = {q}/{gap} {points[v]:.5f} {points[k]:.5f}     {points[m]:.5f}")
         j = k
     
-    print(f"Done all")
+    # print(f"Done all")
     return points
 
 def piggot():
@@ -179,7 +180,9 @@ def piggot():
     for rr in rr_piggot:
         if pp := piggot_point(rr):
             f, re = pp
-            points[re] = f
+            if f < 0.043:
+                # do not ahve the Piggot lie too far above the roughest pipe
+                points[re] = f
 
     piggot_list = []
     #last_valid = None
@@ -241,12 +244,6 @@ def plot_diagram(title, filename, plot="loglog", fff=colebrook):
 # - - -- - - - -- - - - -- - - - -- - - - -- - - - -- - - - -- - - - -- - - - -- - 
 # Define the Reynolds number range and relative roughness values
 # only need 10 points for the straight line
-reynolds_laminar = np.logspace(2.9, 3.9, 5) # 10^2.7 = 501, 10^3.4 = 2512
-reynolds = np.logspace(3.4, 9.0, 500) # 10^7.7 = 5e7
-relative_roughness_values = [0.01, 0.001, 0.0001, 0.00001]
-
-fp = piggot()
-
 params = {'legend.fontsize': 'x-large',
           'figure.figsize': (10, 6),
          'axes.labelsize': 'x-large',
@@ -254,6 +251,11 @@ params = {'legend.fontsize': 'x-large',
          'xtick.labelsize':'x-large',
          'ytick.labelsize':'x-large'}
 plt.rcParams.update(params)
+
+reynolds_laminar = np.logspace(2.9, 3.9, 5) # 10^2.7 = 501, 10^3.4 = 2512
+reynolds = np.logspace(3.4, 9.0, 1000) # 10^7.7 = 5e7
+relative_roughness_values = [0.01, 0.001, 0.0001, 0.00001,  0.000001]
+fp = piggot()
 
 plot_diagram('Moody Diagram (Colebrook)', 'moody_colebrook.png', plot="loglog")
 plot_diagram('Moody Diagram (Azfal)', 'moody_azfal.png', plot="loglog", fff=azfal)
