@@ -1,4 +1,5 @@
 import math
+import sys
 
 def sonntag_vapor_pressure(T_K):
     """
@@ -25,14 +26,16 @@ def sonntag_vapor_pressure(T_K):
     P_sat = math.exp(ln_P_sat)
     return P_sat
 
+def main():
+    # Example usage
+    T_K = 300  # Temperature in Kelvin
+    atm = 101325 # Pa
+    P_sat_Pa = sonntag_vapor_pressure(T_K)
+    print(f"Saturation vapor pressure at {T_K:.2f} K is {P_sat_Pa:.2f} Pa is {P_sat_Pa/atm:.2f} atm")
+    for TC in range(0,100,5):
+        t = 273.15 + TC
+        p = sonntag_vapor_pressure(t)/atm
+        print(f"{TC:4}  {p:8.4f}" )
 
-# Example usage
-T_K = 300  # Temperature in Kelvin
-atm = 101325 # Pa
-P_sat_Pa = sonntag_vapor_pressure(T_K)
-print(f"Saturation vapor pressure at {T_K:.2f} K is {P_sat_Pa:.2f} Pa is {P_sat_Pa/atm:.2f} atm")
-for TC in range(0,100,5):
-    t = 273.15 + TC
-    p = sonntag_vapor_pressure(t)/atm
-    print(f"{TC:4}  {p:8.4f}" )
-    
+if __name__ == '__main__':
+    sys.exit(main())  
