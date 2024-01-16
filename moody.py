@@ -68,7 +68,40 @@ def colebrook(reynolds, relative_roughness):
         return 1.0 / np.sqrt(f) + 2.0 * np.log10(rr / 3.7 + 2.51 / (re * np.sqrt(f)))
 
         
-    # Solve for the friction factor using the Newton-Raphson method
+    # Solve for the friction factor using the Newton-Raphson method ?
+    f_solution = f_initial
+    f_new = f_initial
+    epsilon = 0.02
+    for _ in range(20): # not Newton method, just iterate 20x
+        if f_solution < 0:
+            f_new = lowest_f
+        else:
+            # print(f"### {reynolds}, {relative_roughness} Fail to find, need to iterate ###")
+            term = 2.51 / (reynolds * np.sqrt(f_solution))
+            f_new -= f(f_solution, reynolds, relative_roughness) / (-0.5 * f_solution**(-1.5) -  term * (-0.5 * f_solution**(-1.5)))
+        if abs((f_solution - f_new)/f_solution) < epsilon:
+            return f_new
+        f_solution = f_new
+    return f_solution
+
+@memoize 
+def azfal(reynolds, relative_roughness):
+    """Define the Azfal variant fff equation as an implicit function and solve it
+    10.1115/1.2375129
+    https://www.researchgate.net/publication/238183949_Alternate_Scales_for_Turbulent_Flow_in_Transitional_Rough_Pipes_Universal_Log_Laws
+    """
+    # Initial guess for the friction factor
+    f_initial = 0.02
+    #f_initial = haarland(reynolds, relative_roughness) #fails 
+    
+    # Define the implicit Azfal equation
+    def f(f, re, rr):
+        j = 11
+        t = np.exp(-j*5.66 /(rr*re*np.sqrt(f)))
+        return 1.0 / np.sqrt(f) + 2.0 * np.log10(+2.51 / (re * np.sqrt(f)) + rr *t / 3.7 )
+
+        
+    # Solve for the friction factor using the Newton-Raphson method (?) 
     f_solution = f_initial
     f_new = f_initial
     epsilon = 0.02
@@ -222,7 +255,8 @@ params = {'legend.fontsize': 'x-large',
          'ytick.labelsize':'x-large'}
 plt.rcParams.update(params)
 
-plot_diagram('Moody Diagram', 'moody_diagram.png', plot="loglog")
+plot_diagram('Moody Diagram (Colebrook)', 'moody_colebrook.png', plot="loglog")
+plot_diagram('Moody Diagram (Azfal)', 'moody_azfal.png', plot="loglog", fff=azfal)
 
 # Plot enlarged diagram
 reynolds_laminar = np.logspace(2.9, 3.4, 5) # 10^2.7 = 501, 10^3.4 = 2512
@@ -231,11 +265,14 @@ relative_roughness_values = [0.01, 0.003, 0.001]
 
 # fp = piggot() # not in view on the enlarged plot
 fp = None
-plot_diagram('Moody Diagram Transition region', 'moody_enlarge.png',plot="loglog")
+plot_diagram('Moody (Colebrook) Transition region', 'moody_colebrook_enlarge.png',plot="loglog")
+plot_diagram('Moody (Azfal) Transition region', 'moody_azfal_enlarge.png',plot="loglog", fff=azfal)
 
 reynolds_laminar = np.logspace(2.9, 3.4, 50) # 10^2.7 = 501, 10^3.4 = 2512
+reynolds = np.logspace(3.4, 4.0, 500) 
 
-plot_diagram('Moody Diagram Transition region', 'moody_enlarge_lin.png',plot="linear")
+plot_diagram('Moody (Colebrook) Transition region', 'moody_colebrook_enlarge_lin.png',plot="linear")
+plot_diagram('Moody (Azfal) Transition region', 'moody_azfal_enlarge_lin.png',plot="linear", fff=azfal)
 
 
 # plt.show() # does not work as this is a non-interactive run of the program
