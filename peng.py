@@ -53,7 +53,7 @@ T273 = 273.15 # K
 # using aux. program visc-temp.py in this repo.
 
 gas_data = {
-    'H2': {'Tc': 33.2, 'Pc': 13.0, 'omega': -0.22, 'Mw':2.015, 'Vs': (8.9,300, 0.692), 'Hc':0.286},
+    'H2': {'Tc': 33.2, 'Pc': 13.0, 'omega': -0.22, 'Mw':2.015, 'Vs': (8.9,300, 0.692), 'Hc':0.286, 'H_':2},
     'CH4': {'Tc': 190.56, 'Pc': 45.99, 'omega': 0.01142, 'Mw': 16.04246, 'Vs': (11.1,300, 1.03), 'Hc':0.89058, 'C_':1, 'H_':4}, # Hc from ISO_6976
     'C2H6': {'Tc': 305.32, 'Pc': 48.72, 'omega': 0.099, 'Mw': 30.07, 'Vs': (9.4,300, 0.87), 'Hc':1.561, 'C_':2, 'H_':6}, # 
     'C3H8': {'Tc': 369.15, 'Pc': 42.48, 'omega': 0.1521, 'Mw': 44.096, 'Vs': (8.2,300, 0.93), 'Hc':2.22, 'C_':3, 'H_':8}, # https://www.engineeringtoolbox.com/propane-d_1423.html
@@ -332,6 +332,24 @@ def do_mm_rules(mix):
     
     return mm_mix
 
+@memoize       
+def do_flue_rules(mix, X_):
+    """Calculate the mean molecular Carbon number and hydrogen number"""
+    
+    if mix in gas_data:
+        # if a pure gas
+        if X_ in gas_data[mix]:
+            return gas_data[mix][X_]
+        
+    X_mix = 0
+    composition = gas_mixtures[mix]
+    for gas, x in composition.items():
+        # Linear mixing rule for number of C and H atoms
+        if X_ in gas_data[gas]:
+           X_mix += x * gas_data[gas][X_]
+    
+    return X_mix
+    
 @memoize
 def linear_mix_rule(mix, values):
     """Calculate the mean value of a property for a mixture
@@ -633,7 +651,7 @@ def get_blasius_factor(g, p, T):
     b_factor = pow(μ, 0.25) * pow(ϱ, 0.75)
     return b_factor
     
-def get_Hc(g, T15C):
+def get_Hc(g, T):
     """If the data is there, return the standard heat of combustion, 
     but in MJ/m³ not MJ/mol
     Uses molar volume at (15 degrees C, 1 atm) even though reference T for Hc is 25 C"""
@@ -649,7 +667,7 @@ def get_Hc(g, T15C):
             hc += x * gas_data[pure_gas]['Hc']
     # hc is in MJ/mol, so we need to divide by the molar volume at  (25 degrees C, 1 atm) in m³
     Mw = do_mm_rules(g)/1000 # Mw now in kg/mol not g/mol
-    ϱ_0 = get_density(g, Atm, T15C) # in kg/m³
+    ϱ_0 = get_density(g, Atm, T) # in kg/m³
     molar_volume = Mw / ϱ_0  # in m³/mol
     
     if hc:
@@ -657,6 +675,24 @@ def get_Hc(g, T15C):
     else:
         return molar_volume, None, None
 
+def print_fluegas(g):
+    mm = do_mm_rules(g) # mean molar mass
+
+    if g in gas_data:
+        c_ = 0
+        h_ = 0
+        if 'C_' in gas_data[g]:
+            c_ = gas_data[g]['C_']
+        if 'H_' in gas_data[g]:
+            h_ = gas_data[g]['H_']
+    else:
+        c_ = do_flue_rules(g, 'C_')
+        h_ = do_flue_rules(g, 'H_')
+
+    mv, hcmv, hc = get_Hc(g, 298)
+    if hc:
+        print(f"{g:15} {mm:6.3f}  {c_:5.2f}   {h_:5.2f} {hc:9.6f}")
+    
 @memoize
 def get_viscosity(g, p, T):
     if g in gas_data:
@@ -771,9 +807,10 @@ def main():
 
     dp = 40
     tp = 15 # C
+    t8 = 8 # C
     pressure =  Atm + dp/1000 # 1atm + 47.5 mbar, halfway between 20 mbar and 75 mbar
     T15C = T273 + tp # K
-    T8C = T273 + 8 # K
+    T8C = T273 + t8 # K
 
     # Print the densities at 8 C and 15 C  - - - - - - - - - - -
 
@@ -789,7 +826,7 @@ def main():
     for g in plot_gases:
         print_density(g, pressure, T15C)
 
-    print(f"\n{'gas':13}{'Mw(g/mol)':6}  {'ϱ(kg/m³)':5}  {'μ(Pa.s)':5}  {'z (-)':5} T={8:.1f}°C ")
+    print(f"\n{'gas':13}{'Mw(g/mol)':6}  {'ϱ(kg/m³)':5}  {'μ(Pa.s)':5}  {'z (-)':5} T={t8:.1f}°C ")
     for g in plot_gases:
         print_density(g, pressure, T8C)
 
@@ -802,7 +839,18 @@ def main():
 
     print(f"\nHc etc. all at 15°C and 1 atm = {Atm} bar. Wobbe limit is  47.20 to 51.41 MJ/m³")
     print(f"W_factor_ϱ =  1/(sqrt(ϱ/ϱ(air))) ")
+    print(f"{'gas':13} {'Hc(MJ/mol)':12} {'MV₀(m³/mol)':11} {'Hc(MJ/m³)':11}{'W_factor_ϱ':11} Wobbe(MJ/m³) ")
+    for g in plot_gases:
+        print_wobbe(g, T15C)
+     
+    print("'nice' values range from -50% to +50% from the centre of the valid Wobbe range.")
 
+    print(f"\n[H2O][CO2] of gas at P={dp:.1f} mbar above 1 atm, i.e. P={pressure:.5f} bar")
+    print(f"{'gas':13}{'Mw(g/mol)':6}    {'C_':5}   {'H_':5}{'Hc (MJ/mol)':5} ")
+    for g in ['H2', 'CH4', 'C2H6']:
+        print_fluegas(g)
+    for g in gas_mixtures:
+        print_fluegas(g)
 
     # Plot defaults
     params = {'legend.fontsize': 'x-large',
@@ -813,11 +861,6 @@ def main():
              'ytick.labelsize':'x-large'}
     plt.rcParams.update(params)
 
-    print(f"{'gas':13} {'Hc(MJ/mol)':12} {'MV₀(m³/mol)':11} {'Hc(MJ/m³)':11}{'W_factor_ϱ':11} Wobbe(MJ/m³) ")
-    for g in plot_gases:
-        print_wobbe(g, T15C)
-     
-    print("'nice' values range from -50% to +50% from the centre of the valid Wobbe range.")
     # Plot the compressibility  - - - - - - - - - - -
 
     # Calculate Z0 for each gas
