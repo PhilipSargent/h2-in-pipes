@@ -675,7 +675,25 @@ def get_Hc(g, T):
     else:
         return molar_volume, None, None
 
-def print_fluegas(g):
+def get_fuel_fraction(g):
+    if g in gas_data:
+        if 'Hc' in gas_data[g]:
+            if gas_data[g]['Hc'] > 0:
+                return 1.0
+            else:
+                return 0
+        else:
+            return 0
+            
+    mff = 0
+    composition = gas_mixtures[g]
+    for pure_gas, x in composition.items():
+        # Linear mixing rule for volume factor
+        ff = get_fuel_fraction(pure_gas)
+        mff += x * ff
+    return mff
+    
+def print_fuelgas(g):
     mm = do_mm_rules(g) # mean molar mass
 
     if g in gas_data:
@@ -689,9 +707,19 @@ def print_fluegas(g):
         c_ = do_flue_rules(g, 'C_')
         h_ = do_flue_rules(g, 'H_')
 
+    # mole fraction fuel
+
+    mff = get_fuel_fraction(g)
+
     mv, hcmv, hc = get_Hc(g, 298)
     if hc:
-        print(f"{g:15} {mm:6.3f}  {c_:5.2f}   {h_:5.2f} {hc:9.6f}")
+        # for one mole of fuel gas
+        # moles O2 = h_/2 + c_
+        # but * 1.15 for excess air
+        # moles N2 = moles O2 * (79.05/20.95)
+        o2 = (h_/2 + c_) * 1.15
+        n2 = gas_mixtures['dryAir']['O2']
+        print(f"{g:15} {mm:6.3f}  {c_:5.2f}   {h_:5.2f} {hc:9.6f} {mff*100:8.4f} %")
     
 @memoize
 def get_viscosity(g, p, T):
@@ -845,12 +873,12 @@ def main():
      
     print("'nice' values range from -50% to +50% from the centre of the valid Wobbe range.")
 
-    print(f"\n[H2O][CO2] of gas at P={dp:.1f} mbar above 1 atm, i.e. P={pressure:.5f} bar")
-    print(f"{'gas':13}{'Mw(g/mol)':6}    {'C_':5}   {'H_':5}{'Hc (MJ/mol)':5} ")
+    print(f"\n[H2O][CO2] of fuel gas")
+    print(f"{'gas':13}{'Mw(g/mol)':6}   {'C_':5}   {'H_':5}{'Hc(MJ/mol)':5}  fuel")
     for g in ['H2', 'CH4', 'C2H6']:
-        print_fluegas(g)
+        print_fuelgas(g)
     for g in gas_mixtures:
-        print_fluegas(g)
+        print_fuelgas(g)
 
     # Plot defaults
     params = {'legend.fontsize': 'x-large',
