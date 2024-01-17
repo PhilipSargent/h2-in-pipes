@@ -5,6 +5,7 @@ import pathlib as pl
 import sys
 
 from cycler import cycler
+from sonntag import  get_dew_point
 
 """This code written Philip Sargent, starting in December 2023, by  to support a paper on the replacement of natural
 gas in the UK distribution grid with hydrogen.
@@ -53,7 +54,7 @@ T273 = 273.15 # K
 # using aux. program visc-temp.py in this repo.
 
 gas_data = {
-    'H2': {'Tc': 33.2, 'Pc': 13.0, 'omega': -0.22, 'Mw':2.015, 'Vs': (8.9,300, 0.692), 'Hc':0.285826, 'H_':2},
+    'H2': {'Tc': 33.2, 'Pc': 13.0, 'omega': -0.22, 'Mw':2.015, 'Vs': (8.9,300, 0.692), 'Hc':0.285826, 'C_':0, 'H_':0},
     'CH4': {'Tc': 190.56, 'Pc': 45.99, 'omega': 0.01142, 'Mw': 16.04246, 'Vs': (11.1,300, 1.03), 'Hc':0.890602, 'C_':1, 'H_':4}, # Hc from ISO_6976
     'C2H6': {'Tc': 305.32, 'Pc': 48.72, 'omega': 0.099, 'Mw': 30.07, 'Vs': (9.4,300, 0.87), 'Hc':1.5639, 'C_':2, 'H_':6}, # 
     'C3H8': {'Tc': 369.15, 'Pc': 42.48, 'omega': 0.1521, 'Mw': 44.096, 'Vs': (8.2,300, 0.93), 'Hc':2.21866, 'C_':3, 'H_':8}, # https://www.engineeringtoolbox.com/propane-d_1423.html
@@ -785,6 +786,59 @@ def print_wobbe(g, T15C):
     
     print(f"{g:15} {hc} {mv:.7f} {hcmv}{wobbe_factor_ϱ:>11.5f}   {w} {flag} {too_light}")
 
+def dew_point(g):
+    # Calculate the reagent (input) gases 
+    ff = get_fuel_fraction(g)
+    if ff < 0.001:
+        #print(f"Not a fuel {ff}")
+        return
+    o2_fuel = do_flue_rules(g,'C_') + do_flue_rules(g,'H_')/4
+    o2_gas = o2_fuel * ff
+    n2_gas = 0
+    co2_gas = 0
+    if 'N2' in  gas_mixtures[g]:
+        n2_gas = gas_mixtures[g]['N2']
+    if 'CO2' in  gas_mixtures[g]:
+        n2_gas = gas_mixtures[g]['CO2']
+        
+    #n2_gas = 1 - ff # everything that isn't O2 in the fuel
+
+    #print(f"\n{g:5}\t C_={do_flue_rules(g,'C_'):6.4f} H_={do_flue_rules(g,'H_'):6.4f} O2:fuel {o2_fuel:6.4f} O2:gas ratio {o2_gas:6.4f}")
+    
+    o2_in = o2_fuel * ff * 1.15 # 15% excess air
+    
+    o2 = gas_mixtures['dryAir']['O2']
+    # h2o = gas_mixtures['dryAir']['H2O']
+    n2 = 1- o2
+    n2_in = o2_in * n2/o2
+    # synthetic air
+    o2s, n2s = 0.2095, 0.7905
+    n2_synth = o2_in * n2s/o2s
+    #print(f"O2 in: {o2_in:6.4f}, N2 in {n2_in:6.4f}  {n2_synth:6.4f}")
+    
+    # Calculate the output (product) gases
+    o2_out = o2_in - o2_gas
+    n2_out = n2_in + n2_gas
+    n2_out_synth = n2_synth + n2_gas
+    
+    co2_out =  do_flue_rules(g,'C_') + co2_gas 
+    h2o_out =  do_flue_rules(g,'H_')/2   # no H2O in the fuel gas, but there might be in air
+    #print(f"O2 out: {o2_out:6.4f}, N2 out {n2_out:6.4f} {n2_out_synth:6.4f}  CO2 {co2_out:6.4f}  H2O {h2o_out:6.4f} ")
+    tot_out = (o2_out + n2_out_synth + co2_out + h2o_out)
+    t = tot_out/100
+    #print(f"O2 out: {o2_out/t:6.3f}, N2 out {n2_out/t:6.3f} {n2_out_synth/t:6.3f}  CO2 {co2_out/t:6.3f}  H2O {h2o_out/t:6.3f} ")
+   # OK, h2o_out/t is the partial pressure of H2O which determines the dew point. At last.
+    h2o_pp = Atm * h2o_out/tot_out # in mol %, so convert to pressure in bar
+    h2o_pp = h2o_pp * 1e5 # now in Pascals
+    dew_C = get_dew_point(h2o_pp)-T273
+    #print(f"{h2o_out/tot_out:.4f} {dew_C:.4f} C")
+    return dew_C
+
+def print_gas(g):
+    dew_C = dew_point(g)
+    if dew_C:
+        print(f"Dew point: {dew_C:.4f} C")
+     
 def print_ng():
     g = "NG"
     print(f"NatGas at Fordoun NTS 20th Jan.2021")
@@ -793,15 +847,9 @@ def print_ng():
         mv, hcmv, hc = get_Hc(f, 298)
         if not hc:
             hc = 0
-        # print(f"{f:5}\t{nts[f]*100:8.5f} %{gas_data[f]['C_']:3}{gas_data[f]['H_']:3} {hc*1000:6.1f} kJ/mol ")
-    o2_fuel = do_flue_rules(g,'C_') + do_flue_rules(g,'H_')/4
-    o2_gas = o2_fuel * get_fuel_fraction(g)
-    # print("")
-    print(f"{'NG':5}\t C_={do_flue_rules(g,'C_'):6.4f} H_={do_flue_rules(g,'H_'):6.4f} O2:fuel {o2_fuel:6.4f} O2:gas ratio {o2_gas:6.4f}")
-    
-    o2_in = o2_fuel * get_fuel_fraction(g) * 1.15 # 15% excess air
-    n2_in = 1/gas_mixtures['dryAir']['O2']
-    print(air, o2_in, n2_in)
+        print(f"{f:5}\t{nts[f]*100:8.5f} %{gas_data[f]['C_']:3}{gas_data[f]['H_']:3} {hc*1000:6.1f} kJ/mol ")
+    print("")
+    print_gas(g) 
 
 def style(mix):
     if mix in gas_data:
@@ -822,7 +870,7 @@ colours =  {'H2': 'xkcd:red',
 def colour(g):
     if g in colours:
         return colours[g]
-    return None # default behavior
+    return None # default behavior 
     splat = colour_cycle() # called as a generator, but always returns first item
     for c in splat:
        break
@@ -868,6 +916,7 @@ def main():
     for g in ["H2", "CH4"]:
         plot_gases.append(g)
 
+
     print(f"{'gas':13}{'Mw(g/mol)':6}  {'ϱ(kg/m³)':5}  {'μ(Pa.s)':5} {'z (-)':5} T={tp:.1f}°C ")
     for g in plot_gases:
         print_density(g, pressure, T15C)
@@ -897,7 +946,9 @@ def main():
         print_fuelgas(g)
     for g in gas_mixtures:
         print_fuelgas(g)
-
+    for g in gas_mixtures:
+        print_gas(g)
+        
     # Plot defaults
     params = {'legend.fontsize': 'x-large',
               'figure.figsize': (10, 6),
