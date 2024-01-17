@@ -5,7 +5,8 @@ import pathlib as pl
 import sys
 
 from cycler import cycler
-from sonntag import  get_dew_point
+import sonntag as st
+#from sonntag import  get_dew_point
 
 """This code written Philip Sargent, starting in December 2023, by  to support a paper on the replacement of natural
 gas in the UK distribution grid with hydrogen.
@@ -54,7 +55,7 @@ T273 = 273.15 # K
 # using aux. program visc-temp.py in this repo.
 
 gas_data = {
-    'H2': {'Tc': 33.2, 'Pc': 13.0, 'omega': -0.22, 'Mw':2.015, 'Vs': (8.9,300, 0.692), 'Hc':0.285826, 'C_':0, 'H_':0},
+    'H2': {'Tc': 33.2, 'Pc': 13.0, 'omega': -0.22, 'Mw':2.015, 'Vs': (8.9,300, 0.692), 'Hc':0.285826, 'C_':0, 'H_':2},
     'CH4': {'Tc': 190.56, 'Pc': 45.99, 'omega': 0.01142, 'Mw': 16.04246, 'Vs': (11.1,300, 1.03), 'Hc':0.890602, 'C_':1, 'H_':4}, # Hc from ISO_6976
     'C2H6': {'Tc': 305.32, 'Pc': 48.72, 'omega': 0.099, 'Mw': 30.07, 'Vs': (9.4,300, 0.87), 'Hc':1.5639, 'C_':2, 'H_':6}, # 
     'C3H8': {'Tc': 369.15, 'Pc': 42.48, 'omega': 0.1521, 'Mw': 44.096, 'Vs': (8.2,300, 0.93), 'Hc':2.21866, 'C_':3, 'H_':8}, # https://www.engineeringtoolbox.com/propane-d_1423.html
@@ -719,7 +720,8 @@ def print_fuelgas(g):
         # moles N2 = moles O2 * (79.05/20.95)
         o2 = (h_/2 + c_) * 1.15
         n2 = gas_mixtures['dryAir']['O2']
-        print(f"{g:15} {mm:6.3f}  {c_:5.3f}   {h_:5.3f} {hc*1000:9.3f} {mff*100:8.4f} %")
+        dew_C = dew_point(g)
+        print(f"{g:15} {mm:6.3f} {dew_C:5.3f} {c_:5.3f}   {h_:5.3f} {hc*1000:9.3f} {mff*100:8.4f} %")
     
 @memoize
 def get_viscosity(g, p, T):
@@ -796,10 +798,11 @@ def dew_point(g):
     o2_gas = o2_fuel * ff
     n2_gas = 0
     co2_gas = 0
-    if 'N2' in  gas_mixtures[g]:
-        n2_gas = gas_mixtures[g]['N2']
-    if 'CO2' in  gas_mixtures[g]:
-        n2_gas = gas_mixtures[g]['CO2']
+    if g not in gas_data:
+        if 'N2' in  gas_mixtures[g]:
+            n2_gas = gas_mixtures[g]['N2']
+        if 'CO2' in  gas_mixtures[g]:
+            n2_gas = gas_mixtures[g]['CO2']
         
     #n2_gas = 1 - ff # everything that isn't O2 in the fuel
 
@@ -830,7 +833,7 @@ def dew_point(g):
    # OK, h2o_out/t is the partial pressure of H2O which determines the dew point. At last.
     h2o_pp = Atm * h2o_out/tot_out # in mol %, so convert to pressure in bar
     h2o_pp = h2o_pp * 1e5 # now in Pascals
-    dew_C = get_dew_point(h2o_pp)-T273
+    dew_C = st.get_dew_point(h2o_pp)-T273
     #print(f"{h2o_out/tot_out:.4f} {dew_C:.4f} C")
     return dew_C
 
@@ -941,14 +944,12 @@ def main():
     print("'nice' values range from -50% to +50% from the centre of the valid Wobbe range.")
 
     print(f"\n[H2O][CO2] of fuel gas")
-    print(f"{'gas':13}{'Mw(g/mol)':6}   {'C_':5}   {'H_':5}{'Hc(kJ/mol)':5}  fuel")
+    print(f"{'gas':13}{'Mw(g/mol)':6} {'Dew Pt':6}  {'C_':5}   {'H_':5}{'Hc(kJ/mol)':5}  fuel")
     for g in ['H2', 'CH4', 'C2H6']:
         print_fuelgas(g)
     for g in gas_mixtures:
         print_fuelgas(g)
-    for g in gas_mixtures:
-        print_gas(g)
-        
+
     # Plot defaults
     params = {'legend.fontsize': 'x-large',
               'figure.figsize': (10, 6),
