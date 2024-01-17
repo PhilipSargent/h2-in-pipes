@@ -786,15 +786,18 @@ def print_wobbe(g, T15C):
     print(f"{g:15} {hc} {mv:.7f} {hcmv}{wobbe_factor_ϱ:>11.5f}   {w} {flag} {too_light}")
 
 def print_ng():
+    g = "NG"
     print(f"NatGas at Fordoun NTS 20th Jan.2021")
-    nts = gas_mixtures["NG"]
+    nts = gas_mixtures[g]
     for f in nts:
         mv, hcmv, hc = get_Hc(f, 298)
         if not hc:
             hc = 0
         print(f"{f:5}\t{nts[f]*100:8.5f} %{gas_data[f]['C_']:3}{gas_data[f]['H_']:3} {hc*1000:6.1f} kJ/mol ")
+    o2_fuel = do_flue_rules(g,'C_') + do_flue_rules(g,'H_')/4
+    o2_gas = o2_fuel * get_fuel_fraction(g)
     print("")
-    print(f"{'NG':5}\t C_={do_flue_rules('NG','C_'):6.4f} H_={do_flue_rules('NG','H_'):6.4f} Hc= ")
+    print(f"{'NG':5}\t C_={do_flue_rules(g,'C_'):6.4f} H_={do_flue_rules(g,'H_'):6.4f} O2:fuel {o2_fuel:6.4f} O2:gas ratio {o2_gas:6.4f}")
 
 def style(mix):
     if mix in gas_data:
