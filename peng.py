@@ -67,21 +67,21 @@ gas_data = {
     # omega from http://www.coolprop.org/fluid_properties/fluids/Neopentane.html
     
     'C6':  {'Tc': 507.6, 'Pc': 30.2, 'omega': 0.1521, 'Mw': 86.1754, 'Vs': (8.6,400, 1.03), 'Hc':4.19475, 'C_':6, 'H_':14}, # omega is 0.2797 isohexane    
-    'CO2': {'Tc': 304.2, 'Pc': 73.8, 'omega': 0.228, 'Mw': 44.01, 'Vs': (15.0,300, 0.872), 'Hc':0}, # https://en.wikipedia.org/wiki/Acentric_factor
-    'H2O': {'Tc': 647.1, 'Pc': 220.6, 'omega': 0.344292, "Mw": 18.015, 'Vs': (9.8,300, 1.081), 'Hc':0}, # https://link.springer.com/article/10.1007/s10765-020-02643-6/tables/1
-    'N2': {'Tc': 126.21, 'Pc': 33.958, 'omega': 0.0372, 'Mw':28.013, 'Vs': (17.9,300, 0.658), 'Hc':0}, #  omega http://www.coolprop.org/fluid_properties/fluids/Nitrogen.html
-    'He': {'Tc': 5.2, 'Pc': 2.274, 'omega': -0.3836, 'Mw': 4.0026, 'Vs': (19.9,300, 0.69), 'Hc':0},  # omega http://www.coolprop.org/fluid_properties/fluids/Helium.html
+    'CO2': {'Tc': 304.2, 'Pc': 73.8, 'omega': 0.228, 'Mw': 44.01, 'Vs': (15.0,300, 0.872), 'Hc':0, 'C_':0, 'H_':0}, # https://en.wikipedia.org/wiki/Acentric_factor
+    'H2O': {'Tc': 647.1, 'Pc': 220.6, 'omega': 0.344292, "Mw": 18.015, 'Vs': (9.8,300, 1.081), 'Hc':0, 'C_':0, 'H_':0}, # https://link.springer.com/article/10.1007/s10765-020-02643-6/tables/1
+    'N2': {'Tc': 126.21, 'Pc': 33.958, 'omega': 0.0372, 'Mw':28.013, 'Vs': (17.9,300, 0.658), 'Hc':0, 'C_':0, 'H_':0}, #  omega http://www.coolprop.org/fluid_properties/fluids/Nitrogen.html
+    'He': {'Tc': 5.2, 'Pc': 2.274, 'omega': -0.3836, 'Mw': 4.0026, 'Vs': (19.9,300, 0.69), 'Hc':0, 'C_':0, 'H_':0},  # omega http://www.coolprop.org/fluid_properties/fluids/Helium.html
     # https://eng.libretexts.org/Bookshelves/Chemical_Engineering/Distillation_Science_(Coleman)/03%3A_Critical_Properties_and_Acentric_Factor
     # N2 https://pubs.acs.org/doi/suppl/10.1021/acs.iecr.2c00363/suppl_file/ie2c00363_si_001.pdf
     # N2 omega is from https://en.wikipedia.org/wiki/Acentric_factor
-    'Ar': {'Tc': 150.687, 'Pc': 48.630, 'omega': 0, 'Mw': 39.948, 'Vs': (22.7,300, 0.77), 'Hc':0}, #https://en.wikipedia.org/wiki/Acentric_factor
-    'O2': {'Tc': 154.581, 'Pc': 50.43, 'omega': 0.022, 'Mw': 31.9988, 'Vs': (20.7,300, 0.72), 'Hc':0},# http://www.coolprop.org/fluid_properties/fluids/Oxygen.html
+    'Ar': {'Tc': 150.687, 'Pc': 48.630, 'omega': 0, 'Mw': 39.948, 'Vs': (22.7,300, 0.77), 'Hc':0, 'C_':0, 'H_':0}, #https://en.wikipedia.org/wiki/Acentric_factor
+    'O2': {'Tc': 154.581, 'Pc': 50.43, 'omega': 0.022, 'Mw': 31.9988, 'Vs': (20.7,300, 0.72), 'Hc':0, 'C_':0, 'H_':0},# http://www.coolprop.org/fluid_properties/fluids/Oxygen.html
     }
 
 # Natural gas compositions (mole fractions)
 gas_mixtures = {
     
-    'NG': {'CH4': 0.895514, 'C2H6': 0.051196, 'C3H8': 0.013549, 'iC4': 0.001269, 'nC4': 0.002162, 'neoC5': 2e-05, 'iC5': 0.000344, 'nC5': 0.003472, 'C6': 0.002377, 'CO2': 0.020743, 'N2': 0.009354}, # Normalized.email John Baldwin 30/12/2023 - Fordoun
+    'NG': {'CH4': 0.895514, 'C2H6': 0.051196, 'C3H8': 0.013549, 'nC4': 0.001269, 'iC4': 0.002162, 'nC5': 2e-05, 'iC5': 0.000344, 'neoC5': 0.003472, 'C6': 0.002377, 'CO2': 0.020743, 'N2': 0.009354}, # Normalized.email John Baldwin 30/12/2023 - Fordoun
     # 'Fordoun': { 'CH4':  0.900253, 'C2H6':  0.051467, 'C3H8':  0.013621, 'iC4':  0.001276, 'nC4':  0.002173, 'neoC5':  0.000020,'iC5':  0.000346, 'nC5':  0.003490,  'C6':  0.002390, 'CO2':  0.020853, 'N2':  0.009404, }, # original email John Baldwin 30/12/2023, unnormalized
     'Groening': {'CH4': 0.813, 'C2H6': 0.0285, 'C3H8': 0.0037, 'nC4': 0.0014, 'nC5': 0.0004, 'C6': 0.0006, 'CO2': 0.0089, 'N2': 0.1435, 'O2': 0}, # Groeningen gas https://en.wikipedia.org/wiki/Groningen_gas_field
     
@@ -109,7 +109,7 @@ gas_mixtures = {
     # 'propane': {'C3H8': 1.0}, # ethane, but using the mixing rules: software test check
     
     # dry air from Picard2008, who is quoting 
-    'dryAir':  {'N2': 0.780848, 'O2': 0.209390, 'CO2': 0.00040, 'Ar': 0.009332},
+    'dryAir':  {'N2': 0.780872, 'O2': 0.209396, 'CO2': 0.00040, 'Ar': 0.009332},
     #'Air':  {'N2': 0.761749, 'O2': 0.204355, 'CO2': 0.00039, 'Ar': 0.009112, 'He': 5.0e-06, 'H2O': 0.024389} # https://www.thoughtco.com/chemical-composition-of-air-604288
     # But ALSO adding 2.5% moisture to the air and normalising
 }
@@ -140,13 +140,7 @@ for g in ag:
     air[g] = ag[g]*(1 - air['H2O'])
 gas_mixtures['Air'] = air
 
-#print(f"NatGas gas 11D composition: Duchowny22, doi:10.1016/j.egyr.2022.02.289")
-print(f"NatGas at Fordoun NTS 20th Jan.2021")
-nts = gas_mixtures["NG"]
-for f in nts:
-    print(f"{f:5}\t{nts[f]*100:7.5f} %")
-    
-display_gases = ["NG"]
+
 # Binary interaction parameters for hydrocarbons for Peng-Robinson
 # based on the Chueh-Prausnitz correlation
 # from https://wiki.whitson.com/eos/cubic_eos/
@@ -348,8 +342,12 @@ def do_flue_rules(mix, X_):
         # Linear mixing rule for number of C and H atoms
         if X_ in gas_data[gas]:
            X_mix += x * gas_data[gas][X_]
-    
-    return X_mix
+    # for mixtures this must be normalised using only the combustible gases
+    ff = get_fuel_fraction(mix)
+    if ff > 0 :
+        return X_mix/ff
+   
+    return 0
     
 @memoize
 def linear_mix_rule(mix, values):
@@ -720,7 +718,7 @@ def print_fuelgas(g):
         # moles N2 = moles O2 * (79.05/20.95)
         o2 = (h_/2 + c_) * 1.15
         n2 = gas_mixtures['dryAir']['O2']
-        print(f"{g:15} {mm:6.3f}  {c_:5.3f}   {h_:5.3f} {hc:9.6f} {mff*100:8.4f} %")
+        print(f"{g:15} {mm:6.3f}  {c_:5.3f}   {h_:5.3f} {hc*1000:9.3f} {mff*100:8.4f} %")
     
 @memoize
 def get_viscosity(g, p, T):
@@ -786,7 +784,18 @@ def print_wobbe(g, T15C):
    
     
     print(f"{g:15} {hc} {mv:.7f} {hcmv}{wobbe_factor_ϱ:>11.5f}   {w} {flag} {too_light}")
-    
+
+def print_ng():
+    print(f"NatGas at Fordoun NTS 20th Jan.2021")
+    nts = gas_mixtures["NG"]
+    for f in nts:
+        mv, hcmv, hc = get_Hc(f, 298)
+        if not hc:
+            hc = 0
+        print(f"{f:5}\t{nts[f]*100:8.5f} %{gas_data[f]['C_']:3}{gas_data[f]['H_']:3} {hc*1000:6.1f} kJ/mol ")
+    print("")
+    print(f"{'NG':5}\t C_={do_flue_rules('NG','C_'):6.4f} H_={do_flue_rules('NG','H_'):6.4f} Hc= ")
+
 def style(mix):
     if mix in gas_data:
         return 'dashed'
@@ -831,15 +840,16 @@ def main():
         composition = gas_mixtures[mix]
         check_composition(mix, composition)
 
-        
-    # print_bip() # binary interaction parameters
-
+    print_ng()
+    
     dp = 40
     tp = 15 # C
     t8 = 8 # C
     pressure =  Atm + dp/1000 # 1atm + 47.5 mbar, halfway between 20 mbar and 75 mbar
     T15C = T273 + tp # K
     T8C = T273 + t8 # K
+
+    display_gases = ["NG"]    
 
     # Print the densities at 8 C and 15 C  - - - - - - - - - - -
 
@@ -875,7 +885,7 @@ def main():
     print("'nice' values range from -50% to +50% from the centre of the valid Wobbe range.")
 
     print(f"\n[H2O][CO2] of fuel gas")
-    print(f"{'gas':13}{'Mw(g/mol)':6}   {'C_':5}   {'H_':5}{'Hc(MJ/mol)':5}  fuel")
+    print(f"{'gas':13}{'Mw(g/mol)':6}   {'C_':5}   {'H_':5}{'Hc(kJ/mol)':5}  fuel")
     for g in ['H2', 'CH4', 'C2H6']:
         print_fuelgas(g)
     for g in gas_mixtures:
