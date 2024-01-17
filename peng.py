@@ -793,11 +793,15 @@ def print_ng():
         mv, hcmv, hc = get_Hc(f, 298)
         if not hc:
             hc = 0
-        print(f"{f:5}\t{nts[f]*100:8.5f} %{gas_data[f]['C_']:3}{gas_data[f]['H_']:3} {hc*1000:6.1f} kJ/mol ")
+        # print(f"{f:5}\t{nts[f]*100:8.5f} %{gas_data[f]['C_']:3}{gas_data[f]['H_']:3} {hc*1000:6.1f} kJ/mol ")
     o2_fuel = do_flue_rules(g,'C_') + do_flue_rules(g,'H_')/4
     o2_gas = o2_fuel * get_fuel_fraction(g)
-    print("")
+    # print("")
     print(f"{'NG':5}\t C_={do_flue_rules(g,'C_'):6.4f} H_={do_flue_rules(g,'H_'):6.4f} O2:fuel {o2_fuel:6.4f} O2:gas ratio {o2_gas:6.4f}")
+    
+    o2_in = o2_fuel * get_fuel_fraction(g) * 1.15 # 15% excess air
+    n2_in = 1/gas_mixtures['dryAir']['O2']
+    print(air, o2_in, n2_in)
 
 def style(mix):
     if mix in gas_data:
