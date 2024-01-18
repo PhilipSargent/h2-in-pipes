@@ -1,6 +1,6 @@
 import numpy as np
 
-def logistic_dose_function_algorithm(var_independent, fl, fr, power_sm, power_jtn, rcr):
+def ldfa(var_independent, fl, fr, power_sm, power_jtn, rcr):
     """
     Calculates the logistic dose function.
 
@@ -15,8 +15,9 @@ def logistic_dose_function_algorithm(var_independent, fl, fr, power_sm, power_jt
     Returns:
         The value of the logistic dose function.
     """
-
-    return fl + (fr - fl) / ((1. + (var_independent / rcr) ** power_sm) ** power_jtn)
+    # print(var_independent, fl, fr, power_sm, power_jtn, rcr)
+    
+    return fl + (fr - fl) / ((1 + (var_independent / rcr) ** power_sm) ** power_jtn)
 
 def virtual_nikuradse_correlation():
     """
@@ -26,7 +27,7 @@ def virtual_nikuradse_correlation():
     print("Reminder: VNC requires Re > 0 and Sigma >= 15.")
 
  
-    # Constants
+    # Constants and arrays (using numpy for convenience)
     s = np.array([-50., -15., -5., -2.])
     t = np.array([0.5, 0.5, 0.5, 0.5])
     a = np.array([64., 0.000083, 0.3164, 0.1537, 0.0753])
@@ -34,54 +35,46 @@ def virtual_nikuradse_correlation():
     r = np.array([2320., 3810., 70000., 2000000.])
     m = np.array([-2., -5., -5., -5., -5.])
     n = np.array([0.5, 0.5, 0.5, 0.5, 0.5])
+    
+    # Calculate arrays
+    # Array initializations (equivalent to Fortran's reshape)
+    aax = np.array([
+        [0.05016, 0.0476, 0.00944, 0.02076, 0.00253],
+        [0.03599, 0.0331, 0.00758, 0.02448, 0.0225],
+        [0.02615, 0.0235, 0.00615, 0.02869, 0.0561],
+        [0.01851, 0.0161, 0.00491, 0.03410, 0.1031],
+        [0.01344, 0.0113, 0.00397, 0.04000, 0.1307],
+        [0.00965, 0.0079, 0.00320, 0.04710, 0.1593]
+    ])
+
+    bbx = np.array([
+        [0.0, 0.002, 0.1229, 0.2945, 0.5435],
+        [0.0, 0.002, 0.1, 0.2413, 0.2687],
+        [0.0, 0.002, 0.0822, 0.2003, 0.1417],
+        [0.0, 0.002, 0.0665, 0.1619, 0.0693],
+        [0.0, 0.002, 0.0544, 0.1337, 0.0356],
+        [0.0, 0.002, 0.0445, 0.1099, 0.0181]
+    ])
+
+    rrx = np.array([
+        [1010000., 23900., 6000., 6000., 1289.],
+        [1400000., 49800., 12300., 10280., 3109.],
+        [1900000., 100100., 23900., 17100., 7109.],
+        [2660000., 214500., 50100., 29900., 18109.],
+        [3650000., 441000., 99900., 50000., 42109.],
+        [5000000., 910000., 200000., 85070., 100109.]
+    ])
 
     # Main loop
     outer_loop = False
     while not outer_loop:
         # Get input from the user
-        re = float(input("Please input the value of flow Reynolds number (Re>0) then press ENTER: "))
-        sigma = float(input("Please input the value of roughness ratio (Sigma>=15) then press ENTER: "))
+        # re = float(input("Please input the value of flow Reynolds number (Re>0) then press ENTER: "))
+        # sigma = float(input("Please input the value of roughness ratio (Sigma>=15) then press ENTER: "))
+        re = 3000
+        sigma = 200
         if re <= 0 or sigma < 15:
             raise ValueError("Invalid input: Re must be greater than 0 and Sigma must be greater than or equal to 15")
-
-        # Constants and arrays (using numpy for convenience)
-        s = np.array([-50., -15., -5., -2.])
-        t = np.array([0.5, 0.5, 0.5, 0.5])
-        a = np.array([64., 0.000083, 0.3164, 0.1537, 0.0753])
-        b = np.array([-1., 0.75, -0.25, -0.185, -0.136])
-        r = np.array([2320., 3810., 70000., 2000000.])
-        m = np.array([-2., -5., -5., -5., -5.])
-        n = np.array([0.5, 0.5, 0.5, 0.5, 0.5])
-        
-        # Calculate arrays
-        # Array initializations (equivalent to Fortran's reshape)
-        aax = np.array([
-            [0.05016, 0.0476, 0.00944, 0.02076, 0.00253],
-            [0.03599, 0.0331, 0.00758, 0.02448, 0.0225],
-            [0.02615, 0.0235, 0.00615, 0.02869, 0.0561],
-            [0.01851, 0.0161, 0.00491, 0.03410, 0.1031],
-            [0.01344, 0.0113, 0.00397, 0.04000, 0.1307],
-            [0.00965, 0.0079, 0.00320, 0.04710, 0.1593]
-        ])
-
-        bbx = np.array([
-            [0.0, 0.002, 0.1229, 0.2945, 0.5435],
-            [0.0, 0.002, 0.1, 0.2413, 0.2687],
-            [0.0, 0.002, 0.0822, 0.2003, 0.1417],
-            [0.0, 0.002, 0.0665, 0.1619, 0.0693],
-            [0.0, 0.002, 0.0544, 0.1337, 0.0356],
-            [0.0, 0.002, 0.0445, 0.1099, 0.0181]
-        ])
-
-        rrx = np.array([
-            [1010000., 23900., 6000., 6000., 1289.],
-            [1400000., 49800., 12300., 10280., 3109.],
-            [1900000., 100100., 23900., 17100., 7109.],
-            [2660000., 214500., 50100., 29900., 18109.],
-            [3650000., 441000., 99900., 50000., 42109.],
-            [5000000., 910000., 200000., 85070., 100109.]
-        ])
-
 
         aa = np.copy(aax)  # Create a copy of aax
         aa[0, :] += 0.0098
@@ -121,32 +114,42 @@ def virtual_nikuradse_correlation():
 
         p = a * re**b  # Vectorized multiplication and exponentiation
         f = np.zeros_like(a)  # Initialize f with zeros
+
         f[0] = p[0]
-        f[1:] = ldfa(re, f[:-1], p[1:], s[:-1], t[:-1], r[:-1])  # Vectorized LDFA calls
+        # f[1:] = ldfa(re, f[:-1], p[1:], s[:-1], t[:-1], r[:-1])  # Vectorized LDFA calls
+        for i in range(5):  # Iterate from 1 to 4 (length of the arrays)
+            f[i] = ldfa(re, f[i - 1], p[i], s[i - 1], t[i - 1], r[i - 1])
 
         pp = aa * re**bb  # Vectorized multiplication and exponentiation for 2D arrays
         ff = np.zeros_like(aa)  # Initialize ff with zeros
         ff[0, :] = pp[0, :]
-        ff[1:, :] = ldfa(re, pp[1:, :], ff[:-1, :], m[:-1], n[:-1], rr[:-1, :])  # Vectorized LDFA calls
+        
+        # ff[1:, :] = ldfa(re, pp[1:, :], ff[:-1, :], m[:-1], n[:-1], rr[:-1, :])  # Vectorized LDFA calls
+        for i in range(1,5):  # Iterate over rows
+            for j in range(5):  # Iterate over columns (assuming 6 columns in ff)
+                ff[i, j] = ldfa(re, pp[i, j], ff[i - 1, j], m[i - 1], n[i - 1], rr[i - 1, j])
 
         index_j = 1  # Comment: INDEX_J is roughness index and may be 1, 2, 3, 4, 5, or 6 for the six values of roughness in Nikuradse’s (1933) data. The result does not depend on INDEX_J.
         lamda_s = f[-1]  # Access the last element of f
         lamda_r = ff[-1, index_j - 1] # clever, spotted that user is asked for 1..6 but python indexing works from zero !
         lamda = ldfa(re, lamda_s, lamda_r, m[-1], n[-1], rr[-1, index_j - 1])
 
-        print("The friction factor is: Lamda = ", lamda)
+        print(f"{re=} {sigma=} : The friction factor is: Lamda = {lamda:.5f}")
 
         while True:
             print("[Press '1' to continue or press '0' to exit]")
             k = input()
 
             if k == "0":
-                break
+                outer_loop = True
             elif k == "1":
                 # Continue with the calculation
                 pass
             else:
-                print("ERROR!!! Please only input the number 1 or 0!")            
+                print("ERROR!!! Please only input the number 1 or 0!")  
+            break
+        
+virtual_nikuradse_correlation()
 
 print("---------------------------------------------------------")
 print("Thank you for using the VNC friction factor calculator.")
