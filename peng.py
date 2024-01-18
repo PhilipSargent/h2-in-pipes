@@ -1111,7 +1111,7 @@ def main():
     P = pressure
     re_g = {}
 
-    for mix in plot_gases + ['He', 'Ar']:
+    for mix in plot_gases + ['He']:
         ϱ_ng[mix] =  [get_density(mix, P, T) for T in temperatures]
         μ_ng[mix] = [get_viscosity(mix, P, T) for T in temperatures]
             
