@@ -31,6 +31,10 @@ R = 0.083144626  # l.bar/(mol.K)  SI after 2019 redefinition of Avagadro and Bol
 # 1 bar is today defined as 100,000 Pa not 1atm
 
 Atm = 1.01325 # bar 
+#Atm = 0.9256 # bar 
+#Atm = 1.0536  # bar 
+# Lowest recorded pressure in UK 925.6mb at Ochertyre, near Crieff, Perthshire on the 26th January 1884
+# highest recorded pressure in UK 1053.6 mbar, Aberdeen 31.1.1902
 T273 = 273.15 # K
 
 
@@ -1107,19 +1111,18 @@ def main():
     P = pressure
     re_g = {}
 
-    for mix in plot_gases:
-        if mix in gas_data:
-            ϱ_ng[mix] =  [get_density(mix, P, T) for T in temperatures]
-            μ_ng[mix] = [get_viscosity(mix, P, T) for T in temperatures]
+    for mix in plot_gases + ['He', 'Ar']:
+        ϱ_ng[mix] =  [get_density(mix, P, T) for T in temperatures]
+        μ_ng[mix] = [get_viscosity(mix, P, T) for T in temperatures]
             
         re_g[mix] = []
-        for i in range(len(μ_g[mix])):
-            re_g[mix].append( ϱ_ng[mix][i] / μ_g[mix][i])
+        for i in range(len(μ_ng[mix])):
+            re_g[mix].append(  μ_ng[mix][i]/ϱ_ng[mix][i])
         plt.plot(temperatures - T273, re_g[mix], label= mix, **plot_kwargs(mix))
         
-    plt.title(f'Density / Dynamic Viscosity vs Temperature at {pressure} bar')
+    plt.title(f'Kinematic Viscosity vs Temperature at {pressure} bar')
     plt.xlabel('Temperature (°C)')
-    plt.ylabel('Density/ Dynamic Viscosity (kg/m³)/(μPa.s) ')
+    plt.ylabel('Dynamic Viscosity/Density (μPa.s)/(kg/m³) ')
     plt.legend()
     plt.grid(True)
 
