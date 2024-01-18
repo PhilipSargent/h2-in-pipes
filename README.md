@@ -7,6 +7,8 @@ We have a paper in preparation which documents and uses these calculations for t
 If you would like a preprint of this paper, please email me or post an Issue on this project to contact me.
 
 ![moody_diagram](https://github.com/PhilipSargent/h2-in-pipes/assets/5623885/f41ea2ca-c12e-4c8f-a717-df9572b54eea)
+![moody_azfal](https://github.com/PhilipSargent/h2-in-pipes/assets/5623885/95db0b1e-13a6-4def-a4f4-bb8d9e8dd88e)
+
 ![peng_z](https://github.com/PhilipSargent/h2-in-pipes/assets/5623885/8c38150c-cf02-49b9-98d4-5269e28eb2ca)
 
 ![peng_bf](https://github.com/PhilipSargent/h2-in-pipes/assets/5623885/92a911eb-c0ea-41dc-91c2-0f80a38c8f22)
