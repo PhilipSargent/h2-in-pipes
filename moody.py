@@ -6,6 +6,8 @@ Below is a Python program that uses the `matplotlib` and `numpy` libraries to pl
 import functools
 import numpy as np
 import matplotlib.pyplot as plt
+import virt_nik as vn
+
 from scipy.interpolate import interp1d
 
 # We memoize some functions so that they do not get repeadtedly called with
@@ -39,7 +41,10 @@ def blasius(reynolds):
     
     return None
      
-    
+#@memoize 
+def virtual_nikuradse(reynolds, relative_roughness):
+    return vn.vm(reynolds, relative_roughness)
+
 def smooth(reynolds):
     return colebrook(reynolds, 0.0)
     
@@ -259,6 +264,7 @@ fp = piggot()
 
 plot_diagram('Moody Diagram (Colebrook)', 'moody_colebrook.png', plot="loglog")
 plot_diagram('Moody Diagram (Azfal)', 'moody_azfal.png', plot="loglog", fff=azfal)
+plot_diagram('Moody Diagram (Virtual Nikuradze)', 'moody_vm.png', plot="loglog", fff=virtual_nikuradse)
 
 # Plot enlarged diagram
 reynolds_laminar = np.logspace(2.9, 3.4, 5) # 10^2.7 = 501, 10^3.4 = 2512
