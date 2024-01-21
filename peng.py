@@ -968,7 +968,7 @@ def get_moles_air_for_1mol_fuel_gas(g):
     n2_synth = o2_in * n2s/o2s
     air_mol = o2_in + n2_synth
     #print(f"{g:4} Moles of air per mol of fuel : {air_mol_0:8.4f} {air_mol:8.4f}")
-    return  air_mol
+    return  air_mol_0
 
 @memoize
 def get_flue_composition(g):
@@ -1056,7 +1056,6 @@ def find_intersection(g1, g2):
     """For a condensing boiler at 1 atm, at what temperature are
     the efficiences equal between these two fuels?"""
     p = Atm
-    print(g1, g2)
     def objective(T):
         obj = condense(T, p, g1) - condense(T, p, g2)
         #print(f"{T-T273:5.3f} {condense(T, p, g1):8.4f} {condense(T, p, g2):8.4f}")
@@ -1082,8 +1081,18 @@ def find_intersection(g1, g2):
         print("ABORT")
     print(f"At {T-T273:5.2f} degrees C the fuels '{g1}' and '{g2}' have the same efficiency of {eff:8.5f} %  ({n})")
  
-        
-    
+def export_η_table():
+    """Produce a text file with boiler efficiences"""
+    p = Atm
+    t_condense = np.linspace(T273+0,T273+100, 101)  
+    c_H2 = [condense(T, p, 'H2') for T in t_condense]
+    c_NG = [condense(T, p, 'NG') for T in t_condense]
+
+    with open('η_table.txt', 'w') as η:
+       η.write(f"{'Temp.(C)':8}   {'η (H2)':8} {'η (NG)':8}\n") 
+       for T in t_condense:
+            η.write(f"{T-T273:8.1f} {condense(T, p, 'H2'):8.4f} {condense(T, p, 'NG'):8.4f}\n") 
+   
 def get_h2o_pp(g):
     # REFACTOR ALL THIS now that it is being done properly elsewhwere
     
@@ -1255,6 +1264,8 @@ def main():
     for g in gas_mixtures:
         print_fuelgas(g)
 
+    export_η_table()
+    
     #- - - - - - - - - - - - - - - - - - - - - -- - - - - - - - - - -- - - - - - - - - - -
     # Plot defaults
     params = {'legend.fontsize': 'x-large',
