@@ -812,33 +812,34 @@ def print_wobbe(g, T15C):
         flag = f"{'  -            '}"
     
     print(f"{g:15} {hc} {mv:.7f} {hcmv}{wobbe_factor_ϱ:>11.5f}   {w} {flag} {too_light}")
-
+    
+@memoize  
 def condensing_fraction(g, t):
-    """The fraction of water in teh flue gas that condenses to a liquid,
+    """The fraction of water in the flue gas that condenses to a liquid,
     for this fuel gas g
     for this condensing temperature t
+    
+    minimum of:
+         vapour pressure(T)*(moles_O2+moles_N2)/(1-vapour pressure(T))
+         moles_H20
     """
-     #   =min('vapour pressure data'!B2*('H2 overview'!$E$7+'H2 overview'!$F$7)/(1-'vapour pressure data'!B2),'H2 overview'!$G$7)
-  
     flue = get_flue_composition(g)
     h2o_mol = gas_mixtures[flue]['H2O']
     
     water_vp = 1.0 * h2o_mol * Atm * 1e5 # mole fraction = partial pressure, convert to Pascals
-    #print(f"Water % {100*water_mol:8.4} {water_vp:8.4f} Pa")
     
     vp = st.sonntag_vapor_pressure(t)
-    h2o_pp = get_h2o_pp(g)
-    dew_C = st.get_dew_point(h2o_pp)-T273
-    # print(h2o_pp, h2o_mol)
+    rh = water_vp/vp
     
-    if t > st.get_dew_point( water_vp):
+    if rh <= 1.0:
         water_fraction = 0
     else:
-        water_fraction = 1.0
-
- 
+        water_fraction = (water_vp - vp)/water_vp
+    
+    print(f"{g:4} {t-273.15:8.2f} {water_fraction=:8.4f}")
     return water_fraction
-
+    
+@memoize  
 def get_water_moles(g, t):
     """get number of moles of liquid water condensed for fuel g
     and at temperature t 
@@ -849,7 +850,8 @@ def get_water_moles(g, t):
     water_fraction = condensing_fraction(g,t)
     water = water_fraction * h2o_moles
     return water
-
+    
+@memoize  
 def get_vapour_moles(g, t):
     """get number of moles of  water vapour, NOT condensed for fuel g
     and at temperature t 
@@ -883,6 +885,7 @@ def sensible_fuel(g, t):
     print(f"{g:5} {t} fuel {sensible_heat=:8.3f}")
     return sensible_heat
 
+@memoize  
 def get_moles_flue_for_1mol_fuel_gas(g):
     """ Calculates the components of the flue gas
     as a side-effect, puts the composition into gas_mixture['flue']
@@ -923,7 +926,7 @@ def get_moles_flue_for_1mol_fuel_gas(g):
     n = 0
     for c in flue_gas:
         n += flue_gas[c]
-    print(f"Number of moles in flue gas for 1 mole fuel: {n:8.4f}")
+    #print(f"Number of moles in flue gas for 1 mole fuel: {n:8.4f}")
       
       # Normalise
     for c in flue_gas:
@@ -931,6 +934,7 @@ def get_moles_flue_for_1mol_fuel_gas(g):
     gas_mixtures['flue'] = flue_gas
     return n
 
+@memoize  
 def get_moles_O2_for_1mol_fuel_gas(g):
     ff = get_fuel_fraction(g)
     if ff < 0.001:
@@ -941,6 +945,7 @@ def get_moles_O2_for_1mol_fuel_gas(g):
     o2_in = o2_burned * 1.15 # 15% excess air
     return o2_in, o2_burned
 
+@memoize  
 def get_moles_air_for_1mol_fuel_gas(g):
     o2_in, _ = get_moles_O2_for_1mol_fuel_gas(g)
     
@@ -951,7 +956,7 @@ def get_moles_air_for_1mol_fuel_gas(g):
     o2s, n2s = 0.2095, 0.7905
     n2_synth = o2_in * n2s/o2s
     air_mol = o2_in + n2_synth
-    print(f"{g:4} Moles of air per mol of fuel : {air_mol_0:8.4f} {air_mol:8.4f}")
+    #print(f"{g:4} Moles of air per mol of fuel : {air_mol_0:8.4f} {air_mol:8.4f}")
     return  air_mol
 
 @memoize    
@@ -1208,16 +1213,17 @@ def main():
     plt.rcParams.update(params)
 
    # Plot the condensing curve  - - - - - - - - - - -
-    t_condense = np.linspace(273.15+20, 273.15+100, 100)  
+    p = Atm
+    t_condense = np.linspace(273.15+20, 273.15+100, 16)  
     plt.figure(figsize=(10, 6))
-    c_H2 = [condense(T, pressure, 'H2') for T in t_condense]
-    c_NG = [condense(T, pressure, 'NG') for T in t_condense]
-    #c_Al = [condense(T, pressure, 'Algerian') for T in t_condense]
+    c_H2 = [condense(T, p, 'H2') for T in t_condense]
+    #c_NG = [condense(T, p, 'NG') for T in t_condense]
+    #c_Al = [condense(T, p, 'Algerian') for T in t_condense]
     plt.plot(t_condense-273.15, c_H2, label='Pure hydrogen', **plot_kwargs('H2'))
-    plt.plot(t_condense-273.15, c_NG, label='Natural Gas', **plot_kwargs('NG'))
+    #plt.plot(t_condense-273.15, c_NG, label='Natural Gas', **plot_kwargs('NG'))
     #plt.plot(t_condense-273.15, c_Al, label='Algerian', **plot_kwargs('Al'))
    
-    plt.title(f'Boiler efficiency vs Temperature at {pressure} bar')
+    plt.title(f'Boiler efficiency vs Temperature at {p} bar')
     plt.xlabel('Temperature (°C)')
     plt.ylabel('Boiler efficiency (%)')
     plt.legend()
