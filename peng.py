@@ -58,7 +58,7 @@ T273 = 273.15 # K
 # using aux. program visc-temp.py in this repo.
 
 gas_data = {
-    'H2': {'Tc': 33.2, 'Pc': 13.0, 'omega': -0.22, 'Mw':2.015, 'Vs': (8.9,300, 0.692), 'Hc':0.285826, 'C_':0, 'H_':2},
+    'H2': {'Tc': 33.2, 'Pc': 13.0, 'omega': -0.22, 'Mw':2.015, 'Vs': (8.9,300, 0.692), 'Hc':0.285826, 'C_':0, 'H_':2, 'Cp': 28.76 },
     'CH4': {'Tc': 190.56, 'Pc': 45.99, 'omega': 0.01142, 'Mw': 16.04246, 'Vs': (11.1,300, 1.03), 'Hc':0.890602, 'C_':1, 'H_':4}, # Hc from ISO_6976
     'C2H6': {'Tc': 305.32, 'Pc': 48.72, 'omega': 0.099, 'Mw': 30.07, 'Vs': (9.4,300, 0.87), 'Hc':1.5639, 'C_':2, 'H_':6}, # 
     'C3H8': {'Tc': 369.15, 'Pc': 42.48, 'omega': 0.1521, 'Mw': 44.096, 'Vs': (8.2,300, 0.93), 'Hc':2.21866, 'C_':3, 'H_':8}, # https://www.engineeringtoolbox.com/propane-d_1423.html
@@ -73,14 +73,14 @@ gas_data = {
     
     'C6':  {'Tc': 507.6, 'Pc': 30.2, 'omega': 0.1521, 'Mw': 86.1754, 'Vs': (8.6,400, 1.03), 'Hc':4.19475, 'C_':6, 'H_':14}, # omega is 0.2797 isohexane    
     'CO2': {'Tc': 304.2, 'Pc': 73.8, 'omega': 0.228, 'Mw': 44.01, 'Vs': (15.0,300, 0.872), 'Hc':0, 'C_':0, 'H_':0}, # https://en.wikipedia.org/wiki/Acentric_factor
-    'H2O': {'Tc': 647.1, 'Pc': 220.6, 'omega': 0.344292, "Mw": 18.015, 'Vs': (9.8,300, 1.081), 'Hc':0, 'C_':0, 'H_':0}, # https://link.springer.com/article/10.1007/s10765-020-02643-6/tables/1
-    'N2': {'Tc': 126.21, 'Pc': 33.958, 'omega': 0.0372, 'Mw':28.013, 'Vs': (17.9,300, 0.658), 'Hc':0, 'C_':0, 'H_':0}, #  omega http://www.coolprop.org/fluid_properties/fluids/Nitrogen.html
+    'H2O': {'Tc': 647.1, 'Pc': 220.6, 'omega': 0.344292, "Mw": 18.015, 'Vs': (9.8,300, 1.081), 'Hc':0, 'C_':0, 'H_':0, 'Cp': 32.81, 'Hvap': 43.99}, # https://link.springer.com/article/10.1007/s10765-020-02643-6/tables/1
+    'N2': {'Tc': 126.21, 'Pc': 33.958, 'omega': 0.0372, 'Mw':28.013, 'Vs': (17.9,300, 0.658), 'Hc':0, 'C_':0, 'H_':0, 'Cp': 29.12, 'CpL':75.63}, #  omega http://www.coolprop.org/fluid_properties/fluids/Nitrogen.html, CpL is Cp for liquid
     'He': {'Tc': 5.2, 'Pc': 2.274, 'omega': -0.3836, 'Mw': 4.0026, 'Vs': (19.9,300, 0.69), 'Hc':0, 'C_':0, 'H_':0},  # omega http://www.coolprop.org/fluid_properties/fluids/Helium.html
     # https://eng.libretexts.org/Bookshelves/Chemical_Engineering/Distillation_Science_(Coleman)/03%3A_Critical_Properties_and_Acentric_Factor
     # N2 https://pubs.acs.org/doi/suppl/10.1021/acs.iecr.2c00363/suppl_file/ie2c00363_si_001.pdf
     # N2 omega is from https://en.wikipedia.org/wiki/Acentric_factor
     'Ar': {'Tc': 150.687, 'Pc': 48.630, 'omega': 0, 'Mw': 39.948, 'Vs': (22.7,300, 0.77), 'Hc':0, 'C_':0, 'H_':0}, #https://en.wikipedia.org/wiki/Acentric_factor
-    'O2': {'Tc': 154.581, 'Pc': 50.43, 'omega': 0.022, 'Mw': 31.9988, 'Vs': (20.7,300, 0.72), 'Hc':0, 'C_':0, 'H_':0},# http://www.coolprop.org/fluid_properties/fluids/Oxygen.html
+    'O2': {'Tc': 154.581, 'Pc': 50.43, 'omega': 0.022, 'Mw': 31.9988, 'Vs': (20.7,300, 0.72), 'Hc':0, 'C_':0, 'H_':0, 'Cp':29.34},# http://www.coolprop.org/fluid_properties/fluids/Oxygen.html
     }
 
 # Natural gas compositions (mole fractions)
