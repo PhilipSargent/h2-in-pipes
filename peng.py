@@ -72,14 +72,14 @@ gas_data = {
     # omega from http://www.coolprop.org/fluid_properties/fluids/Neopentane.html
     
     'C6':  {'Tc': 507.6, 'Pc': 30.2, 'omega': 0.1521, 'Mw': 86.1754, 'Vs': (8.6,400, 1.03), 'Hc':4.19475, 'C_':6, 'H_':14}, # omega is 0.2797 isohexane    
-    'CO2': {'Tc': 304.2, 'Pc': 73.8, 'omega': 0.228, 'Mw': 44.01, 'Vs': (15.0,300, 0.872), 'Hc':0, 'C_':0, 'H_':0}, # https://en.wikipedia.org/wiki/Acentric_factor
-    'H2O': {'Tc': 647.1, 'Pc': 220.6, 'omega': 0.344292, "Mw": 18.015, 'Vs': (9.8,300, 1.081), 'Hc':0, 'C_':0, 'H_':0, 'Cp': 32.81, 'Hvap': 43.99}, # https://link.springer.com/article/10.1007/s10765-020-02643-6/tables/1
-    'N2': {'Tc': 126.21, 'Pc': 33.958, 'omega': 0.0372, 'Mw':28.013, 'Vs': (17.9,300, 0.658), 'Hc':0, 'C_':0, 'H_':0, 'Cp': 29.12, 'CpL':75.63}, #  omega http://www.coolprop.org/fluid_properties/fluids/Nitrogen.html, CpL is Cp for liquid
-    'He': {'Tc': 5.2, 'Pc': 2.274, 'omega': -0.3836, 'Mw': 4.0026, 'Vs': (19.9,300, 0.69), 'Hc':0, 'C_':0, 'H_':0},  # omega http://www.coolprop.org/fluid_properties/fluids/Helium.html
+    'CO2': {'Tc': 304.2, 'Pc': 73.8, 'omega': 0.228, 'Mw': 44.01, 'Vs': (15.0,300, 0.872), 'Hc':0, 'C_':0, 'H_':0, 'Cp':37.12}, # https://en.wikipedia.org/wiki/Acentric_factor
+    'H2O': {'Tc': 647.1, 'Pc': 220.6, 'omega': 0.344292, "Mw": 18.015, 'Vs': (9.8,300, 1.081), 'Hc':0, 'C_':0, 'H_':0, 'Cp': 32.81, 'LH': 43.99, 'CpL':75.63}, # CpL in liquid phase LH latent heat  https://link.springer.com/article/10.1007/s10765-020-02643-6/tables/1
+    'N2': {'Tc': 126.21, 'Pc': 33.958, 'omega': 0.0372, 'Mw':28.013, 'Vs': (17.9,300, 0.658), 'Hc':0, 'C_':0, 'H_':0, 'Cp': 29.12}, #  omega http://www.coolprop.org/fluid_properties/fluids/Nitrogen.html, CpL is Cp for liquid
+    'He': {'Tc': 5.2, 'Pc': 2.274, 'omega': -0.3836, 'Mw': 4.0026, 'Vs': (19.9,300, 0.69), 'Hc':0, 'C_':0, 'H_':0, 'Cp': 126.153},  # omega http://www.coolprop.org/fluid_properties/fluids/Helium.html
     # https://eng.libretexts.org/Bookshelves/Chemical_Engineering/Distillation_Science_(Coleman)/03%3A_Critical_Properties_and_Acentric_Factor
     # N2 https://pubs.acs.org/doi/suppl/10.1021/acs.iecr.2c00363/suppl_file/ie2c00363_si_001.pdf
     # N2 omega is from https://en.wikipedia.org/wiki/Acentric_factor
-    'Ar': {'Tc': 150.687, 'Pc': 48.630, 'omega': 0, 'Mw': 39.948, 'Vs': (22.7,300, 0.77), 'Hc':0, 'C_':0, 'H_':0}, #https://en.wikipedia.org/wiki/Acentric_factor
+    'Ar': {'Tc': 150.687, 'Pc': 48.630, 'omega': 0, 'Mw': 39.948, 'Vs': (22.7,300, 0.77), 'Hc':0, 'C_':0, 'H_':0, 'Cp':20.786}, #https://en.wikipedia.org/wiki/Acentric_factor
     'O2': {'Tc': 154.581, 'Pc': 50.43, 'omega': 0.022, 'Mw': 31.9988, 'Vs': (20.7,300, 0.72), 'Hc':0, 'C_':0, 'H_':0, 'Cp':29.34},# http://www.coolprop.org/fluid_properties/fluids/Oxygen.html
     }
 
@@ -692,7 +692,10 @@ def get_Cp(g):
         for pure_gas, x in composition.items():
             # Linear mixing rule for volume factor
             if 'Cp' in gas_data[pure_gas]:
-                cp += x * gas_data[pure_gas]['Cp']
+                pure_cp = gas_data[pure_gas]['Cp']
+                contrib = x * pure_cp
+                cp += contrib
+                #print(f"{g:5} {pure_gas:5} Cp:{pure_cp:8.4f} Cp contrib:{contrib:8.4f}")
     # Cp is in J/mol.K
     if cp:
         return cp
@@ -811,11 +814,33 @@ def print_wobbe(g, T15C):
     
     print(f"{g:15} {hc} {mv:.7f} {hcmv}{wobbe_factor_ϱ:>11.5f}   {w} {flag} {too_light}")
 
-   
+
+    
+@memoize
+def latent_out(g, t):
+    LH = gas_data['H2O']['LH'] # kJ/mol
+    flue = get_flue_composition(g)
+    water_mol = gas_mixtures[flue]['H2O']
+    
+    # OK, that is the total amount of water. How much condenses at temp=t
+    condensate = 0.5 * water_mol ############# need to calc. this
+    
+    latent_heat =   condensate * LH * 1000 # convert to J from kJ
+    return latent_heat
+ 
     
 @memoize
 def sensible_fuel(g, t):
-    return 10
+    """For 1 mole of pseudo-gas g, how much is the sensible heat required to heat it
+    from t to 298 K ?
+    This includes inerts aas well as combustible gases
+    """
+    fuel_mol = 1.0 # start with 1 mol of fuel gas
+    fuel_cp = get_Cp(g)
+    sensible_heat = fuel_cp * (298 - t)
+    print(f"{g:5} {t} fuel {sensible_heat=:8.3f}")
+    return sensible_heat
+
     
 @memoize    
 def sensible_air(t):
@@ -825,9 +850,10 @@ def sensible_air(t):
     air_mol = 3 ############# need to calc. this
     air_cp = get_Cp('Air')
     sensible_heat = air_cp * (298 - t)
-    print(f"{t} Air {sensible_heat=:8.3f}")
+    print(f"Air   {t} Air {sensible_heat=:8.3f}")
     return sensible_heat
-    
+   
+@memoize
 def get_flue_composition(g):
     """For one mole of fuel gas, return the composition of the flue gas"""
     
@@ -859,7 +885,7 @@ def condense(T, pressure, g):
     _, _, hc_MJ = get_Hc(g, 298) 
     hc = hc_MJ * 1000 * 1000
 
-    heat_out = hc - sensible_in(g, T, t_fuel, t_air) - sensible_out(g, T)
+    heat_out = hc + latent_out(g, T) - sensible_in(g, T, t_fuel, t_air) - sensible_out(g, T)
     η = 100 * heat_out/hc
     return η
     
@@ -875,15 +901,31 @@ def sensible_out(g, T):
     """Sensible heat needed to'heat' flue gas from 298 to exit temp"""
     flue_out = sensible_flue(g, T)
     return flue_out 
-    
-def get_h2o_pp(g):
-    # Calculate the reagent (input) gases 
+
+def get_moles_O2_for_1mol_fuel_gas(g):
     ff = get_fuel_fraction(g)
     if ff < 0.001:
         #print(f"Not a fuel {ff}")
         return
-    o2_fuel = do_flue_rules(g,'C_') + do_flue_rules(g,'H_')/4
-    o2_gas = o2_fuel * ff
+    o2_fuel = do_flue_rules(g,'C_') + do_flue_rules(g,'H_')/4 # directly need to burn
+    o2_burned = o2_fuel * ff # actual needed, as not all that 1 mol on fuel is combustible
+    o2_in = o2_burned * 1.15 # 15% excess air
+    return o2_in, o2_burned
+    
+def get_moles_air_for_1mol_fuel_gas(g):
+    air_mol =2
+    return  air_mol
+
+def get_mols_air_for_1mol_O2(g):
+    pass
+    return
+    
+
+def get_h2o_pp(g):
+    # Calculate the reagent (input) gases for 1 mol of fuel gas g
+    o2_in, o2_burned = get_moles_O2_for_1mol_fuel_gas(g)
+
+    # now calculate inerts
     n2_gas = 0
     co2_gas = 0
     if g not in gas_data:
@@ -896,7 +938,6 @@ def get_h2o_pp(g):
 
     #print(f"\n{g:5}\t C_={do_flue_rules(g,'C_'):6.4f} H_={do_flue_rules(g,'H_'):6.4f} O2:fuel {o2_fuel:6.4f} O2:gas ratio {o2_gas:6.4f}")
     
-    o2_in = o2_fuel * ff * 1.15 # 15% excess air
     
     o2 = gas_mixtures['dryAir']['O2']
     # h2o = gas_mixtures['dryAir']['H2O']
@@ -908,7 +949,7 @@ def get_h2o_pp(g):
     #print(f"O2 in: {o2_in:6.4f}, N2 in {n2_in:6.4f}  {n2_synth:6.4f}")
     
     # Calculate the output (product) gases
-    o2_out = o2_in - o2_gas
+    o2_out = o2_in - o2_burned
     n2_out = n2_in + n2_gas
     n2_out_synth = n2_synth + n2_gas
     
