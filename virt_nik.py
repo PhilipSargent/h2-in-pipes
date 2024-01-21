@@ -146,6 +146,7 @@ def main():
     """
     print("Welcome! This code calculates Lamda = f(Re, Sigma) for pipe flows using the Virtual Nikuradse Correlation (VNC).")
     print("Reminder: VNC requires Re > 0 and Sigma >= 15.")
+    print("This DOES NOT WORK - imperfect conversion from frotran not fixed yet.")
 
     # Main loop
     outer_loop = False

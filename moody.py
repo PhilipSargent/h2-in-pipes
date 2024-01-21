@@ -7,6 +7,7 @@ import functools
 import numpy as np
 import matplotlib.pyplot as plt
 import virt_nik as vn
+import pyfrac_yj as pf
 
 from scipy.interpolate import interp1d
 
@@ -43,11 +44,13 @@ def blasius(reynolds):
      
 @memoize 
 def virtual_nikuradse(reynolds, relative_roughness):
-    """This DOES NOT WORK - imperfect conversion from frotran not fixed yet
-    """
-
+    # Now using pyfrac code, which uses Fanning ff so is 4* too small
+    # but while this fits Blasius end, the high-Re end is STILL 4x too small..
     sigma = 1/relative_roughness
-    return vn.vm(reynolds, sigma)
+    return 4 * pf.FF_YangJoseph(reynolds, sigma)
+
+    #This vn.vm DOES NOT WORK - my imperfect conversion from fortran not fixed yet
+    # return vn.vm(reynolds, sigma)
 
 def smooth(reynolds):
     return colebrook(reynolds, 0.0)
@@ -217,7 +220,7 @@ def plot_diagram(title, filename, plot="loglog", fff=colebrook):
     friction_factors = {}
     for rr in relative_roughness_values:
         friction_factors[rr] = [fff(re, rr) for re in reynolds]
-        print(fff,rr)
+        #print(fff,rr)
         # [print(re, rr, haarland(re, rr)) for re in reynolds]
 
 
@@ -267,14 +270,8 @@ plt.rcParams.update(params)
 reynolds_laminar = np.logspace(2.9, 3.9, 5) # 10^2.7 = 501, 10^3.4 = 2512
 reynolds = np.logspace(2.4, 9.0, 1000) # 10^7.7 = 5e7
 relative_roughness_values = [0.01, 0.001, 0.0001, 0.00001,  0.000001] #
-relative_roughness_values = list(reversed(relative_roughness_values))
+#relative_roughness_values = list(reversed(relative_roughness_values))
 fp = piggot()
-
-re = 3000
-sigma = 200
-for rrv in relative_roughness_values:
-    sigma = 1/rrv
-    print(f"{re} {sigma:.1f} {vn.vm(re, sigma):.5f}")
 
 plot_diagram('Moody Diagram (Colebrook)', 'moody_colebrook.png', plot="loglog")
 plot_diagram('Moody Diagram (Azfal)', 'moody_azfal.png', plot="loglog", fff=azfal)
@@ -298,7 +295,14 @@ plot_diagram('Moody (Colebrook) Transition region', 'moody_colebrook_enlarge_lin
 plot_diagram('Moody (Azfal) Transition region', 'moody_azfal_enlarge_lin.png',plot="linear", fff=azfal)
 plot_diagram('Moody Diagram (Virtual Nikuradze)', 'moody_vm_enlarge_lin.png', plot="loglog", fff=virtual_nikuradse)
 
-# plt.show() # does not work as this is a non-interactive run of the program
+
+re = 1e9
+print(f"For high Re = {re:6.0e}")
+for rr in [0.01, 0.001, 0.0001, 0.00001,  0.000001]:
+    for fff in [colebrook, azfal, virtual_nikuradse]:
+        print(f"{fff.__name__:17} {rr:6} {fff(re, rr):.5f}")
+    print("")
+
 '''
 Before running this program, ensure you have the required libraries installed. You can install them using pip:
 pip install numpy matplotlib scipy
