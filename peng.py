@@ -813,28 +813,59 @@ def print_wobbe(g, T15C):
     
     print(f"{g:15} {hc} {mv:.7f} {hcmv}{wobbe_factor_ϱ:>11.5f}   {w} {flag} {too_light}")
 
-@memoize
-def latent_out(g, t):
-    ############ Must be for 1 mole of fuel gas !
-    LH = gas_data['H2O']['LH'] # kJ/mol
+def condensing_fraction(g, t):
+    """The fraction of water in teh flue gas that condenses to a liquid,
+    for this fuel gas g
+    for this condensing temperature t
+    """
+     #   =min('vapour pressure data'!B2*('H2 overview'!$E$7+'H2 overview'!$F$7)/(1-'vapour pressure data'!B2),'H2 overview'!$G$7)
+  
     flue = get_flue_composition(g)
-    water_mol = gas_mixtures[flue]['H2O']
+    h2o_mol = gas_mixtures[flue]['H2O']
     
-    water_vp = water_mol * Atm * 1e5 #Pascals
-    print(f"Water % {100*water_mol:8.4} {water_vp:8.4f} Pa")
-    # OK, that is the total amount of water. How much condenses at temp=t
+    water_vp = 1.0 * h2o_mol * Atm * 1e5 # mole fraction = partial pressure, convert to Pascals
+    #print(f"Water % {100*water_mol:8.4} {water_vp:8.4f} Pa")
     
     vp = st.sonntag_vapor_pressure(t)
     h2o_pp = get_h2o_pp(g)
     dew_C = st.get_dew_point(h2o_pp)-T273
-    print(h2o_pp, water_mol)
+    # print(h2o_pp, h2o_mol)
     
     if t > st.get_dew_point( water_vp):
-        condensing_fraction = 0
+        water_fraction = 0
     else:
-        condensing_fraction = 0.5
+        water_fraction = 1.0
 
-    condensate = condensing_fraction * water_mol ############# need to calc. this
+ 
+    return water_fraction
+
+def get_water_moles(g, t):
+    """get number of moles of liquid water condensed for fuel g
+    and at temperature t 
+    for one mole of fuel gas"""
+    flue_moles = get_moles_flue_for_1mol_fuel_gas(g)
+    h2o_moles = flue_moles * gas_mixtures['flue']['H2O']
+    
+    water_fraction = condensing_fraction(g,t)
+    water = water_fraction * h2o_moles
+    return water
+
+def get_vapour_moles(g, t):
+    """get number of moles of  water vapour, NOT condensed for fuel g
+    and at temperature t 
+    for one mole of fuel gas"""
+    flue_moles = get_moles_flue_for_1mol_fuel_gas(g)
+    h2o_moles = flue_moles * gas_mixtures['flue']['H2O']
+    
+    vapour_fraction =  1 - condensing_fraction(g, t)
+    vapour = vapour_fraction * h2o_moles
+    return vapour
+   
+@memoize
+def latent_out(g, t):
+    # we need the actual number of moles of water, not just the proprtion
+    condensate = get_water_moles(g, t)     
+    LH = gas_data['H2O']['LH'] # kJ/mol    
     
     latent_heat =   condensate * LH * 1000 # convert to J from kJ
     return latent_heat
@@ -851,12 +882,6 @@ def sensible_fuel(g, t):
     sensible_heat = fuel_mol * fuel_cp * (298 - t)
     print(f"{g:5} {t} fuel {sensible_heat=:8.3f}")
     return sensible_heat
-
-def get_water_moles(g, t):
-    """get number of moles of liquid water condensed for fuel g
-    and at temperature t """
-    ################### CALCULATE THIS
-    return 1
 
 def get_moles_flue_for_1mol_fuel_gas(g):
     """ Calculates the components of the flue gas
@@ -934,7 +959,6 @@ def sensible_air(g, t):
     """For 1 mole of pseudo-gas g, how much is the sensible heat required to heat it
     from t to 298 K ?
     """
-    ############ Must be for 1 mole of fuel gas !
     air_mol = get_moles_air_for_1mol_fuel_gas(g)
     air_cp = get_Cp('Air')
     
@@ -956,7 +980,6 @@ def get_flue_composition(g):
 @memoize    
 def sensible_flue(g, t):
     """Sensible heat needed to'heat' flue gas from 298 to exit temp"""
-    ############ Must be for 1 mole of fuel gas !
     flue_moles = get_moles_flue_for_1mol_fuel_gas(g)
     flue_cp = get_Cp('flue')
     sensible_heat = flue_moles * flue_cp * (t- 298) # flue ext temp is greater than 298 (nearly always)
@@ -966,11 +989,9 @@ def sensible_flue(g, t):
 @memoize    
 def sensible_water(g, t):
     """Sensible heat needed to'heat' liquid water from 298 to exit temp"""
-    ############ Must be for 1 mole of fuel gas !
-    water_moles = get_water_moles(g, t)
+    water_moles = get_water_moles(g, t) # for one mole fuel
     water_cp = gas_data['H2O']['CpL']
     sensible_heat = water_moles *water_cp * (t- 298) 
-    # print(f"{g:5}{water_cp:8.3f} {t:5.1f} water {sensible_heat=:8.3f}")
     return sensible_heat
 
 def condense(T, pressure, g):
@@ -994,17 +1015,15 @@ def condense(T, pressure, g):
 @memoize
 def sensible_in(g, T, t_fuel, t_air):
     """Sensible heat needed to heat inlet fuel and air up to 298"""
-    ############ Must be for 1 mole of fuel gas !
-    fuel_in = sensible_fuel(g, t_fuel)
-    air_in = sensible_air(g, t_air)
+    fuel_in = sensible_fuel(g, t_fuel) # 1 mole of fuel
+    air_in = sensible_air(g, t_air) # yes, this is for 1 mole of fuel
     return fuel_in + air_in
     
 @memoize
 def sensible_out(g, T):
     """Sensible heat needed to'heat' flue gas from 298 to exit temp"""
-    ############ Must be for 1 mole of fuel gas !
-    flue_out = sensible_flue(g, T)
-    water_out = sensible_water(g, T)
+    flue_out = sensible_flue(g, T) # yes, for 1 mole fuel
+    water_out = sensible_water(g, T) # for one mole fuel
     return flue_out + water_out
 
 def get_h2o_pp(g):
@@ -1193,10 +1212,10 @@ def main():
     plt.figure(figsize=(10, 6))
     c_H2 = [condense(T, pressure, 'H2') for T in t_condense]
     c_NG = [condense(T, pressure, 'NG') for T in t_condense]
-    c_Al = [condense(T, pressure, 'Algerian') for T in t_condense]
+    #c_Al = [condense(T, pressure, 'Algerian') for T in t_condense]
     plt.plot(t_condense-273.15, c_H2, label='Pure hydrogen', **plot_kwargs('H2'))
     plt.plot(t_condense-273.15, c_NG, label='Natural Gas', **plot_kwargs('NG'))
-    plt.plot(t_condense-273.15, c_Al, label='Algerian', **plot_kwargs('Al'))
+    #plt.plot(t_condense-273.15, c_Al, label='Algerian', **plot_kwargs('Al'))
    
     plt.title(f'Boiler efficiency vs Temperature at {pressure} bar')
     plt.xlabel('Temperature (°C)')
