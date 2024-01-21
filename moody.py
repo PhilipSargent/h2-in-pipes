@@ -41,9 +41,10 @@ def blasius(reynolds):
     
     return None
      
-#@memoize 
+@memoize 
 def virtual_nikuradse(reynolds, relative_roughness):
-    return vn.vm(reynolds, relative_roughness)
+    sigma = 1/relative_roughness
+    return vn.vm(reynolds, sigma)
 
 def smooth(reynolds):
     return colebrook(reynolds, 0.0)
@@ -213,6 +214,7 @@ def plot_diagram(title, filename, plot="loglog", fff=colebrook):
     friction_factors = {}
     for rr in relative_roughness_values:
         friction_factors[rr] = [fff(re, rr) for re in reynolds]
+        print(fff,rr)
         # [print(re, rr, haarland(re, rr)) for re in reynolds]
 
 
@@ -257,10 +259,19 @@ params = {'legend.fontsize': 'x-large',
          'ytick.labelsize':'x-large'}
 plt.rcParams.update(params)
 
+
+
 reynolds_laminar = np.logspace(2.9, 3.9, 5) # 10^2.7 = 501, 10^3.4 = 2512
 reynolds = np.logspace(2.4, 9.0, 1000) # 10^7.7 = 5e7
-relative_roughness_values = [0.01, 0.001, 0.0001, 0.00001,  0.000001]
+relative_roughness_values = [0.01, 0.001, 0.0001, 0.00001,  0.000001] #
+relative_roughness_values = list(reversed(relative_roughness_values))
 fp = piggot()
+
+re = 3000
+sigma = 200
+for rrv in relative_roughness_values:
+    sigma = 1/rrv
+    print(f"{re} {sigma:.1f} {vn.vm(re, sigma):.5f}")
 
 plot_diagram('Moody Diagram (Colebrook)', 'moody_colebrook.png', plot="loglog")
 plot_diagram('Moody Diagram (Azfal)', 'moody_azfal.png', plot="loglog", fff=azfal)
@@ -275,13 +286,14 @@ relative_roughness_values = [0.01, 0.003, 0.001]
 fp = None
 plot_diagram('Moody (Colebrook) Transition region', 'moody_colebrook_enlarge.png',plot="loglog")
 plot_diagram('Moody (Azfal) Transition region', 'moody_azfal_enlarge.png',plot="loglog", fff=azfal)
+plot_diagram('Moody Diagram (Virtual Nikuradze)', 'moody_vm_enlarge.png', plot="loglog", fff=virtual_nikuradse)
 
 reynolds_laminar = np.logspace(2.9, 3.4, 50) # 10^2.7 = 501, 10^3.4 = 2512
 reynolds = np.logspace(3.0, 4.0, 500) 
 
 plot_diagram('Moody (Colebrook) Transition region', 'moody_colebrook_enlarge_lin.png',plot="linear")
 plot_diagram('Moody (Azfal) Transition region', 'moody_azfal_enlarge_lin.png',plot="linear", fff=azfal)
-
+plot_diagram('Moody Diagram (Virtual Nikuradze)', 'moody_vm_enlarge_lin.png', plot="loglog", fff=virtual_nikuradse)
 
 # plt.show() # does not work as this is a non-interactive run of the program
 '''

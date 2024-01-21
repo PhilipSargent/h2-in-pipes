@@ -78,10 +78,14 @@ def ldfa(var_independent, fl, fr, power_sm, power_jtn, rcr):
     
     t1 =  (fr - fl)
     t9 = (var_independent / rcr)
-    print(t9, power_sm)
+
     t2 = t9 ** power_sm
     t3 = ((1 + t2) ** power_jtn)
-    return fl + t1 / t3
+    
+    k1 =  t1 / t3
+    #print(power_sm, fl,k1)
+    r = fl + k1
+    return r
 
 def vm(re, sigma):
     # Modify AA, BB, and RR based on Sigma
@@ -129,6 +133,7 @@ def vm(re, sigma):
     lamda_r = ff[-1, index_j - 1] # clever, spotted that user is asked for 1..6 but python indexing works from zero !
     lamda = ldfa(re, lamda_s, lamda_r, m[-1], n[-1], rr[-1, index_j - 1])
     
+    lamda = max(lamda, 5e-3)
     return lamda
     
 def main():
