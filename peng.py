@@ -810,20 +810,31 @@ def print_wobbe(g, T15C):
         hc = f"{'-':^12}"
         hcmv = f"{'-':^11}"
         flag = f"{'  -            '}"
-   
     
     print(f"{g:15} {hc} {mv:.7f} {hcmv}{wobbe_factor_ϱ:>11.5f}   {w} {flag} {too_light}")
 
-
-    
 @memoize
 def latent_out(g, t):
+    ############ Must be for 1 mole of fuel gas !
     LH = gas_data['H2O']['LH'] # kJ/mol
     flue = get_flue_composition(g)
     water_mol = gas_mixtures[flue]['H2O']
     
+    water_vp = water_mol * Atm * 1e5 #Pascals
+    print(f"Water % {100*water_mol:8.4} {water_vp:8.4f} Pa")
     # OK, that is the total amount of water. How much condenses at temp=t
-    condensate = 0.5 * water_mol ############# need to calc. this
+    
+    vp = st.sonntag_vapor_pressure(t)
+    h2o_pp = get_h2o_pp(g)
+    dew_C = st.get_dew_point(h2o_pp)-T273
+    print(h2o_pp, water_mol)
+    
+    if t > st.get_dew_point( water_vp):
+        condensing_fraction = 0
+    else:
+        condensing_fraction = 0.5
+
+    condensate = condensing_fraction * water_mol ############# need to calc. this
     
     latent_heat =   condensate * LH * 1000 # convert to J from kJ
     return latent_heat
@@ -837,9 +848,15 @@ def sensible_fuel(g, t):
     """
     fuel_mol = 1.0 # start with 1 mol of fuel gas
     fuel_cp = get_Cp(g)
-    sensible_heat = fuel_cp * (298 - t)
+    sensible_heat = fuel_mol * fuel_cp * (298 - t)
     print(f"{g:5} {t} fuel {sensible_heat=:8.3f}")
     return sensible_heat
+
+def get_water_moles(g, t):
+    """get number of moles of liquid water condensed for fuel g
+    and at temperature t """
+    ################### CALCULATE THIS
+    return 1
 
 def get_moles_flue_for_1mol_fuel_gas(g):
     """ Calculates the components of the flue gas
@@ -917,6 +934,7 @@ def sensible_air(g, t):
     """For 1 mole of pseudo-gas g, how much is the sensible heat required to heat it
     from t to 298 K ?
     """
+    ############ Must be for 1 mole of fuel gas !
     air_mol = get_moles_air_for_1mol_fuel_gas(g)
     air_cp = get_Cp('Air')
     
@@ -937,11 +955,22 @@ def get_flue_composition(g):
     
 @memoize    
 def sensible_flue(g, t):
-    flue_mol = 3 ########### CALCULATE THIS
-    flue_gas = get_flue_composition(g)
-    flue_cp = get_Cp(flue_gas)
-    sensible_heat = flue_cp * (t- 298) # flue ext temp is greater than 298 (nearly always)
+    """Sensible heat needed to'heat' flue gas from 298 to exit temp"""
+    ############ Must be for 1 mole of fuel gas !
+    flue_moles = get_moles_flue_for_1mol_fuel_gas(g)
+    flue_cp = get_Cp('flue')
+    sensible_heat = flue_moles * flue_cp * (t- 298) # flue ext temp is greater than 298 (nearly always)
     # print(f"{g:5}{flue_cp:8.3f} {t:5.1f} Flue {sensible_heat=:8.3f}")
+    return sensible_heat
+
+@memoize    
+def sensible_water(g, t):
+    """Sensible heat needed to'heat' liquid water from 298 to exit temp"""
+    ############ Must be for 1 mole of fuel gas !
+    water_moles = get_water_moles(g, t)
+    water_cp = gas_data['H2O']['CpL']
+    sensible_heat = water_moles *water_cp * (t- 298) 
+    # print(f"{g:5}{water_cp:8.3f} {t:5.1f} water {sensible_heat=:8.3f}")
     return sensible_heat
 
 def condense(T, pressure, g):
@@ -965,6 +994,7 @@ def condense(T, pressure, g):
 @memoize
 def sensible_in(g, T, t_fuel, t_air):
     """Sensible heat needed to heat inlet fuel and air up to 298"""
+    ############ Must be for 1 mole of fuel gas !
     fuel_in = sensible_fuel(g, t_fuel)
     air_in = sensible_air(g, t_air)
     return fuel_in + air_in
@@ -972,13 +1002,14 @@ def sensible_in(g, T, t_fuel, t_air):
 @memoize
 def sensible_out(g, T):
     """Sensible heat needed to'heat' flue gas from 298 to exit temp"""
+    ############ Must be for 1 mole of fuel gas !
     flue_out = sensible_flue(g, T)
-    return flue_out 
-
-
-    
+    water_out = sensible_water(g, T)
+    return flue_out + water_out
 
 def get_h2o_pp(g):
+    # REFACTOR ALL THIS now that it is being done properly elsewhwere
+    
     # Calculate the reagent (input) gases for 1 mol of fuel gas g
     o2_in, o2_burned = get_moles_O2_for_1mol_fuel_gas(g)
 
