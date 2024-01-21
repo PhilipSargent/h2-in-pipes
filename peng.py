@@ -679,6 +679,26 @@ def get_Hc(g, T):
     else:
         return molar_volume, None, None
 
+def get_Cp(g):
+    """If the data is there, return the specific heat in J/mol.K, 
+    """
+    if g in gas_mixture_properties and 'Cp' in gas_mixture_properties[g]:
+        cp = gas_mixture_properties[g]['Cp']
+    elif g in gas_data and 'Cp' in gas_data[g]:
+        cp = gas_data[g]['Cp']
+    else:
+        cp = 0
+        composition = gas_mixtures[g]
+        for pure_gas, x in composition.items():
+            # Linear mixing rule for volume factor
+            if 'Cp' in gas_data[pure_gas]:
+                cp += x * gas_data[pure_gas]['Cp']
+    # Cp is in J/mol.K
+    if cp:
+        return cp
+    else:
+        return None
+
 def get_fuel_fraction(g):
     if g in gas_data:
         if 'Hc' in gas_data[g]:
@@ -791,12 +811,57 @@ def print_wobbe(g, T15C):
     
     print(f"{g:15} {hc} {mv:.7f} {hcmv}{wobbe_factor_ϱ:>11.5f}   {w} {flag} {too_light}")
 
+   
+    
+@memoize
+def sensible_fuel(g, t):
+    return 10
+    
+@memoize    
+def sensible_air(t):
+    """For 1 mole of pseudo-gas g, how much is the sensible heat required to heat it
+    from t to 298 K ?
+    """
+    air_mol = 3 # need to calc. this
+    air_cp = get_Cp('Air')
+    sensible_heat = air_cp * (298 - t)
+    print(f"{t} Air {sensible_heat=:8.3f}")
+    return sensible_heat
+    
+@memoize    
+def sensible_flue(g, T):
+    return 12
+
 def condense(T, pressure, g):
+    """Return the efficiency (%) of the boiler assuming flue gas is all condensed
+    at temperature T
+    """
+    t_fuel = 273.15 + 8
+    t_air  = 273.15 + 5
+    
     ff = get_fuel_fraction(g)
     if ff < 0.001:
         #print(f"Not a fuel {ff}")
-        return None    
-    return 50
+        return None  
+    _, _, hc_MJ = get_Hc(g, 298) 
+    hc = hc_MJ * 1000 * 1000
+
+    heat_out = hc - sensible_in(g, T, t_fuel, t_air) - sensible_out(g, T)
+    η = 100 * heat_out/hc
+    return η
+    
+@memoize
+def sensible_in(g, T, t_fuel, t_air):
+    """Sensible heat needed to heat inlet fuel and air up to 298"""
+    fuel_in = sensible_fuel(g, t_fuel)
+    air_in = sensible_air(t_air)
+    return fuel_in + air_in
+    
+@memoize
+def sensible_out(g, T):
+    """Sensible heat needed to'heat' flue gas from 298 to exit temp"""
+    flue_out = sensible_flue(g, T)
+    return flue_out 
     
 def get_h2o_pp(g):
     # Calculate the reagent (input) gases 
