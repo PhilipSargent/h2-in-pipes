@@ -822,15 +822,28 @@ def sensible_air(t):
     """For 1 mole of pseudo-gas g, how much is the sensible heat required to heat it
     from t to 298 K ?
     """
-    air_mol = 3 # need to calc. this
+    air_mol = 3 ############# need to calc. this
     air_cp = get_Cp('Air')
     sensible_heat = air_cp * (298 - t)
     print(f"{t} Air {sensible_heat=:8.3f}")
     return sensible_heat
     
+def get_flue_composition(g):
+    """For one mole of fuel gas, return the composition of the flue gas"""
+    
+    ########### CALCULATE THIS
+    flue = {'O2': 0.307, 'N2': 9.181, 'CO2': 1.14, 'H2O': 2.119}
+    gas_mixtures['flue'] = flue
+    return 'flue'
+    
 @memoize    
-def sensible_flue(g, T):
-    return 12
+def sensible_flue(g, t):
+    flue_mol = 3 ########### CALCULATE THIS
+    flue_gas = get_flue_composition(g)
+    flue_cp = get_Cp(flue_gas)
+    sensible_heat = flue_cp * (t- 298) # flue ext temp is greater than 298 (nearly always)
+    # print(f"{g:5}{flue_cp:8.3f} {t:5.1f} Flue {sensible_heat=:8.3f}")
+    return sensible_heat
 
 def condense(T, pressure, g):
     """Return the efficiency (%) of the boiler assuming flue gas is all condensed
@@ -841,7 +854,7 @@ def condense(T, pressure, g):
     
     ff = get_fuel_fraction(g)
     if ff < 0.001:
-        #print(f"Not a fuel {ff}")
+        print(f"Not a fuel {ff}")
         return None  
     _, _, hc_MJ = get_Hc(g, 298) 
     hc = hc_MJ * 1000 * 1000
