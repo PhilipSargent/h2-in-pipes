@@ -942,7 +942,7 @@ def get_moles_flue_for_1mol_fuel_gas(g):
       # Normalise
     for c in flue_gas:
         flue_gas[c] = flue_gas[c]/n
-    gas_mixtures['flue'] = flue_gas
+    gas_mixtures[g+"_flue"] = flue_gas
     return n
 
 @memoize  
@@ -977,7 +977,7 @@ def get_flue_composition(g):
     re-think how this is stored..?"""
     
     n = get_moles_flue_for_1mol_fuel_gas(g)
-    return 'flue'
+    return g+'_flue'
         
 @memoize
 def sensible_fuel(g, t):
@@ -1007,7 +1007,7 @@ def sensible_air(g, t):
 def sensible_flue(g, t):
     """Sensible heat needed to'heat' flue gas from 298 to exit temp"""
     flue_moles = get_moles_flue_for_1mol_fuel_gas(g)
-    flue_cp = get_Cp('flue')
+    flue_cp = get_Cp(g+'_flue')
     sensible_heat = flue_moles * flue_cp * (t- 298) # flue ext temp is greater than 298 (nearly always)
     # print(f"{g:5}{flue_cp:8.3f} {t:5.1f} Flue {sensible_heat=:8.3f}")
     return sensible_heat
@@ -1036,7 +1036,7 @@ def sensible_out(g, T):
 
 def condense(T, pressure, g):
     """Return the efficiency (%) of the boiler assuming flue gas is all condensed
-    at temperature T
+    at temperature T (K)
     """
     t_fuel = 273.15 + 8
     t_air  = 273.15 + 5
@@ -1051,6 +1051,38 @@ def condense(T, pressure, g):
     heat_out = hc - latent_lost(g, T) - sensible_in(g, T, t_fuel, t_air) - sensible_out(g, T)
     η = 100 * heat_out/hc
     return η
+
+def find_intersection(g1, g2):
+    """For a condensing boiler at 1 atm, at what temperature are
+    the efficiences equal between these two fuels?"""
+    p = Atm
+    print(g1, g2)
+    def objective(T):
+        obj = condense(T, p, g1) - condense(T, p, g2)
+        #print(f"{T-T273:5.3f} {condense(T, p, g1):8.4f} {condense(T, p, g2):8.4f}")
+        return obj
+        
+    eps = 1e-5
+    T = T273 + 60
+    n = 0
+    while True:
+        n += 1
+        if T > T273 + 100:
+            break
+        obj = objective(T)
+        #print(f"{T-T273:5.3f} Obj:{obj} ")
+        if abs(obj) < eps:
+            break
+        delta_T = 3 * obj
+        T += delta_T
+        
+        
+    eff = condense(T, p, g1)
+    if obj > 2* eps:
+        print("ABORT")
+    print(f"At {T-T273:5.2f} degrees C the fuels '{g1}' and '{g2}' have the same efficiency of {eff:8.5f} %  ({n})")
+ 
+        
     
 def get_h2o_pp(g):
     # REFACTOR ALL THIS now that it is being done properly elsewhwere
@@ -1260,7 +1292,8 @@ def main():
     plt.savefig(fn["η"])
     plt.close()
     
-    
+    find_intersection('H2', 'NG') # where do the efficiences cross?
+    find_intersection('H2', 'NG+20%H2') # where do the efficiences cross?
    
    # Plot the compressibility  - - - - - - - - - - -
 
