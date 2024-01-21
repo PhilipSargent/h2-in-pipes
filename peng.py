@@ -841,26 +841,99 @@ def sensible_fuel(g, t):
     print(f"{g:5} {t} fuel {sensible_heat=:8.3f}")
     return sensible_heat
 
+def get_moles_flue_for_1mol_fuel_gas(g):
+    """ Calculates the components of the flue gas
+    as a side-effect, puts the composition into gas_mixture['flue']
+    """
+    # First we calculate the number of moles of each component in the input air
+    # and adjust for the O2 which has got burned.
+    o2_in, o2_burned = get_moles_O2_for_1mol_fuel_gas(g)
+    air_mol = get_moles_air_for_1mol_fuel_gas(g)
     
+    flue_gas = {} # moles (not fractions)
+    for c in gas_mixtures['dryAir']:
+        flue_gas[c] = air_mol *  gas_mixtures['dryAir'][c]
+    # check
+    #print(f"O2 in {flue_gas['O2']} {o2_in}")
+    
+    flue_gas['O2'] = flue_gas['O2'] - o2_burned
+    
+    # Now we add in the inerts from the fuel gas, which we have 1 mole of
+    # unless it is a pure gas in which case nothing is added
+    if g not in gas_data:
+         for c in gas_mixtures[g]:
+            if gas_data[c]['C_'] == 0 and gas_data[c]['H_'] == 0 : # skip the combustibles
+                if c in flue_gas:
+                    flue_gas[c] += 1 *gas_mixtures[g][c] # 1 mole
+                else:
+                    flue_gas[c] = 1 * gas_mixtures[g][c] # 1 mole
+
+    # Calculate the output (product) gases for 1 mole of fuel gas
+    co2_out =  do_flue_rules(g,'C_') 
+    h2o_out =  do_flue_rules(g,'H_')/2
+    
+    # we know the dry air has CO2 in it, so no need to check that
+    # and we know it has no moisture
+    flue_gas['CO2'] += co2_out
+    flue_gas['H2O'] = h2o_out
+    
+    # add up the number of moles
+    n = 0
+    for c in flue_gas:
+        n += flue_gas[c]
+    print(f"Number of moles in flue gas for 1 mole fuel: {n:8.4f}")
+      
+      # Normalise
+    for c in flue_gas:
+        flue_gas[c] = flue_gas[c]/n
+    gas_mixtures['flue'] = flue_gas
+    return n
+
+def get_moles_O2_for_1mol_fuel_gas(g):
+    ff = get_fuel_fraction(g)
+    if ff < 0.001:
+        print(f"{g:5} Not a fuel {ff}")
+        return
+    o2_fuel = do_flue_rules(g,'C_') + do_flue_rules(g,'H_')/4 # directly need to burn
+    o2_burned = o2_fuel * ff # actual needed, as not all that 1 mol on fuel is combustible
+    o2_in = o2_burned * 1.15 # 15% excess air
+    return o2_in, o2_burned
+
+def get_moles_air_for_1mol_fuel_gas(g):
+    o2_in, _ = get_moles_O2_for_1mol_fuel_gas(g)
+    
+    x = gas_mixtures['dryAir']['O2'] # = 0.21 
+    air_mol_0 = o2_in * 1/x # where x is fraction of O2 in air
+    
+    # Alternatiove synthetic air calc to match spreadsheet
+    o2s, n2s = 0.2095, 0.7905
+    n2_synth = o2_in * n2s/o2s
+    air_mol = o2_in + n2_synth
+    print(f"{g:4} Moles of air per mol of fuel : {air_mol_0:8.4f} {air_mol:8.4f}")
+    return  air_mol
+
 @memoize    
-def sensible_air(t):
+def sensible_air(g, t):
     """For 1 mole of pseudo-gas g, how much is the sensible heat required to heat it
     from t to 298 K ?
     """
-    air_mol = 3 ############# need to calc. this
+    air_mol = get_moles_air_for_1mol_fuel_gas(g)
     air_cp = get_Cp('Air')
-    sensible_heat = air_cp * (298 - t)
+    
+    sensible_heat = air_mol * air_cp * (298 - t)
     print(f"Air   {t} Air {sensible_heat=:8.3f}")
     return sensible_heat
    
 @memoize
 def get_flue_composition(g):
-    """For one mole of fuel gas, return the composition of the flue gas"""
+    """For one mole of fuel gas, return the composition of the flue gas
     
-    ########### CALCULATE THIS
-    flue = {'O2': 0.307, 'N2': 9.181, 'CO2': 1.14, 'H2O': 2.119}
-    gas_mixtures['flue'] = flue
+    ALWAYS recalculate this as we run with several fuels
+    re-think how this is stored..?"""
+    
+    n = get_moles_flue_for_1mol_fuel_gas(g)
     return 'flue'
+    
     
 @memoize    
 def sensible_flue(g, t):
@@ -893,7 +966,7 @@ def condense(T, pressure, g):
 def sensible_in(g, T, t_fuel, t_air):
     """Sensible heat needed to heat inlet fuel and air up to 298"""
     fuel_in = sensible_fuel(g, t_fuel)
-    air_in = sensible_air(t_air)
+    air_in = sensible_air(g, t_air)
     return fuel_in + air_in
     
 @memoize
@@ -902,30 +975,14 @@ def sensible_out(g, T):
     flue_out = sensible_flue(g, T)
     return flue_out 
 
-def get_moles_O2_for_1mol_fuel_gas(g):
-    ff = get_fuel_fraction(g)
-    if ff < 0.001:
-        #print(f"Not a fuel {ff}")
-        return
-    o2_fuel = do_flue_rules(g,'C_') + do_flue_rules(g,'H_')/4 # directly need to burn
-    o2_burned = o2_fuel * ff # actual needed, as not all that 1 mol on fuel is combustible
-    o2_in = o2_burned * 1.15 # 15% excess air
-    return o2_in, o2_burned
-    
-def get_moles_air_for_1mol_fuel_gas(g):
-    air_mol =2
-    return  air_mol
 
-def get_mols_air_for_1mol_O2(g):
-    pass
-    return
     
 
 def get_h2o_pp(g):
     # Calculate the reagent (input) gases for 1 mol of fuel gas g
     o2_in, o2_burned = get_moles_O2_for_1mol_fuel_gas(g)
 
-    # now calculate inerts
+    # now calculate inerts, start off with those in the fuel
     n2_gas = 0
     co2_gas = 0
     if g not in gas_data:
@@ -1105,8 +1162,10 @@ def main():
     plt.figure(figsize=(10, 6))
     c_H2 = [condense(T, pressure, 'H2') for T in t_condense]
     c_NG = [condense(T, pressure, 'NG') for T in t_condense]
+    c_Al = [condense(T, pressure, 'Algerian') for T in t_condense]
     plt.plot(t_condense-273.15, c_H2, label='Pure hydrogen', **plot_kwargs('H2'))
     plt.plot(t_condense-273.15, c_NG, label='Natural Gas', **plot_kwargs('NG'))
+    plt.plot(t_condense-273.15, c_Al, label='Algerian', **plot_kwargs('Al'))
    
     plt.title(f'Boiler efficiency vs Temperature at {pressure} bar')
     plt.xlabel('Temperature (°C)')
