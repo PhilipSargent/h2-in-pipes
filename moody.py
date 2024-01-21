@@ -43,6 +43,9 @@ def blasius(reynolds):
      
 @memoize 
 def virtual_nikuradse(reynolds, relative_roughness):
+    """This DOES NOT WORK - imperfect conversion from frotran not fixed yet
+    """
+
     sigma = 1/relative_roughness
     return vn.vm(reynolds, sigma)
 

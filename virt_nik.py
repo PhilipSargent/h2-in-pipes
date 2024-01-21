@@ -133,7 +133,11 @@ def vm(re, sigma):
     lamda_r = ff[-1, index_j - 1] # clever, spotted that user is asked for 1..6 but python indexing works from zero !
     lamda = ldfa(re, lamda_s, lamda_r, m[-1], n[-1], rr[-1, index_j - 1])
     
+    # attempting to fix bad stuff
     lamda = max(lamda, 5e-3)
+    f_laminar = 64 / re
+    if lamda < f_laminar:
+        lamda = f_laminar
     return lamda
     
 def main():
