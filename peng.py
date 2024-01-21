@@ -6,10 +6,9 @@ import sys
 
 from cycler import cycler
 import sonntag as st
-#from sonntag import  get_dew_point
 
-"""This code written Philip Sargent, starting in December 2023, by  to support a paper on the replacement of natural
-gas in the UK distribution grid with hydrogen.
+"""This code written Philip Sargent, starting in December 2023, by  to support
+a paper on the replacement of natural gas in the UK distribution grid with hydrogen.
 
 For general information, commercial natural gas typically contains 85 to 90 percent methane, with the remainder mainly nitrogen and ethane, and has a calorific value of approximately 38 megajoules (MJ) per cubic metre
 
@@ -17,7 +16,7 @@ Wobbe Number (WN) (i) ≤51.41 MJ/m³, and  (ii)  ≥47.20 MJ/m³
 https://www.nationalgas.com/data-and-operations/quality
 ≥46.5MJ/m3 after 6 April 2025 https://www.hse.gov.uk/gas/gas-safety-management-regulation-changes.htm
 
-UNITS: bar, K, litres
+UNITS: bar, K, litres NOTE: bar is not SI ! Need to convert to Pascal.
 """
 # This algorithm does NOT deal with the temperature dependence of alpha properly. 
 # The code should be rearranged to calculate alpha for each point ont he plot for each gas.
@@ -154,7 +153,7 @@ gas_mixtures['Air'] = air
 # Note that the default value (in the code) is -0.019 as this represents ideal gas behaviour.
 
 # There is a full table of BIP using teh GCM method on https://wiki.whitson.com/eos/bips/index.html#coutinho-et-al-correlation
-# using these might be better than teh Coutinho equation - future work.
+# using these might be better than the Coutinho equation - future work.
 
 # These are used in function estimate_k_?(g1, g2) which estimates these parameters from gas data.
 # NOT NOW USED, instead weuse the Coutinho estimation procedure in estimate_k()
@@ -792,7 +791,14 @@ def print_wobbe(g, T15C):
     
     print(f"{g:15} {hc} {mv:.7f} {hcmv}{wobbe_factor_ϱ:>11.5f}   {w} {flag} {too_light}")
 
-def dew_point(g):
+def condense(T, pressure, g):
+    ff = get_fuel_fraction(g)
+    if ff < 0.001:
+        #print(f"Not a fuel {ff}")
+        return None    
+    return 50
+    
+def get_h2o_pp(g):
     # Calculate the reagent (input) gases 
     ff = get_fuel_fraction(g)
     if ff < 0.001:
@@ -837,6 +843,10 @@ def dew_point(g):
    # OK, h2o_out/t is the partial pressure of H2O which determines the dew point. At last.
     h2o_pp = Atm * h2o_out/tot_out # in mol %, so convert to pressure in bar
     h2o_pp = h2o_pp * 1e5 # now in Pascals
+    return h2o_pp
+
+def dew_point(g):
+    h2o_pp = get_h2o_pp(g)
     dew_C = st.get_dew_point(h2o_pp)-T273
     #print(f"{h2o_out/tot_out:.4f} {dew_C:.4f} C")
     return dew_C
@@ -844,18 +854,24 @@ def dew_point(g):
 def print_gas(g):
     dew_C = dew_point(g)
     if dew_C:
-        print(f"Dew point: {dew_C:.4f} C")
+        print(f"{g} Dew point: {dew_C:.4f} C")
      
-def print_ng():
-    g = "NG"
-    print(f"NatGas at Fordoun NTS 20th Jan.2021")
-    nts = gas_mixtures[g]
-    for f in nts:
+def print_fuel(g, s):
+    print(f"\n{s}")
+    #print(f"{g:3}")
+    if g not in gas_mixtures:
+        f = g
         mv, hcmv, hc = get_Hc(f, 298)
         if not hc:
             hc = 0
-        print(f"{f:5}\t{nts[f]*100:8.5f} %{gas_data[f]['C_']:3}{gas_data[f]['H_']:3} {hc*1000:6.1f} kJ/mol ")
-    print("")
+        print(f"{f:5}\t{100:8.4f} %{gas_data[f]['C_']:3}{gas_data[f]['H_']:3} {hc*1000:6.1f} kJ/mol ")
+    else:
+        nts = gas_mixtures[g]
+        for f in nts:
+            mv, hcmv, hc = get_Hc(f, 298)
+            if not hc:
+                hc = 0
+            print(f"{f:5}\t{nts[f]*100:8.5f} %{gas_data[f]['C_']:3}{gas_data[f]['H_']:3} {hc*1000:6.1f} kJ/mol ")
     print_gas(g) 
 
 def style(mix):
@@ -894,7 +910,7 @@ def main():
     program = sys.argv[0]
     stem = str(pl.Path(program).with_suffix(""))
     fn={}
-    for s in ["z", "ϱ", "μ", "bf", "bf_NG"]:
+    for s in ["z", "ϱ", "μ", "bf", "bf_NG", "η"]:
         f = stem  + "_" + s
         fn[s] = pl.Path(f).with_suffix(".png") 
 
@@ -902,7 +918,8 @@ def main():
         composition = gas_mixtures[mix]
         check_composition(mix, composition)
 
-    print_ng()
+    print_fuel('H2', "Hydrogen")
+    print_fuel('NG', "NatGas at Fordoun NTS 20th Jan.2021")
     
     dp = 40
     tp = 15 # C
@@ -954,6 +971,7 @@ def main():
     for g in gas_mixtures:
         print_fuelgas(g)
 
+    #- - - - - - - - - - - - - - - - - - - - - -- - - - - - - - - - -- - - - - - - - - - -
     # Plot defaults
     params = {'legend.fontsize': 'x-large',
               'figure.figsize': (10, 6),
@@ -963,7 +981,24 @@ def main():
              'ytick.labelsize':'x-large'}
     plt.rcParams.update(params)
 
-    # Plot the compressibility  - - - - - - - - - - -
+   # Plot the condensing curve  - - - - - - - - - - -
+    t_condense = np.linspace(273.15+20, 273.15+100, 100)  
+    plt.figure(figsize=(10, 6))
+    c_H2 = [condense(T, pressure, 'H2') for T in t_condense]
+    c_NG = [condense(T, pressure, 'NG') for T in t_condense]
+    plt.plot(t_condense-273.15, c_H2, label='Pure hydrogen', **plot_kwargs('H2'))
+    plt.plot(t_condense-273.15, c_NG, label='Natural Gas', **plot_kwargs('NG'))
+   
+    plt.title(f'Boiler efficiency vs Temperature at {pressure} bar')
+    plt.xlabel('Temperature (°C)')
+    plt.ylabel('Boiler efficiency (%)')
+    plt.legend()
+    # plt.grid(True)
+
+    plt.savefig(fn["η"])
+    plt.close()
+   
+   # Plot the compressibility  - - - - - - - - - - -
 
     # Calculate Z0 for each gas
     Z0 = {}
