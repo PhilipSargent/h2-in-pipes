@@ -348,7 +348,7 @@ plot_diagram('Moody Diagram (Virtual Nikuradze)', 'moody_vm_enlarge_lin.png', pl
 re = 1e9
 print(f"For high Re = {re:6.0e}")
 for rr in [0.01, 0.001, 0.0001, 0.00001,  0.000001]:
-    for fff in [colebrook, azfal, virtual_nikuradse]:
+    for fff in [colebrook, azfal, swarmee, virtual_nikuradse]:
         print(f"{fff.__name__:17} {rr:6} {fff(re, rr):.5f}")
     print("")
 
