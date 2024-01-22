@@ -245,7 +245,8 @@ def plot_diagram(title, filename, plot="loglog", fff=colebrook):
     friction_blasius = [blasius(re) for re in reynolds]
     
     plt.figure(figsize=(10, 6))
-    plt.ylim(0.004, 0.11)
+    if moody_ylim:
+        plt.ylim(0.004, 0.11)
     # Plot the Moody diagram
     # plt.loglog(reynolds, friction_smooth, label=f'Smooth: ε/D = 0')
     if plot == "loglog":
@@ -282,7 +283,7 @@ params = {'legend.fontsize': 'x-large',
          'ytick.labelsize':'x-large'}
 plt.rcParams.update(params)
 
-
+moody_ylim = True
 
 reynolds_laminar = np.logspace(2.9, 3.9, 5) # 10^2.7 = 501, 10^3.4 = 2512
 reynolds = np.logspace(2.4, 9.0, 1000) # 10^7.7 = 5e7
@@ -296,12 +297,14 @@ plot_diagram('Moody Diagram (Swarmee)', 'moody_swarmee.png', plot="loglog", fff=
 plot_diagram('Moody Diagram (Virtual Nikuradze)', 'moody_vm.png', plot="loglog", fff=virtual_nikuradse)
 
 # Plot enlarged diagram
+moody_ylim = False
 reynolds_laminar = np.logspace(2.9, 3.4, 5) # 10^2.7 = 501, 10^3.4 = 2512
 reynolds = np.logspace(3.0, 5.0, 500) 
 relative_roughness_values = [0.01, 0.003, 0.001]
 
 # fp = piggot() # not in view on the enlarged plot
 fp = None
+
 plot_diagram('Moody (Colebrook) Transition region', 'moody_colebrook_enlarge.png',plot="loglog")
 plot_diagram('Moody (Azfal) Transition region', 'moody_azfal_enlarge.png',plot="loglog", fff=azfal)
 plot_diagram('Moody Diagram (Virtual Nikuradze)', 'moody_vm_enlarge.png', plot="loglog", fff=virtual_nikuradse)
