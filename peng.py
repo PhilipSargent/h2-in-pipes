@@ -1465,18 +1465,37 @@ def main():
 
     plt.savefig(fn["bf_NG"])
     plt.close()
-    print(f"Blasius Parameter ϱ^3/4.μ^1/4 (normalised by NG) between {temperatures[0]-T273:4.1f}C and {temperatures[-1]-T273:4.1f}C")
-    for mix in bf_gases:
-        if mix == "NG":
-             continue
-        #print(bf_g[mix])
-        bf_g[mix].sort()
-        mn = bf_g[mix][0]
-        mx = bf_g[mix][-1]
-        mean = (mx + mn)/2
-        rng = (mx - mn)/2
-        pct = 100*rng/mean
-        print(f"{mix:5} {mean:9.4f} +/- {rng:9.4f}  {pct:9.4f}%")
+    
+    bf_g = {}
+    t = 0
+    for P in [Atm, pressure, 4*Atm, 7*Atm]:
+        t += 1
+        print(f"\nBlasius Parameter ϱ^3/4.μ^1/4 (normalised by NG) between {temperatures[0]-T273:4.1f}C and {temperatures[-1]-T273:4.1f}C at {P} bar")
+        for mix in bf_gases:
+            bf_g[mix] = []
+            for T in temperatures:
+                bf = get_blasius_factor(mix,P,T)
+                bf_g[mix].append(bf)
+            if mix == "NG":
+                 continue
+            for i in range(len(temperatures)):
+                T = temperatures[i]
+                bf_g[mix][i] = bf_g[mix][i]/ bf_g['NG'][i]
+            plt.plot(temperatures - T273, bf_g[mix], label= mix, **plot_kwargs(mix))
+            bf_g[mix].sort()
+            mn = bf_g[mix][0]
+            mx = bf_g[mix][-1]
+            mean = (mx + mn)/2
+            rng = (mx - mn)/2
+            pct = 100*rng/mean
+            print(f"{mix:5} {mean:9.4f} ±{rng:7.4f}  {pct:7.4f}%")
+            plt.title(f'Blasius Parameter ϱ^3/4.μ^1/4  normalised to NG value at {P} bar')
+            plt.xlabel('Temperature (°C)')
+            plt.ylabel('Blasius Parameter ratio ')
+            plt.legend()
+        plt.savefig(f"peng_bf_NG_{t}.png")
+        plt.close()
+
 
     # ϱ/Viscosity plot Kinematic EXPTL values at 298K - - - - - - - - - - -
 
