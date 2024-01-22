@@ -245,6 +245,7 @@ def plot_diagram(title, filename, plot="loglog", fff=colebrook):
     friction_blasius = [blasius(re) for re in reynolds]
     
     plt.figure(figsize=(10, 6))
+    plt.ylim(0.004, 0.11)
     # Plot the Moody diagram
     # plt.loglog(reynolds, friction_smooth, label=f'Smooth: ε/D = 0')
     if plot == "loglog":
