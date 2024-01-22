@@ -49,11 +49,27 @@ def virtual_nikuradse(reynolds, relative_roughness):
     sigma = 1/relative_roughness
     return 4 * pf.FF_YangJoseph(reynolds, sigma)
 
-    #This vn.vm DOES NOT WORK - my imperfect conversion from fortran not fixed yet
+    #This vn.vm DOES NOT WORK - my imperfect conversion from fortran not fixed yet:
     # return vn.vm(reynolds, sigma)
 
 def smooth(reynolds):
     return colebrook(reynolds, 0.0)
+    
+def swarmee(Re, r):
+    """Swarmee as quoted by Brackbill"""
+    t1 = (64/Re)**8
+    
+    p5 = (2500/Re)**6
+    
+    j1 = r/3.7 + 5.74/Re**0.9
+    
+    j2 = np.log(j1)
+    j3 = j2 - p5
+    
+    k1 = 9.5 * j3**-16
+    
+    f = ( t1 + k1)**(1/8)
+    return f
     
 def haarland(reynolds, relative_roughness):
     """The accuracy of the Darcy friction factor solved from this equation
@@ -275,6 +291,7 @@ fp = piggot()
 
 plot_diagram('Moody Diagram (Colebrook)', 'moody_colebrook.png', plot="loglog")
 plot_diagram('Moody Diagram (Azfal)', 'moody_azfal.png', plot="loglog", fff=azfal)
+plot_diagram('Moody Diagram (Swarmee)', 'moody_swarmee.png', plot="loglog", fff=swarmee)
 plot_diagram('Moody Diagram (Virtual Nikuradze)', 'moody_vm.png', plot="loglog", fff=virtual_nikuradse)
 
 # Plot enlarged diagram
