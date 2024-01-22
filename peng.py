@@ -1034,13 +1034,13 @@ def sensible_out(g, T):
     return flue_out + water_out
     
 def d_condense(T, pressure, g):
-    """Differential of the efficiencey/ condensations temperature plot"""
+    """Differential of the efficiency/ condensations temperature plot"""
     δ = 0.1
     e1 = condense(T-δ, pressure, g)
     e2 = condense(T+δ, pressure, g)
     
     return (e1-e2)/2*δ
-    
+
 @memoize
 def condense(T, pressure, g):
     """Return the efficiency (%) of the boiler assuming flue gas is all condensed
@@ -1211,7 +1211,7 @@ def main():
     program = sys.argv[0]
     stem = str(pl.Path(program).with_suffix(""))
     fn={}
-    for s in ["z", "ϱ", "μ", "bf", "bf_NG", "η", "dη"]:
+    for s in ["z", "ϱ", "μ", "bf", "bf_NG", "η", "dη","Tη"]:
         f = stem  + "_" + s
         fn[s] = pl.Path(f).with_suffix(".png") 
 
@@ -1303,7 +1303,7 @@ def main():
     plt.savefig(fn["η"])
     plt.close()
     
-       # Plot the Differential of the condensing curve  - - - - - - - - - - -
+    # Plot the Differential of the condensing curve  - - - - - - - - - - -
     p = Atm
     t_condense = np.linspace(273.15+20, 273.15+100, 1000)  
     plt.figure(figsize=(10, 6))
@@ -1323,7 +1323,7 @@ def main():
     
     find_intersection('H2', 'NG') # where do the efficiences cross?
     find_intersection('H2', 'NG+20%H2') # where do the efficiences cross?
-   
+
    # Plot the compressibility  - - - - - - - - - - -
 
     # Calculate Z0 for each gas
@@ -1468,7 +1468,7 @@ def main():
     
     bf_g = {}
     t = 0
-    for P in [Atm, pressure, 4*Atm, 7*Atm]:
+    for P in [pressure, 4+Atm, 7+Atm]:
         t += 1
         print(f"\nBlasius Parameter ϱ^3/4.μ^1/4 (normalised by NG) between {temperatures[0]-T273:4.1f}C and {temperatures[-1]-T273:4.1f}C at {P} bar")
         for mix in bf_gases:
@@ -1488,7 +1488,7 @@ def main():
             mean = (mx + mn)/2
             rng = (mx - mn)/2
             pct = 100*rng/mean
-            print(f"{mix:5} {mean:9.4f} ±{rng:7.4f}  {pct:7.4f}%")
+            print(f"{mix:5} {mean:9.4f} ±{rng:7.4f}  {pct:5.2f}%")
             plt.title(f'Blasius Parameter ϱ^3/4.μ^1/4  normalised to NG value at {P} bar')
             plt.xlabel('Temperature (°C)')
             plt.ylabel('Blasius Parameter ratio ')
@@ -1588,7 +1588,7 @@ def main():
     plt.close()
 
     # Plot Blasius Parameter for pure hydrogen and natural gases
-    pressures = np.linspace(1, 7, 100)  # bar
+    pressures = np.linspace(1, 8.1, 100)  # bar
     T = T273+8
 
     plt.figure(figsize=(10, 6))
