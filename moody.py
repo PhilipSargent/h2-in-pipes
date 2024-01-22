@@ -41,7 +41,28 @@ def blasius(reynolds):
         return f
     
     return None
-     
+
+@memoize 
+def gioia_chakraborty_friction_factor(Re, epsilon):
+    """
+    Calculates the friction factor using the Gioia and Chakraborty method.
+
+    Args:
+        Re: Reynolds number
+        k: Roughness height
+        D: Pipe diameter
+
+    Returns:
+        Friction factor
+    """
+
+    A = 30 + 8.8 * epsilon + 7.1 * epsilon**2 + 2.4 * epsilon**3
+    B = 550 + 33 * epsilon**2
+
+    f = 0.8 / (Re / A)**(1/3) * (1 + 12 / (Re / B)**2)**(-1/2)
+
+    return f/4
+    
 @memoize 
 def virtual_nikuradse(reynolds, relative_roughness):
     # Now using pyfrac code, which uses Fanning ff so is 4* too small
@@ -228,41 +249,47 @@ def piggot():
     return p
     
 def plot_diagram(title, filename, plot="loglog", fff=colebrook):
-    """Calculate the friction factor for each relative roughness
+    """Calculate the friction factor for each relative roughness,
+    OK this does stuff several times and should be disentangled really
     
     fff : the friction factor function
     """
-        
-    friction_factors = {}
-    for rr in relative_roughness_values:
-        friction_factors[rr] = [fff(re, rr) for re in reynolds]
-        #print(fff,rr)
-        # [print(re, rr, haarland(re, rr)) for re in reynolds]
+    if not type(fff) is list:
+        fff = [fff]
 
-
-    friction_laminars = [laminar(re) for re in reynolds_laminar]
-    friction_smooth = [smooth(re) for re in reynolds]
-    friction_blasius = [blasius(re) for re in reynolds]
-    
     plt.figure(figsize=(10, 6))
     if moody_ylim:
         plt.ylim(0.004, 0.11)
-    # Plot the Moody diagram
-    # plt.loglog(reynolds, friction_smooth, label=f'Smooth: ε/D = 0')
+    friction_laminars = [laminar(re) for re in reynolds_laminar]
+    friction_smooth = [smooth(re) for re in reynolds]
+    friction_blasius = [blasius(re) for re in reynolds]
+
     if plot == "loglog":
         plt.loglog(reynolds_laminar, friction_laminars, label=f'Laminar', linestyle='dotted')
         plt.loglog(reynolds, friction_blasius, label=f'Blasius', linestyle='dashed')
         if fp:
             plt.loglog(reynolds, fp, label='Piggot line', linestyle='dashdot')
-        for rr, ff in friction_factors.items():
-            plt.loglog(reynolds, ff, label=f'ε/D = {rr}')
     if plot == "linear":
         plt.plot(reynolds_laminar, friction_laminars, label=f'Laminar', linestyle='dotted')
         plt.plot(reynolds, friction_blasius, label=f'Blasius', linestyle='dashed')
         if fp:
             plt.plot(reynolds, fp, label='Piggot')
-        for rr, ff in friction_factors.items():
-            plt.plot(reynolds, ff, label=f'ε/D = {rr}')
+
+    for f in fff:
+        friction_factors = {}
+        for rr in relative_roughness_values:
+            friction_factors[rr] = [f(re, rr) for re in reynolds]
+            #print(fff,rr)
+            # [print(re, rr, haarland(re, rr)) for re in reynolds]
+
+        # Plot the Moody diagram
+        # plt.loglog(reynolds, friction_smooth, label=f'Smooth: ε/D = 0')
+        if plot == "loglog":
+            for rr, ff in friction_factors.items():
+                plt.loglog(reynolds, ff, label=f'ε/D = {rr}')
+        if plot == "linear":
+            for rr, ff in friction_factors.items():
+                plt.plot(reynolds, ff, label=f'ε/D = {rr}')
 
 
     plt.xlabel('Reynolds number, Re')
@@ -293,11 +320,12 @@ fp = piggot()
 
 plot_diagram('Moody Diagram (Colebrook)', 'moody_colebrook.png', plot="loglog")
 plot_diagram('Moody Diagram (Azfal)', 'moody_azfal.png', plot="loglog", fff=azfal)
+moody_ylim = False
 plot_diagram('Moody Diagram (Swarmee)', 'moody_swarmee.png', plot="loglog", fff=swarmee)
-plot_diagram('Moody Diagram (Virtual Nikuradze)', 'moody_vm.png', plot="loglog", fff=virtual_nikuradse)
+plot_diagram('Moody Diagram (Virtual Nikuradze)', 'moody_vm.png', plot="loglog", fff=[virtual_nikuradse,gioia_chakraborty_friction_factor])
 
 # Plot enlarged diagram
-moody_ylim = False
+
 reynolds_laminar = np.logspace(2.9, 3.4, 5) # 10^2.7 = 501, 10^3.4 = 2512
 reynolds = np.logspace(3.0, 5.0, 500) 
 relative_roughness_values = [0.01, 0.003, 0.001]
@@ -306,15 +334,15 @@ relative_roughness_values = [0.01, 0.003, 0.001]
 fp = None
 
 plot_diagram('Moody (Colebrook) Transition region', 'moody_colebrook_enlarge.png',plot="loglog")
-plot_diagram('Moody (Azfal) Transition region', 'moody_azfal_enlarge.png',plot="loglog", fff=azfal)
-plot_diagram('Moody Diagram (Virtual Nikuradze)', 'moody_vm_enlarge.png', plot="loglog", fff=virtual_nikuradse)
+plot_diagram('Moody (Azfal) Transition region', 'moody_azfal_enlarge.png',plot="loglog", fff=[azfal,gioia_chakraborty_friction_factor])
+plot_diagram('Moody Diagram (Virtual Nikuradze)', 'moody_vm_enlarge.png', plot="loglog", fff=[virtual_nikuradse,gioia_chakraborty_friction_factor])
 
 reynolds_laminar = np.logspace(2.9, 3.4, 50) # 10^2.7 = 501, 10^3.4 = 2512
 reynolds = np.logspace(3.0, 4.0, 500) 
 
 plot_diagram('Moody (Colebrook) Transition region', 'moody_colebrook_enlarge_lin.png',plot="linear")
-plot_diagram('Moody (Azfal) Transition region', 'moody_azfal_enlarge_lin.png',plot="linear", fff=azfal)
-plot_diagram('Moody Diagram (Virtual Nikuradze)', 'moody_vm_enlarge_lin.png', plot="loglog", fff=virtual_nikuradse)
+plot_diagram('Moody (Azfal) Transition region', 'moody_azfal_enlarge_lin.png',plot="linear", fff=[azfal,gioia_chakraborty_friction_factor])
+plot_diagram('Moody Diagram (Virtual Nikuradze)', 'moody_vm_enlarge_lin.png', plot="loglog", fff=[virtual_nikuradse,gioia_chakraborty_friction_factor])
 
 
 re = 1e9
