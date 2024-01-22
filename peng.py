@@ -1033,7 +1033,16 @@ def sensible_out(g, T):
     flue_out = sensible_flue(g, T) # yes, for 1 mole fuel
     water_out = sensible_water(g, T) # for one mole fuel
     return flue_out + water_out
-
+    
+def d_condense(T, pressure, g):
+    """Differential of the efficiencey/ condensations temperature plot"""
+    δ = 0.1
+    e1 = condense(T-δ, pressure, g)
+    e2 = condense(T+δ, pressure, g)
+    
+    return (e1-e2)/2*δ
+    
+@memoize
 def condense(T, pressure, g):
     """Return the efficiency (%) of the boiler assuming flue gas is all condensed
     at temperature T (K)
@@ -1203,7 +1212,7 @@ def main():
     program = sys.argv[0]
     stem = str(pl.Path(program).with_suffix(""))
     fn={}
-    for s in ["z", "ϱ", "μ", "bf", "bf_NG", "η"]:
+    for s in ["z", "ϱ", "μ", "bf", "bf_NG", "η", "dη"]:
         f = stem  + "_" + s
         fn[s] = pl.Path(f).with_suffix(".png") 
 
@@ -1282,17 +1291,9 @@ def main():
     plt.figure(figsize=(10, 6))
     c_H2 = [condense(T, p, 'H2') for T in t_condense]
     c_NG = [condense(T, p, 'NG') for T in t_condense]
-    # c_Al = [condense(T, p, 'NG+20%H2') for T in t_condense]
-    # c_gg = [condense(T, p, 'Groening') for T in t_condense]
-    # c_10n = [condense(T, p, '10C2-10N') for T in t_condense]
-    # c_ch4 = [condense(T, p, 'CH4') for T in t_condense]
     
     plt.plot(t_condense-273.15, c_H2, label='Pure hydrogen', **plot_kwargs('H2'))
     plt.plot(t_condense-273.15, c_NG, label='Natural Gas', **plot_kwargs('NG'))
-    # plt.plot(t_condense-273.15, c_Al, label='NG+20%H2', **plot_kwargs('Al'))
-    # plt.plot(t_condense-273.15, c_gg, label='Groening', **plot_kwargs('Al'))
-    # plt.plot(t_condense-273.15, c_10n, label='10C2-10N', **plot_kwargs('Al'))
-    # plt.plot(t_condense-273.15, c_ch4, label='CH4', **plot_kwargs('Al'))
    
     plt.title(f'Boiler efficiency vs Condensing Temperature at {p} bar')
     plt.xlabel('Temperature (°C)')
@@ -1301,6 +1302,24 @@ def main():
     # plt.grid(True)
 
     plt.savefig(fn["η"])
+    plt.close()
+    
+       # Plot the Differential of the condensing curve  - - - - - - - - - - -
+    p = Atm
+    t_condense = np.linspace(273.15+20, 273.15+100, 1000)  
+    plt.figure(figsize=(10, 6))
+    c_H2 = [d_condense(T, p, 'H2') for T in t_condense]
+    c_NG = [d_condense(T, p, 'NG') for T in t_condense]
+     
+    plt.plot(t_condense-273.15, c_H2, label='Pure hydrogen', **plot_kwargs('H2'))
+    plt.plot(t_condense-273.15, c_NG, label='Natural Gas', **plot_kwargs('NG'))
+   
+    plt.title(f'd(η)/d(T) vs Condensing Temperature at {p} bar')
+    plt.xlabel('Temperature (°C)')
+    plt.ylabel('Boiler efficiency gradient d(η)/d(T) (%/K)')
+    plt.legend()
+ 
+    plt.savefig(fn["dη"])
     plt.close()
     
     find_intersection('H2', 'NG') # where do the efficiences cross?
