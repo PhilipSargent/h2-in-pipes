@@ -1,6 +1,4 @@
 """
-Bing wrote this code with only one little bug:
-
 Below is a Python program that uses the `matplotlib` and `numpy` libraries to plot a Moody diagram, which is a graph that shows the relationship between the Reynolds number, relative roughness, and the Darcy-Weisbach friction factor for fluid flow in pipes. The program will save the plot as an image file named `moody_diagram.png`."""
 
 import functools
@@ -134,8 +132,8 @@ def colebrook(reynolds, relative_roughness):
     return f_solution
 
 @memoize 
-def azfal(reynolds, relative_roughness):
-    """Define the Azfal variant fff equation as an implicit function and solve it
+def Afzal(reynolds, relative_roughness):
+    """Define the Afzal variant fff equation as an implicit function and solve it
     10.1115/1.2375129
     https://www.researchgate.net/publication/238183949_Alternate_Scales_for_Turbulent_Flow_in_Transitional_Rough_Pipes_Universal_Log_Laws
     """
@@ -143,7 +141,7 @@ def azfal(reynolds, relative_roughness):
     f_initial = 0.02
     #f_initial = haarland(reynolds, relative_roughness) #fails 
     
-    # Define the implicit Azfal equation
+    # Define the implicit Afzal equation
     def f(f, re, rr):
         j = 11
         t = np.exp(-j*5.66 /(rr*re*np.sqrt(f)))
@@ -319,7 +317,7 @@ relative_roughness_values = [0.01, 0.001, 0.0001, 0.00001,  0.000001] #
 fp = piggot()
 
 plot_diagram('Moody Diagram (Colebrook)', 'moody_colebrook.png', plot="loglog")
-plot_diagram('Moody Diagram (Azfal)', 'moody_azfal.png', plot="loglog", fff=azfal)
+plot_diagram('Moody Diagram (Afzal)', 'moody_afzal.png', plot="loglog", fff=Afzal)
 moody_ylim = False
 plot_diagram('Moody Diagram (Swarmee)', 'moody_swarmee.png', plot="loglog", fff=swarmee)
 plot_diagram('Moody Diagram (Virtual Nikuradze)', 'moody_vm.png', plot="loglog", fff=[virtual_nikuradse,gioia_chakraborty_friction_factor])
@@ -334,21 +332,21 @@ relative_roughness_values = [0.01, 0.003, 0.001]
 fp = None
 
 plot_diagram('Moody (Colebrook) Transition region', 'moody_colebrook_enlarge.png',plot="loglog")
-plot_diagram('Moody (Azfal) Transition region', 'moody_azfal_enlarge.png',plot="loglog", fff=[azfal,gioia_chakraborty_friction_factor])
+plot_diagram('Moody (Afzal) Transition region', 'moody_afzal_enlarge.png',plot="loglog", fff=[Afzal,gioia_chakraborty_friction_factor])
 plot_diagram('Moody Diagram (Virtual Nikuradze)', 'moody_vm_enlarge.png', plot="loglog", fff=[virtual_nikuradse,gioia_chakraborty_friction_factor])
 
 reynolds_laminar = np.logspace(2.9, 3.4, 50) # 10^2.7 = 501, 10^3.4 = 2512
 reynolds = np.logspace(3.0, 4.0, 500) 
 
 plot_diagram('Moody (Colebrook) Transition region', 'moody_colebrook_enlarge_lin.png',plot="linear")
-plot_diagram('Moody (Azfal) Transition region', 'moody_azfal_enlarge_lin.png',plot="linear", fff=[azfal,gioia_chakraborty_friction_factor])
+plot_diagram('Moody (Afzal) Transition region', 'moody_afzal_enlarge_lin.png',plot="linear", fff=[Afzal,gioia_chakraborty_friction_factor])
 plot_diagram('Moody Diagram (Virtual Nikuradze)', 'moody_vm_enlarge_lin.png', plot="loglog", fff=[virtual_nikuradse,gioia_chakraborty_friction_factor])
 
 
 re = 1e9
 print(f"For high Re = {re:6.0e}")
 for rr in [0.01, 0.001, 0.0001, 0.00001,  0.000001]:
-    for fff in [colebrook, azfal, swarmee, virtual_nikuradse]:
+    for fff in [colebrook, Afzal, swarmee, virtual_nikuradse]:
         print(f"{fff.__name__:17} {rr:6} {fff(re, rr):.5f}")
     print("")
 
