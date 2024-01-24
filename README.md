@@ -6,6 +6,7 @@ To cite this work, please click on "Cite this repository" on the right-hand menu
 We have a paper in preparation which documents and uses these calculations for the case where UK distribution gas pipes are repurposed to carry hydrogen.
 If you would like a preprint of this paper, please email me or post an Issue on this project to contact me.
 )![p2_h2_ratio](https://github.com/PhilipSargent/h2-in-pipes/assets/5623885/f8d56427-4b60-459e-a01f-bdbe93a717fe)
+![moody_afzal](https://github.com/PhilipSargent/h2-in-pipes/assets/5623885/06769e5b-2bf3-4444-86ae-99622bd48139)
 
 ![peng_z](https://github.com/PhilipSargent/h2-in-pipes/assets/5623885/8c38150c-cf02-49b9-98d4-5269e28eb2ca)
 
