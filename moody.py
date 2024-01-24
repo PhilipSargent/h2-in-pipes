@@ -6,8 +6,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import virt_nik as vn
 import pyfrac_yj as pf
+import warnings
 
 from scipy.interpolate import interp1d
+
+
 
 # We memoize some functions so that they do not get repeadtedly called with
 # the same arguments. Yet still be retain a more obvius way of writing the program.
@@ -27,6 +30,34 @@ def memoize(func):
 
 
 lowest_f = 0.000001
+
+def logistic_transition(x, v1, v2, midpoint, steepness):
+    """
+    Computes the transition between two functions using a logistic curve.
+
+    Args:
+        x: Input values.
+        func1: The first function.
+        func2: The second function.
+        midpoint: The midpoint of the transition.
+        steepness: The steepness of the transition (higher value = steeper).
+
+    Returns:
+        The transitioned values at the input points.
+    """
+
+    y = (1 / (1 + np.exp(-steepness * (x - midpoint)))) * v2 + (1 - (1 / (1 + np.exp(-steepness * (x - midpoint))))) * v1
+    return y
+
+
+def d_func(func, reynolds, rr):
+    """Differential of a function wrt to Re"""
+    δ = reynolds/1e5
+    e1 = func(reynolds-δ, rr)
+    e2 = func(reynolds+δ, rr)
+    
+    return (e1-e2)/2*δ
+
 
 # Define laminar flow (Re < 2000)
 def laminar(reynolds):
@@ -65,9 +96,13 @@ def gioia_chakraborty_friction_factor(Re, epsilon):
 def virtual_nikuradse(reynolds, relative_roughness):
     # Now using pyfrac code, which uses Fanning ff so is 4* too small
     # but while this fits Blasius end, the high-Re end is STILL 4x too small..
+    
+    # warnings.filterwarnings("error")
+    
     sigma = 1/relative_roughness
-    return 4 * pf.FF_YangJoseph(reynolds, sigma)
-
+ 
+    f =  4 * pf.FF_YangJoseph(reynolds, sigma)
+    return f
     #This vn.vm DOES NOT WORK - my imperfect conversion from fortran not fixed yet:
     # return vn.vm(reynolds, sigma)
 
@@ -132,8 +167,90 @@ def colebrook(reynolds, relative_roughness):
     return f_solution
 
 @memoize 
-def Afzal(reynolds, relative_roughness):
-    """Define the Afzal variant fff equation as an implicit function and solve it
+def afzal_b(reynolds, relative_roughness):
+    """Afzal but with Blasius upper bound
+    
+    Note that this is 'before' we introduce the Nikuradse transition to laminar, so
+    we can have the beginning of the transition at a lower Re than one might expect"""
+    Re_upper = 4500
+    Re_lower = 1000
+
+    a = afzal(reynolds, relative_roughness)
+    if reynolds > Re_upper:
+        return a
+    b = blasius(reynolds)
+    if reynolds < Re_lower:
+        return b
+    
+    return np.sqrt(a*b)
+    
+@memoize 
+def afzal_mod(reynolds, relative_roughness):
+    """Afzal but with transiton to laminar"""
+    Re_upper = 5000
+    Re_lower = 1000
+    
+   
+    a = afzal_b(reynolds, relative_roughness)
+    
+
+    if reynolds > Re_upper:
+        return a
+
+    L = laminar(reynolds)
+    if reynolds < Re_lower:
+        return L
+    
+    midpoint = 0.6 * (Re_upper - Re_lower)
+    steepness = 0.01
+    return logistic_transition(reynolds, L, a, midpoint, steepness)
+    
+@memoize 
+def h2_ratio(reynolds, relative_roughness):
+    re_ratio = 0.4103
+    
+    a = afzal_mod(reynolds, relative_roughness)
+    h2 = afzal_mod(reynolds*re_ratio, relative_roughness)
+    
+    increase = h2/a # 100 * (h2-a)/a
+    return increase
+
+@memoize 
+def p2_h2_ratio(reynolds, relative_roughness):
+    """ rho_ratio * v_ratio**2  = 1.03512 """
+    re_ratio = 0.4103
+    
+    v_ratio  = 3.076
+    rho_ratio = 0.1094
+    
+    a = afzal_mod(reynolds, relative_roughness)
+    h2 = afzal_mod(reynolds*re_ratio, relative_roughness)
+    
+    increase =  (h2/a) * rho_ratio * v_ratio**2 # 100 * ((h2-a)/a) * rho_ratio * v_ratio**2
+    return increase
+
+@memoize 
+def w2_h2_ratio(reynolds, relative_roughness):
+    """ rho_ratio * v_ratio**2  = 1.03512 
+    Work = pressure_drop * v_ratio
+    """
+     
+    v_ratio  = 3.076
+        
+    increase = p2_h2_ratio(reynolds, relative_roughness) * v_ratio
+    return increase
+    
+@memoize 
+def afzal_shift(reynolds, relative_roughness):
+    re_ratio = 0.4103
+    
+    h2 = afzal_mod(reynolds*re_ratio, relative_roughness)
+    
+    return h2
+
+@memoize 
+def afzal(reynolds, relative_roughness):
+    """Define the afzal variant fff equation as an implicit function and solve it
     10.1115/1.2375129
     https://www.researchgate.net/publication/238183949_Alternate_Scales_for_Turbulent_Flow_in_Transitional_Rough_Pipes_Universal_Log_Laws
     """
@@ -141,7 +258,7 @@ def Afzal(reynolds, relative_roughness):
     f_initial = 0.02
     #f_initial = haarland(reynolds, relative_roughness) #fails 
     
-    # Define the implicit Afzal equation
+    # Define the implicit afzal equation
     def f(f, re, rr):
         j = 11
         t = np.exp(-j*5.66 /(rr*re*np.sqrt(f)))
@@ -245,8 +362,9 @@ def piggot():
         # if p[i] and p[i+1]:
             # print(f"{i}:{p[i]:.5f} {p[i]-p[i+1]:.5f}")
     return p
+
     
-def plot_diagram(title, filename, plot="loglog", fff=colebrook):
+def plot_diagram(title, filename, plot="loglog", fff=colebrook, gradient=False, h2=False, w2=False):
     """Calculate the friction factor for each relative roughness,
     OK this does stuff several times and should be disentangled really
     
@@ -261,45 +379,73 @@ def plot_diagram(title, filename, plot="loglog", fff=colebrook):
     friction_laminars = [laminar(re) for re in reynolds_laminar]
     friction_smooth = [smooth(re) for re in reynolds]
     friction_blasius = [blasius(re) for re in reynolds]
-
-    if plot == "loglog":
-        plt.loglog(reynolds_laminar, friction_laminars, label=f'Laminar', linestyle='dotted')
-        plt.loglog(reynolds, friction_blasius, label=f'Blasius', linestyle='dashed')
-        if fp:
-            plt.loglog(reynolds, fp, label='Piggot line', linestyle='dashdot')
-    if plot == "linear":
-        plt.plot(reynolds_laminar, friction_laminars, label=f'Laminar', linestyle='dotted')
-        plt.plot(reynolds, friction_blasius, label=f'Blasius', linestyle='dashed')
-        if fp:
-            plt.plot(reynolds, fp, label='Piggot')
+    if not gradient and not h2:
+        
+        if plot == "loglog":
+            plt.loglog(reynolds_laminar, friction_laminars, label=f'Laminar', linestyle='dotted')
+            plt.loglog(reynolds, friction_blasius, label=f'Blasius', linestyle='dashed')
+            if fp:
+                plt.loglog(reynolds, fp, label='Piggot line', linestyle='dashdot')
+        if plot == "linear":
+            plt.plot(reynolds_laminar, friction_laminars, label=f'Laminar', linestyle='dotted')
+            plt.plot(reynolds, friction_blasius, label=f'Blasius', linestyle='dashed')
+            if fp:
+                plt.plot(reynolds, fp, label='Piggot')
 
     for f in fff:
         friction_factors = {}
         for rr in relative_roughness_values:
-            friction_factors[rr] = [f(re, rr) for re in reynolds]
-            #print(fff,rr)
-            # [print(re, rr, haarland(re, rr)) for re in reynolds]
-
+            if gradient:
+                friction_factors[rr] = [ d_func(f, re, rr) for re in reynolds]
+                 
+            else:
+                friction_factors[rr] = [f(re, rr) for re in reynolds]
+ 
         # Plot the Moody diagram
-        # plt.loglog(reynolds, friction_smooth, label=f'Smooth: ε/D = 0')
         if plot == "loglog":
             for rr, ff in friction_factors.items():
                 plt.loglog(reynolds, ff, label=f'ε/D = {rr}')
         if plot == "linear":
             for rr, ff in friction_factors.items():
                 plt.plot(reynolds, ff, label=f'ε/D = {rr}')
+        if plot == "linlog":
+            for rr, ff in friction_factors.items():
+                plt.semilogx(reynolds, ff, label=f'ε/D = {rr}')
 
 
     plt.xlabel('Reynolds number, Re')
-    plt.ylabel('Darcy-Weisbach friction factor, f')
+    if not gradient:
+        plt.ylabel('Darcy-Weisbach friction factor, f')
+    else:
+        plt.ylabel('d(f)/d(Re) Darcy-Weisbach friction factor gradient')
+    if h2:
+        #plt.ylim(-20,150)
+        plt.ylabel(' increase ')
+    if w2:
+        #plt.ylim(-80,500)
+        plt.ylabel(' increase ')
     plt.title(title)
     plt.grid(True, which='both', ls='--')
     plt.legend()
     plt.savefig(filename)
 
+def export_f_table():
+    """Produce a text file with f= f(Re)"""
+    reynolds = np.logspace(2.4, 9.0, 200)
+
+    rr = 1e-5
+    with open('f_table.txt', 'w') as ff:
+       ff.write(f"{'f':8},   {'Re':8} for rr = {rr:9.2f}\n") 
+       for re in reynolds:
+           f = afzal_mod(re, rr)
+           ff.write(f"{f:8.3f}, {re:10.4f}\n") 
+            
 # - - -- - - - -- - - - -- - - - -- - - - -- - - - -- - - - -- - - - -- - - - -- - 
 # Define the Reynolds number range and relative roughness values
 # only need 10 points for the straight line
+
+export_f_table()
+
 params = {'legend.fontsize': 'x-large',
           'figure.figsize': (10, 6),
          'axes.labelsize': 'x-large',
@@ -316,37 +462,55 @@ relative_roughness_values = [0.01, 0.001, 0.0001, 0.00001,  0.000001] #
 #relative_roughness_values = list(reversed(relative_roughness_values))
 fp = piggot()
 
-plot_diagram('Moody Diagram (Colebrook)', 'moody_colebrook.png', plot="loglog")
-plot_diagram('Moody Diagram (Afzal)', 'moody_afzal.png', plot="loglog", fff=Afzal)
+# plot_diagram('Moody Diagram (Colebrook)', 'moody_colebrook.png', plot="loglog")
+plot_diagram('Moody Diagram (Afzal)', 'moody_afzal.png', plot="loglog", fff=afzal_mod)
+
 moody_ylim = False
+plot_diagram('Moody Diagram (Afzal)', 'moody_afzal.png', plot="loglog", fff=afzal_mod)
+
+plot_diagram('factor increase in f between H2 and NG', 'h2_ratio.png', plot="linlog", fff=h2_ratio, h2=True)
+
+plot_diagram('factor increase in Pressure drop between H2 and NG', 'p2_h2_ratio.png', plot="linlog", fff=p2_h2_ratio, h2=True)
+
+plot_diagram('factor increase in compressor work between H2 and NG', 'w2_h2_ratio.png', plot="linlog", fff=w2_h2_ratio, w2=True)
+
 plot_diagram('Moody Diagram (Swarmee)', 'moody_swarmee.png', plot="loglog", fff=swarmee)
-plot_diagram('Moody Diagram (Virtual Nikuradze)', 'moody_vm.png', plot="loglog", fff=[virtual_nikuradse,gioia_chakraborty_friction_factor])
+# plot_diagram('Moody Diagram (Virtual Nikuradze)', 'moody_vm.png', plot="loglog", fff=[virtual_nikuradse,gioia_chakraborty_friction_factor])
 
 # Plot enlarged diagram
 
 reynolds_laminar = np.logspace(2.9, 3.4, 5) # 10^2.7 = 501, 10^3.4 = 2512
-reynolds = np.logspace(3.0, 5.0, 500) 
-relative_roughness_values = [0.01, 0.003, 0.001]
+reynolds = np.logspace(2.8, 5.0, 500) 
+relative_roughness_values = [0.01, 0.003, 0.001, 1e-5]
 
 # fp = piggot() # not in view on the enlarged plot
 fp = None
+plot_diagram('factor increase in f between H2 and NG', 'h2_ratio_enlarge.png', plot="linlog", fff=h2_ratio, h2=True)
 
-plot_diagram('Moody (Colebrook) Transition region', 'moody_colebrook_enlarge.png',plot="loglog")
-plot_diagram('Moody (Afzal) Transition region', 'moody_afzal_enlarge.png',plot="loglog", fff=[Afzal,gioia_chakraborty_friction_factor])
-plot_diagram('Moody Diagram (Virtual Nikuradze)', 'moody_vm_enlarge.png', plot="loglog", fff=[virtual_nikuradse,gioia_chakraborty_friction_factor])
+# plot_diagram('Moody (Colebrook) Transition region', 'moody_colebrook_enlarge.png',plot="loglog")
+plot_diagram('Moody (Afzal) Transition region', 'moody_afzal_enlarge.png',plot="loglog", fff=[afzal_mod, afzal_shift])
 
-reynolds_laminar = np.logspace(2.9, 3.4, 50) # 10^2.7 = 501, 10^3.4 = 2512
+plot_diagram('Moody (Afzal) Transition region', 'moody_afzal_enlarge_ll.png',plot="linlog", fff=[afzal_mod, afzal_shift])
+plot_diagram('Moody (Afzal) Transition region', 'moody_afzal_enlarge_d_ll.png',plot="linlog", fff=[afzal_mod, afzal_shift], gradient=True)
+
+
+# plot_diagram('Moody Diagram (Virtual Nikuradze)', 'moody_vm_enlarge.png', plot="loglog", fff=[virtual_nikuradse,gioia_chakraborty_friction_factor])
+
+reynolds_laminar = np.logspace(2.9, 3.4, 500) # 10^2.7 = 501, 10^3.4 = 2512
 reynolds = np.logspace(3.0, 4.0, 500) 
 
-plot_diagram('Moody (Colebrook) Transition region', 'moody_colebrook_enlarge_lin.png',plot="linear")
-plot_diagram('Moody (Afzal) Transition region', 'moody_afzal_enlarge_lin.png',plot="linear", fff=[Afzal,gioia_chakraborty_friction_factor])
-plot_diagram('Moody Diagram (Virtual Nikuradze)', 'moody_vm_enlarge_lin.png', plot="loglog", fff=[virtual_nikuradse,gioia_chakraborty_friction_factor])
+plot_diagram('factor increase in f between H2 and NG', 'h2_ratio_enlarge_lin.png', plot="linear", fff=h2_ratio, h2=True)
 
+# plot_diagram('Moody (Colebrook) Transition region', 'moody_colebrook_enlarge_lin.png',plot="linear")
+plot_diagram('Moody (Afzal) Transition region', 'moody_afzal_enlarge_lin.png',plot="linear", fff=[afzal_mod, afzal_shift])
+# plot_diagram('Moody Diagram (Virtual Nikuradze)', 'moody_vm_enlarge_lin.png', plot="linear", fff=[virtual_nikuradse,gioia_chakraborty_friction_factor])
+
+exit()
 
 re = 1e9
 print(f"For high Re = {re:6.0e}")
 for rr in [0.01, 0.001, 0.0001, 0.00001,  0.000001]:
-    for fff in [colebrook, Afzal, swarmee, virtual_nikuradse]:
+    for fff in [colebrook, afzal, swarmee, virtual_nikuradse]:
         print(f"{fff.__name__:17} {rr:6} {fff(re, rr):.5f}")
     print("")
 
