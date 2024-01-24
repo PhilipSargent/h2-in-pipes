@@ -1294,9 +1294,9 @@ def main():
     plt.plot(t_condense-273.15, c_H2, label='Pure hydrogen', **plot_kwargs('H2'))
     plt.plot(t_condense-273.15, c_NG, label='Natural Gas', **plot_kwargs('NG'))
    
-    plt.title(f'Boiler efficiency vs Condensing Temperature at {p} bar')
+    plt.title(f'Maximum boiler efficiency vs Condensing Temperature at {p} bar')
     plt.xlabel('Temperature (°C)')
-    plt.ylabel('Boiler efficiency (%)')
+    plt.ylabel('Maximum boiler efficiency (%)')
     plt.legend()
     # plt.grid(True)
 
