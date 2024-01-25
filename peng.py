@@ -1097,7 +1097,9 @@ def export_η_table():
     c_NG = [condense(T, p, 'NG') for T in t_condense]
 
     with open('η_table.txt', 'w') as η:
-       η.write(f"{'Temp.(C)':8}   {'η (H2)':8} {'η (NG)':8}\n") 
+       pass
+       pass
+       η.write(f"{'Temp.(C)':8}   {'eta (H2)':8} {'eta (NG)':8}\n") 
        for T in t_condense:
             η.write(f"{T-T273:8.1f} {condense(T, p, 'H2'):8.4f} {condense(T, p, 'NG'):8.4f}\n") 
    
