@@ -1296,8 +1296,8 @@ def main():
     plt.plot(t_condense-273.15, c_H2, label='Pure hydrogen', **plot_kwargs('H2'))
     plt.plot(t_condense-273.15, c_NG, label='Natural Gas', **plot_kwargs('NG'))
    
-    plt.title(f'Maximum boiler efficiency vs Condensing Temperature at {p} bar')
-    plt.xlabel('Temperature (°C)')
+    #plt.title(f'Maximum boiler efficiency vs Condensing Temperature at {p} bar')
+    plt.xlabel('Flue gas temperature (°C)')
     plt.ylabel('Maximum boiler efficiency (%)')
     plt.legend()
     # plt.grid(True)
@@ -1348,8 +1348,8 @@ def main():
 
         
     # Plot for pure methane
-    Z_CH4 = [peng_robinson(T, pressure, 'CH4') for T in temperatures]
-    plt.plot(temperatures - T273, Z_CH4, label='Pure methane', **plot_kwargs('CH4'))
+    # Z_CH4 = [peng_robinson(T, pressure, 'CH4') for T in temperatures]
+    # plt.plot(temperatures - T273, Z_CH4, label='Pure methane', **plot_kwargs('CH4'))
 
 
     # Plot for natural gas compositions. Now using correct temperature dependence of 'a'
@@ -1382,7 +1382,7 @@ def main():
 
         plt.plot(temperatures - T273, Z_ng, label=mix, **plot_kwargs(mix))
 
-    plt.title(f'Z  Compressibility Factor vs Temperature at {pressure} bar')
+    #plt.title(f'Z  Compressibility Factor vs Temperature at {pressure} bar')
     plt.xlabel('Temperature (°C)')
     plt.ylabel('Z Compressibility Factor')
     plt.legend()
@@ -1430,9 +1430,9 @@ def main():
         plt.plot(temperatures - T273, bf_g[mix], label= mix, **plot_kwargs(mix))
 
 
-    plt.title(f'Blasius Parameter ϱ^3/4.μ^1/4 vs Temperature at {pressure} bar')
+    #plt.title(f'Blasius Parameter  ϱ^3/4.μ^1/4 vs Temperature at {pressure} bar')
     plt.xlabel('Temperature (°C)')
-    plt.ylabel('Blasius Parameter ')
+    plt.ylabel('Blasius Parameter  ϱ^3/4.μ^1/4 ')
     plt.legend()
     plt.grid(True)
 
@@ -1513,7 +1513,7 @@ def main():
             re_g[mix].append(  μ_ng[mix][i]/ϱ_ng[mix][i])
         plt.plot(temperatures - T273, re_g[mix], label= mix, **plot_kwargs(mix))
         
-    plt.title(f'Kinematic Viscosity vs Temperature at {pressure} bar')
+    #plt.title(f'Kinematic Viscosity vs Temperature at {pressure} bar')
     plt.xlabel('Temperature (°C)')
     plt.ylabel('Dynamic Viscosity/Density (μPa.s)/(kg/m³) ')
     plt.legend()

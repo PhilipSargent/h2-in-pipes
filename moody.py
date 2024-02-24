@@ -420,10 +420,11 @@ def plot_diagram(title, filename, plot="loglog", fff=colebrook, gradient=False, 
         plt.ylabel('d(f)/d(Re) Darcy-Weisbach friction factor gradient')
     if h2:
         #plt.ylim(-20,150)
-        plt.ylabel(' increase ')
+        plt.xlabel('Reynolds number Re for natural gas')
+        plt.ylabel('Pressure drop ratio ')
     if w2:
         #plt.ylim(-80,500)
-        plt.ylabel(' increase ')
+        plt.ylabel('Compressor power ratio ')
     plt.title(title)
     plt.grid(True, which='both', ls='--')
     plt.legend()
@@ -463,14 +464,15 @@ relative_roughness_values = [0.01, 0.001, 0.0001, 0.00001,  0.000001] #
 fp = piggot()
 
 # plot_diagram('Moody Diagram (Colebrook)', 'moody_colebrook.png', plot="loglog")
-plot_diagram('Moody Diagram (Afzal)', 'moody_afzal.png', plot="loglog", fff=afzal_mod)
 
 moody_ylim = False
-plot_diagram('Moody Diagram (Afzal)', 'moody_afzal.png', plot="loglog", fff=afzal_mod)
+#plot_diagram('Moody Diagram (Afzal)', 'moody_afzal.png', plot="loglog", fff=afzal_mod)
+plot_diagram('', 'moody_afzal.png', plot="loglog", fff=afzal_mod)
 
 plot_diagram('factor increase in f between H2 and NG', 'h2_ratio.png', plot="linlog", fff=h2_ratio, h2=True)
 
-plot_diagram('factor increase in Pressure drop between H2 and NG', 'p2_h2_ratio.png', plot="linlog", fff=p2_h2_ratio, h2=True)
+#plot_diagram('factor increase in Pressure drop between H2 and NG', 'p2_h2_ratio.png', plot="linlog", fff=p2_h2_ratio, h2=True)
+plot_diagram('', 'p2_h2_ratio.png', plot="linlog", fff=p2_h2_ratio, h2=True)
 
 plot_diagram('factor increase in compressor work between H2 and NG', 'w2_h2_ratio.png', plot="linlog", fff=w2_h2_ratio, w2=True)
 
@@ -488,7 +490,7 @@ fp = None
 plot_diagram('factor increase in f between H2 and NG', 'h2_ratio_enlarge.png', plot="linlog", fff=h2_ratio, h2=True)
 
 # plot_diagram('Moody (Colebrook) Transition region', 'moody_colebrook_enlarge.png',plot="loglog")
-plot_diagram('Moody (Afzal) Transition region', 'moody_afzal_enlarge.png',plot="loglog", fff=[afzal_mod, afzal_shift])
+plot_diagram('Moody (Afzal) Transition region', 'moody_afzal_enlarge.png',plot="loglog", fff=[afzal_mod]) #, afzal_shift
 
 plot_diagram('Moody (Afzal) Transition region', 'moody_afzal_enlarge_ll.png',plot="linlog", fff=[afzal_mod, afzal_shift])
 plot_diagram('Moody (Afzal) Transition region', 'moody_afzal_enlarge_d_ll.png',plot="linlog", fff=[afzal_mod, afzal_shift], gradient=True)
@@ -502,7 +504,7 @@ reynolds = np.logspace(3.0, 4.0, 500)
 plot_diagram('factor increase in f between H2 and NG', 'h2_ratio_enlarge_lin.png', plot="linear", fff=h2_ratio, h2=True)
 
 # plot_diagram('Moody (Colebrook) Transition region', 'moody_colebrook_enlarge_lin.png',plot="linear")
-plot_diagram('Moody (Afzal) Transition region', 'moody_afzal_enlarge_lin.png',plot="linear", fff=[afzal_mod, afzal_shift])
+plot_diagram('Moody (Afzal) Transition region', 'moody_afzal_enlarge_lin.png',plot="linear", fff=[afzal_mod]) #, afzal_shift
 # plot_diagram('Moody Diagram (Virtual Nikuradze)', 'moody_vm_enlarge_lin.png', plot="linear", fff=[virtual_nikuradse,gioia_chakraborty_friction_factor])
 
 exit()
