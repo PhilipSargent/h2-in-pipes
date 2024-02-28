@@ -125,7 +125,7 @@ https://www.nationalgas.com/document/144896/download
 """
 gas_mixture_properties = {
     'Algerian': {'Wb': 49.992, 'HHV': 39.841, 'RD': 0.6351}, #Algerian NG, Romeo 2022, C6+ BUT not according to my calcs. for Hc and wobbe.
-    'Air': {'Hc': 0} 
+    # 'Air': {'Hc': 0} 
 }
 
 
@@ -719,7 +719,9 @@ def get_fuel_fraction(g):
         mff += x * ff
     return mff
     
-def print_fuelgas(g):
+def print_fuelgas(g, oxidiser='Air'):
+    """Oxidiser had been DryAir, now it is Air, i.e. 15%RH at 15C,
+    but we are going to doing enriched air."""
     mm = do_mm_rules(g) # mean molar mass
 
     if g in gas_data:
@@ -744,8 +746,9 @@ def print_fuelgas(g):
         # but * 1.15 for excess air
         # moles N2 = moles O2 * (79.05/20.95)
         o2 = (h_/2 + c_) * 1.15
-        n2 = gas_mixtures['dryAir']['O2']
-        dew_C = dew_point(g)
+        #n2 = gas_mixtures['dryAir']['O2']
+        n2 = gas_mixtures[oxidiser]['N2'] # now 'Air' = 50% RH at 15C, and N2 not O2 ! - unused
+        dew_C = dew_point(g, oxidiser)
         print(f"{g:15} {mm:6.3f} {dew_C:5.3f} {c_:5.3f}   {h_:5.3f} {hc*1000:9.3f} {mff*100:8.4f} %")
     
 @memoize
@@ -991,12 +994,12 @@ def sensible_fuel(g, t):
     return sensible_heat
     
 @memoize    
-def sensible_air(g, t):
+def sensible_air(g, t, oxidiser='Air'):
     """For 1 mole of pseudo-gas g, how much is the sensible heat required to heat it
     from t to 298 K ?
     """
     air_mol = get_moles_air_for_1mol_fuel_gas(g)
-    air_cp = get_Cp('Air')
+    air_cp = get_Cp(oxidiser)
     
     sensible_heat = air_mol * air_cp * (298 - t)
     #print(f"Air   {t} Air {sensible_heat=:8.3f}")
@@ -1004,7 +1007,9 @@ def sensible_air(g, t):
     
 @memoize    
 def sensible_flue(g, t):
-    """Sensible heat needed to'heat' flue gas from 298 to exit temp"""
+    """Sensible heat needed to'heat' flue gas from 298 to exit temp
+    g : the fuel gas
+    """
     flue_moles = get_moles_flue_for_1mol_fuel_gas(g)
     flue_cp = get_Cp(g+'_flue')
     sensible_heat = flue_moles * flue_cp * (t- 298) # flue ext temp is greater than 298 (nearly always)
@@ -1042,7 +1047,7 @@ def d_condense(T, pressure, g):
     return (e1-e2)/2*δ
 
 @memoize
-def condense(T, pressure, g):
+def condense(T, pressure, g, oxidiser='DryAir'):
     """Return the efficiency (%) of the boiler assuming flue gas is all condensed
     at temperature T (K)
     """
@@ -1103,7 +1108,7 @@ def export_η_table():
        for T in t_condense:
             η.write(f"{T-T273:8.1f} {condense(T, p, 'H2'):8.4f} {condense(T, p, 'NG'):8.4f}\n") 
    
-def get_h2o_pp(g):
+def get_h2o_pp(g, oxidiser):
     # REFACTOR ALL THIS now that it is being done properly elsewhwere
     
     # Calculate the reagent (input) gases for 1 mol of fuel gas g
@@ -1123,11 +1128,11 @@ def get_h2o_pp(g):
     #print(f"\n{g:5}\t C_={do_flue_rules(g,'C_'):6.4f} H_={do_flue_rules(g,'H_'):6.4f} O2:fuel {o2_fuel:6.4f} O2:gas ratio {o2_gas:6.4f}")
     
     
-    o2 = gas_mixtures['dryAir']['O2']
+    o2 = gas_mixtures[oxidiser]['O2'] # partial pressue, i.e. molar fraction
     # h2o = gas_mixtures['dryAir']['H2O']
     n2 = 1- o2
     n2_in = o2_in * n2/o2
-    # synthetic air
+    # synthetic air, not used now
     o2s, n2s = 0.2095, 0.7905
     n2_synth = o2_in * n2s/o2s
     #print(f"O2 in: {o2_in:6.4f}, N2 in {n2_in:6.4f}  {n2_synth:6.4f}")
@@ -1148,14 +1153,14 @@ def get_h2o_pp(g):
     h2o_pp = h2o_pp * 1e5 # now in Pascals
     return h2o_pp
 
-def dew_point(g):
-    h2o_pp = get_h2o_pp(g)
+def dew_point(g, oxidiser):
+    h2o_pp = get_h2o_pp(g, oxidiser)
     dew_C = st.get_dew_point(h2o_pp)-T273
     #print(f"{h2o_out/tot_out:.4f} {dew_C:.4f} C")
     return dew_C
 
-def print_gas(g):
-    dew_C = dew_point(g)
+def print_gas(g, oxidiser):
+    dew_C = dew_point(g, oxidiser)
     if dew_C:
         print(f"{g} Dew point: {dew_C:.4f} C")
      
@@ -1175,7 +1180,7 @@ def print_fuel(g, s):
             if not hc:
                 hc = 0
             print(f"{f:5}\t{nts[f]*100:8.5f} %{gas_data[f]['C_']:3}{gas_data[f]['H_']:3} {hc*1000:6.1f} kJ/mol ")
-    print_gas(g) 
+    print_gas(g, oxidiser='dryAir') 
 
 def style(mix):
     if mix in gas_data:
