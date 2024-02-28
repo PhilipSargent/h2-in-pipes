@@ -996,7 +996,7 @@ def sensible_fuel(g, t):
     return sensible_heat
     
 @memoize    
-def sensible_air(g, t, oxidiser='Air'):
+def sensible_air(g, t, oxidiser):
     """For 1 mole of pseudo-gas g, how much is the sensible heat required to heat it
     from t to 298 K ?
     """
@@ -1027,10 +1027,10 @@ def sensible_water(g, t):
     return sensible_heat
 
 @memoize
-def sensible_in(g, T, t_fuel, t_air):
+def sensible_in(g, T, t_fuel, t_air, oxidiser):
     """Sensible heat needed to heat inlet fuel and air up to 298"""
     fuel_in = sensible_fuel(g, t_fuel) # 1 mole of fuel
-    air_in = sensible_air(g, t_air) # yes, this is for 1 mole of fuel
+    air_in = sensible_air(g, t_air, oxidiser) # yes, this is for 1 mole of fuel
     return fuel_in + air_in
     
 @memoize
@@ -1040,16 +1040,16 @@ def sensible_out(g, T):
     water_out = sensible_water(g, T) # for one mole fuel
     return flue_out + water_out
     
-def d_condense(T, pressure, g):
+def d_condense(T, pressure, g, oxidiser):
     """Differential of the efficiency/ condensations temperature plot"""
     δ = 0.1
-    e1 = condense(T-δ, pressure, g)
-    e2 = condense(T+δ, pressure, g)
+    e1 = condense(T-δ, pressure, g, oxidiser)
+    e2 = condense(T+δ, pressure, g, oxidiser)
     
     return (e1-e2)/2*δ
 
 @memoize
-def condense(T, pressure, g, oxidiser='DryAir'):
+def condense(T, pressure, g, oxidiser):
     """Return the efficiency (%) of the boiler assuming flue gas is all condensed
     at temperature T (K)
     """
@@ -1063,16 +1063,16 @@ def condense(T, pressure, g, oxidiser='DryAir'):
     _, _, hc_MJ = get_Hc(g, 298) 
     hc = hc_MJ * 1000 * 1000
 
-    heat_out = hc - latent_lost(g, T) - sensible_in(g, T, t_fuel, t_air) - sensible_out(g, T)
+    heat_out = hc - latent_lost(g, T) - sensible_in(g, T, t_fuel, t_air, oxidiser) - sensible_out(g, T)
     η = 100 * heat_out/hc
     return η
 
-def find_intersection(g1, g2):
+def find_intersection(g1, g2, oxidiser):
     """For a condensing boiler at 1 atm, at what temperature are
     the efficiences equal between these two fuels?"""
     p = Atm
     def objective(T):
-        obj = condense(T, p, g1) - condense(T, p, g2)
+        obj = condense(T, p, g1, oxidiser) - condense(T, p, g2, oxidiser)
         #print(f"{T-T273:5.3f} {condense(T, p, g1):8.4f} {condense(T, p, g2):8.4f}")
         return obj
         
@@ -1091,24 +1091,24 @@ def find_intersection(g1, g2):
         T += delta_T
         
         
-    eff = condense(T, p, g1)
+    eff = condense(T, p, g1, oxidiser)
     if obj > 2* eps:
         print("ABORT")
-    print(f"At {T-T273:5.2f} degrees C the fuels '{g1}' and '{g2}' have the same efficiency of {eff:8.5f} %  ({n})")
+    print(f"At {T-T273:5.2f} degrees C the fuels '{g1}' and '{g2}' have the same efficiency of {eff:8.5f} %  ({n}) with {oxidiser}")
  
-def export_η_table():
+def export_η_table(oxidiser='dryAir'):
     """Produce a text file with boiler efficiences"""
     p = Atm
     t_condense = np.linspace(T273+0,T273+100, 101)  
-    c_H2 = [condense(T, p, 'H2') for T in t_condense]
-    c_NG = [condense(T, p, 'NG') for T in t_condense]
+    c_H2 = [condense(T, p, 'H2', oxidiser) for T in t_condense]
+    c_NG = [condense(T, p, 'NG', oxidiser) for T in t_condense]
 
     with open('η_table.txt', 'w') as η:
        pass
        pass
        η.write(f"{'Temp.(C)':8}   {'eta (H2)':8} {'eta (NG)':8}\n") 
        for T in t_condense:
-            η.write(f"{T-T273:8.1f} {condense(T, p, 'H2'):8.4f} {condense(T, p, 'NG'):8.4f}\n") 
+            η.write(f"{T-T273:8.1f} {condense(T, p, 'H2', oxidiser):8.4f} {condense(T, p, 'NG', oxidiser):8.4f}\n") 
    
 def get_h2o_pp(g, oxidiser):
     # REFACTOR ALL THIS now that it is being done properly elsewhwere
@@ -1220,7 +1220,7 @@ def main():
     program = sys.argv[0]
     stem = str(pl.Path(program).with_suffix(""))
     fn={}
-    for s in ["z", "ϱ", "μ", "bf", "bf_NG", "η", "dη","Tη"]:
+    for s in ["z", "ϱ", "μ", "bf", "bf_NG", "η", "ηη","dη","Tη"]:
         f = stem  + "_" + s
         fn[s] = pl.Path(f).with_suffix(".png") 
 
@@ -1297,8 +1297,8 @@ def main():
     p = Atm
     t_condense = np.linspace(273.15+20, 273.15+100, 1000)  
     plt.figure(figsize=(10, 6))
-    c_H2 = [condense(T, p, 'H2') for T in t_condense]
-    c_NG = [condense(T, p, 'NG') for T in t_condense]
+    c_H2 = [condense(T, p, 'H2', 'Air') for T in t_condense]
+    c_NG = [condense(T, p, 'NG', 'Air') for T in t_condense]
     
     plt.plot(t_condense-273.15, c_H2, label='Pure hydrogen', **plot_kwargs('H2'))
     plt.plot(t_condense-273.15, c_NG, label='Natural Gas', **plot_kwargs('NG'))
@@ -1312,12 +1312,30 @@ def main():
     plt.savefig(fn["η"])
     plt.close()
     
+    # Plot the condensing curves at different % oxygen  - - - - - - - - - - -
+    p = Atm
+    t_condense = np.linspace(273.15+20, 273.15+100, 1000)  
+    plt.figure(figsize=(10, 6))
+    for o in ['Air']:
+        c_NG = [condense(T, p, 'NG', o) for T in t_condense]
+        
+        plt.plot(t_condense-273.15, c_NG, label='Natural Gas '+ o, **plot_kwargs('NG'))
+       
+        #plt.title(f'Maximum boiler efficiency vs Condensing Temperature at {p} bar')
+        plt.xlabel('Flue gas temperature (°C)')
+        plt.ylabel('Maximum boiler efficiency (%)')
+        plt.legend()
+        # plt.grid(True)
+
+    plt.savefig(fn["ηη"])
+    plt.close()
+    
     # Plot the Differential of the condensing curve  - - - - - - - - - - -
     p = Atm
     t_condense = np.linspace(273.15+20, 273.15+100, 1000)  
     plt.figure(figsize=(10, 6))
-    c_H2 = [d_condense(T, p, 'H2') for T in t_condense]
-    c_NG = [d_condense(T, p, 'NG') for T in t_condense]
+    c_H2 = [d_condense(T, p, 'H2', 'Air') for T in t_condense]
+    c_NG = [d_condense(T, p, 'NG', 'Air') for T in t_condense]
      
     plt.plot(t_condense-273.15, c_H2, label='Pure hydrogen', **plot_kwargs('H2'))
     plt.plot(t_condense-273.15, c_NG, label='Natural Gas', **plot_kwargs('NG'))
@@ -1330,8 +1348,8 @@ def main():
     plt.savefig(fn["dη"])
     plt.close()
     
-    find_intersection('H2', 'NG') # where do the efficiences cross?
-    find_intersection('H2', 'NG+20%H2') # where do the efficiences cross?
+    find_intersection('H2', 'NG', 'Air') # where do the efficiences cross?
+    find_intersection('H2', 'NG+20%H2', 'Air') # where do the efficiences cross?
 
    # Plot the compressibility  - - - - - - - - - - -
 
