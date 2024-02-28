@@ -584,7 +584,7 @@ def get_fuel_fraction(g):
         mff += x * ff
     return mff
     
-def print_fuelgas(g, oxidiser='Air'):
+def print_fuelgas(g, oxidiser):
     """Oxidiser had been DryAir, now it is Air, i.e. 15%RH at 15C,
     but we are going to doing enriched air."""
     mm = do_mm_rules(g) # mean molar mass
@@ -795,9 +795,13 @@ def get_moles_flue_for_1mol_fuel_gas(g, oxidiser):
     co2_out =  do_flue_rules(g,'C_') 
     h2o_out =  do_flue_rules(g,'H_')/2
     
-    # we know the dry air has CO2 in it, so no need to check that
+    # we know the dry air has CO2 in it, so no need to check that.. except for H2 burning in pure O2..
     # and we know it has no moisture
-    flue_gas['CO2'] += co2_out
+    if 'CO2' in flue_gas:
+        flue_gas['CO2'] += co2_out
+    else:
+        flue_gas['CO2'] = co2_out
+        
     flue_gas['H2O'] = h2o_out
     
     # add up the number of moles
@@ -962,7 +966,7 @@ def find_intersection(g1, g2, oxidiser):
         print("ABORT")
     print(f"At {T-T273:5.2f} degrees C the fuels '{g1}' and '{g2}' have the same efficiency of {eff:8.5f} %  ({n}) with {oxidiser}")
  
-def export_η_table(oxidiser='dryAir'):
+def export_η_table(oxidiser):
     """Produce a text file with boiler efficiences"""
     p = Atm
     t_condense = np.linspace(T273+0,T273+100, 101)  
@@ -1032,7 +1036,7 @@ def print_gas(g, oxidiser):
     if dew_C:
         print(f"{g} Dew point: {dew_C:.4f} C")
      
-def print_fuel(g, s):
+def print_fuel(g, s, oxidiser):
     print(f"\n{s}")
     #print(f"{g:3}")
     if g not in gas_mixtures:
@@ -1048,7 +1052,7 @@ def print_fuel(g, s):
             if not hc:
                 hc = 0
             print(f"{f:5}\t{nts[f]*100:8.5f} %{gas_data[f]['C_']:3}{gas_data[f]['H_']:3} {hc*1000:6.1f} kJ/mol ")
-    print_gas(g, oxidiser='dryAir') 
+    print_gas(g, oxidiser) 
 
 def style(mix):
     if mix in gas_data:
@@ -1058,6 +1062,7 @@ def style(mix):
 
 # see https://matplotlib.org/stable/users/explain/colors/colors.html (bottom of page)
 colours =  {'H2': 'xkcd:red',
+   'O2': 'xkcd:turquoise',
    'CH4': 'xkcd:azure',
    'C2H6': 'xkcd:orchid',
    'NG+20%H2': 'xkcd:gold',
@@ -1086,7 +1091,7 @@ def main():
     program = sys.argv[0]
     stem = str(pl.Path(program).with_suffix(""))
     fn={}
-    for s in ["z", "ϱ", "μ", "bf", "bf_NG", "η", "ηη","dη","Tη"]:
+    for s in ["z", "ϱ", "μ", "bf", "bf_NG", "η", "ηη", "ηηη","dη","Tη"]:
         f = stem  + "_" + s
         fn[s] = pl.Path(f).with_suffix(".png") 
 
@@ -1094,8 +1099,8 @@ def main():
         composition = gas_mixtures[mix]
         check_composition(mix, composition)
 
-    print_fuel('H2', "Hydrogen")
-    print_fuel('NG', "NatGas at Fordoun NTS 20th Jan.2021")
+    print_fuel('H2', "Hydrogen", 'dryAir')
+    print_fuel('NG', "NatGas at Fordoun NTS 20th Jan.2021", 'dryAir')
     
     dp = 40
     tp = 15 # C
@@ -1143,11 +1148,11 @@ def main():
     print(f"\n[H2O][CO2] of fuel gas")
     print(f"{'gas':13}{'Mw(g/mol)':6} {'Dew Pt':6}  {'C_':5}   {'H_':5}{'Hc(kJ/mol)':5}  fuel")
     for g in ['H2', 'CH4', 'C2H6']:
-        print_fuelgas(g)
+        print_fuelgas(g, 'Air')
     for g in gas_mixtures:
-        print_fuelgas(g)
+        print_fuelgas(g, 'Air')
 
-    export_η_table()
+    export_η_table('Air')
     
     #- - - - - - - - - - - - - - - - - - - - - -- - - - - - - - - - -- - - - - - - - - - -
     # Plot defaults
@@ -1171,6 +1176,7 @@ def main():
    
     #plt.title(f'Maximum boiler efficiency vs Condensing Temperature at {p} bar')
     plt.xlabel('Flue gas temperature (°C)')
+    #plt.ylim([80, 100])
     plt.ylabel('Maximum boiler efficiency (%)')
     plt.legend()
     plt.grid(True)
@@ -1179,37 +1185,59 @@ def main():
     plt.close()
     
     # Plot the condensing curves at different % oxygen  - - - - - - - - - - -
-    get_Cp
     p = Atm
     t_condense = np.linspace(273.15+20, 273.15+100, 1000)  
-    plt.figure(figsize=(10, 6))
-    for o in air_list:
-        # print(f"Cp {o:8} {get_Cp(o):.3f}")
-        c_NG = [condense(T, p, 'NG', o) for T in t_condense]
-        
-        if o == 'Air':
-            k = 'NG'
-        else:
-            k = o
-        plt.plot(t_condense-273.15, c_NG, label='Natural Gas + '+ o, **plot_kwargs(k))
-       
-    plt.xlabel('Flue gas temperature (°C)')
-    plt.ylabel('Maximum boiler efficiency (%)')
-    plt.legend()
-    plt.grid(True)
+    for g in ['NG', 'H2']:
+        plt.figure(figsize=(10, 6))
+        c_g = {}
+        for o in air_list:
+            # print(f"Cp {o:8} {get_Cp(o):.3f}")
+            c_g[o] = [condense(T, p, g, o) for T in t_condense]
+            
+            if o == 'Air':
+                k = g  # linestyle for plot
+            else:
+                k = o
+            plt.plot(t_condense-273.15, c_g[o], label=f"{g}+{o}", **plot_kwargs(k))
+           
+        plt.xlabel('Flue gas temperature (°C)')
+        plt.ylabel('Maximum boiler efficiency (%)')
+        #plt.ylim([80, 100])
+        plt.legend()
+        plt.grid(True)
 
-    plt.savefig(fn["ηη"])
-    plt.close()
-    
+        plt.savefig(f"peng_ηη_{g}.png")
+        plt.close()
+        
+        plt.figure(figsize=(10, 6))
+        for o in air_list:
+            if o == 'Air':
+                continue
+            e = list()
+            for item1, item2 in zip(c_g[o], c_g['Air']):
+                item = item1 - item2
+                #item = item1/item2
+                e.append(item)
+            plt.plot(t_condense-273.15, e, label=f"{g}+{o}", **plot_kwargs(o))
+        
+        plt.xlabel('Flue gas temperature (°C)')
+        plt.ylabel('Increase in maximum boiler efficiency (%)')
+        #plt.ylim([80, 100])
+        plt.legend()
+        plt.grid(True)
+
+        plt.savefig(f"peng_ηηη_{g}.png")
+        plt.close()
+      
     # Plot the Differential of the condensing curve  - - - - - - - - - - -
     p = Atm
     t_condense = np.linspace(273.15+20, 273.15+100, 1000)  
     plt.figure(figsize=(10, 6))
     c_H2 = [d_condense(T, p, 'H2', 'Air') for T in t_condense]
-    c_NG = [d_condense(T, p, 'NG', 'Air') for T in t_condense]
+    c_g = [d_condense(T, p, 'NG', 'Air') for T in t_condense]
      
     plt.plot(t_condense-273.15, c_H2, label='Pure hydrogen', **plot_kwargs('H2'))
-    plt.plot(t_condense-273.15, c_NG, label='Natural Gas', **plot_kwargs('NG'))
+    plt.plot(t_condense-273.15, c_g, label='Natural Gas', **plot_kwargs('NG'))
    
     plt.title(f'd(η)/d(T) vs Condensing Temperature at {p} bar')
     plt.xlabel('Temperature (°C)')
