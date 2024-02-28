@@ -118,6 +118,8 @@ gas_mixtures = {
     'dryAir':  {'N2': 0.780872, 'O2': 0.209396, 'CO2': 0.00040, 'Ar': 0.009332},
     #'Air':  {'N2': 0.761749, 'O2': 0.204355, 'CO2': 0.00039, 'Ar': 0.009112, 'He': 5.0e-06, 'H2O': 0.024389} # https://www.thoughtco.com/chemical-composition-of-air-604288
     # But ALSO adding 2.5% moisture to the air and normalising
+    
+    'O2':  { 'O2': 1.0}, # for the 'oxidiser' list
 }
 
 """reduce the lower limit for Wobbe Index from 47.2 MJ/m³  to 46.50 MJ/m³ was approved by HSE. 
@@ -843,7 +845,7 @@ def print_wobbe(g, T15C):
     # return water_fraction
 
 @memoize  
-def get_vapour_moles(g, t):
+def get_vapour_moles(g, t, oxidiser):
     """Calculate the amount of H2O(g) compared to H2O(l) at
     a particular temperature - in the flue gas
     """
@@ -853,9 +855,9 @@ def get_vapour_moles(g, t):
     
     
     # Work in whole moles, not  mole fractions
-    n = get_moles_flue_for_1mol_fuel_gas(g)
+    n = get_moles_flue_for_1mol_fuel_gas(g,oxidiser)
     
-    flue = get_flue_composition(g)
+    flue = get_flue_composition(g, oxidiser)
     h2o_f = gas_mixtures[flue]['H2O'] # fractional value
     h2o_mol = n * h2o_f        # moles of h2o
     not_mol = n * (1 - h2o_f)  # moles of non-condensibles
@@ -872,17 +874,17 @@ def get_vapour_moles(g, t):
     return vap_mol
 
 @memoize  
-def get_water_moles(g, t):
+def get_water_moles(g, t, oxidiser):
     """get number of moles of liquid water condensed for fuel g
     and at temperature t 
     for one mole of fuel gas"""
-    n = get_moles_flue_for_1mol_fuel_gas(g)
+    n = get_moles_flue_for_1mol_fuel_gas(g, oxidiser)
 
-    flue = get_flue_composition(g)
+    flue = get_flue_composition(g, oxidiser)
     h2o_f = gas_mixtures[flue]['H2O'] # fractional value
     h2o_mol = n * h2o_f        # moles of h2o
     
-    vap_mol = get_vapour_moles(g, t)
+    vap_mol = get_vapour_moles(g, t, oxidiser)
     liq_mol = h2o_mol - vap_mol
 
     return liq_mol
@@ -902,12 +904,12 @@ def get_water_moles(g, t):
     # return vapour
    
 @memoize
-def latent_lost(g, t):
+def latent_lost(g, t, oxidiser):
     # we need the actual number of moles of water, not just the proportion
     # This is the extra heat LOST because it is emitted a vapour, not an extra
     # amount we gain because it condenses.
     # STP at 298K assumes it is all condensed to water
-    lost = get_vapour_moles(g, t)     
+    lost = get_vapour_moles(g, t, oxidiser)     
     LH = gas_data['H2O']['LH'] # kJ/mol    
     
     latent_heat =   lost * LH * 1000 # convert to J from kJ
@@ -916,20 +918,20 @@ def latent_lost(g, t):
     return latent_heat
  
 @memoize  
-def get_moles_flue_for_1mol_fuel_gas(g):
+def get_moles_flue_for_1mol_fuel_gas(g, oxidiser):
     """ Calculates the components of the flue gas
-    as a side-effect, puts the composition into gas_mixture['flue']
+    as a side-effect, puts the composition into 'flue_gas' and then gas_mixture['flue_gas_{oxidiser}']
     """
     # First we calculate the number of moles of each component in the input air
     # and adjust for the O2 which has got burned.
     o2_in, o2_burned = get_moles_O2_for_1mol_fuel_gas(g)
-    air_mol = get_moles_air_for_1mol_fuel_gas(g)
+    air_mol = get_moles_air_for_1mol_fuel_gas(g, oxidiser)
     
     flue_gas = {} # moles (not fractions)
-    for c in gas_mixtures['dryAir']:
-        flue_gas[c] = air_mol *  gas_mixtures['dryAir'][c]
+    for c in gas_mixtures[oxidiser]:
+        flue_gas[c] = air_mol *  gas_mixtures[oxidiser][c]
     # check
-    #print(f"O2 in {flue_gas['O2']} {o2_in}")
+    # print(f"O2 in {flue_gas['O2']} {o2_in}")
     
     flue_gas['O2'] = flue_gas['O2'] - o2_burned
     
@@ -956,12 +958,12 @@ def get_moles_flue_for_1mol_fuel_gas(g):
     n = 0
     for c in flue_gas:
         n += flue_gas[c]
-    #print(f"Number of moles in flue gas for 1 mole fuel: {n:8.4f}")
+    print(f"Number of moles in flue gas for 1 mole fuel: {n:8.4f} for {g:6} and {oxidiser}")
       
       # Normalise
     for c in flue_gas:
         flue_gas[c] = flue_gas[c]/n
-    gas_mixtures[g+"_flue"] = flue_gas
+    gas_mixtures[g+"_flue_"+oxidiser] = flue_gas
     return n
 
 @memoize  
@@ -976,10 +978,13 @@ def get_moles_O2_for_1mol_fuel_gas(g):
     return o2_in, o2_burned
 
 @memoize  
-def get_moles_air_for_1mol_fuel_gas(g):
+def get_moles_air_for_1mol_fuel_gas(g, oxidiser):
     o2_in, _ = get_moles_O2_for_1mol_fuel_gas(g)
     
-    x = gas_mixtures['dryAir']['O2'] # = 0.21 
+    if oxidiser == 'O2':
+        x = 1.0
+    else:
+        x = gas_mixtures[oxidiser]['O2'] 
     air_mol_0 = o2_in * 1/x # where x is fraction of O2 in air
     
     # Alternatiove synthetic air calc to match spreadsheet
@@ -990,19 +995,19 @@ def get_moles_air_for_1mol_fuel_gas(g):
     return  air_mol_0
 
 @memoize
-def get_flue_composition(g):
+def get_flue_composition(g, oxidiser):
     """For one mole of fuel gas, return the composition of the flue gas
     ALWAYS recalculate this as we run with several fuels
     re-think how this is stored..?"""
     
-    n = get_moles_flue_for_1mol_fuel_gas(g)
-    return g+'_flue'
+    n = get_moles_flue_for_1mol_fuel_gas(g, oxidiser)
+    return g+'_flue_'+oxidiser
         
 @memoize
 def sensible_fuel(g, t):
     """For 1 mole of pseudo-gas g, how much is the sensible heat required to heat it
     from t to 298 K ?
-    This includes inerts aas well as combustible gases
+    This includes inerts as well as combustible gases
     """
     fuel_mol = 1.0 # start with 1 mol of fuel gas
     fuel_cp = get_Cp(g)
@@ -1015,7 +1020,7 @@ def sensible_air(g, t, oxidiser):
     """For 1 mole of pseudo-gas g, how much is the sensible heat required to heat it
     from t to 298 K ?
     """
-    air_mol = get_moles_air_for_1mol_fuel_gas(g)
+    air_mol = get_moles_air_for_1mol_fuel_gas(g, oxidiser)
     air_cp = get_Cp(oxidiser)
     
     sensible_heat = air_mol * air_cp * (298 - t)
@@ -1023,20 +1028,20 @@ def sensible_air(g, t, oxidiser):
     return sensible_heat
     
 @memoize    
-def sensible_flue(g, t):
+def sensible_flue(g, t, oxidiser):
     """Sensible heat needed to'heat' flue gas from 298 to exit temp
     g : the fuel gas
     """
-    flue_moles = get_moles_flue_for_1mol_fuel_gas(g)
-    flue_cp = get_Cp(g+'_flue')
+    flue_moles = get_moles_flue_for_1mol_fuel_gas(g, oxidiser)
+    flue_cp = get_Cp(g+'_flue_'+oxidiser)
     sensible_heat = flue_moles * flue_cp * (t- 298) # flue ext temp is greater than 298 (nearly always)
     # print(f"{g:5}{flue_cp:8.3f} {t:5.1f} Flue {sensible_heat=:8.3f}")
     return sensible_heat
 
 @memoize    
-def sensible_water(g, t):
+def sensible_water(g, t, oxidiser):
     """Sensible heat needed to'heat' liquid water from 298 to exit temp"""
-    water_moles = get_water_moles(g, t) # for one mole fuel
+    water_moles = get_water_moles(g, t, oxidiser) # for one mole fuel
     water_cp = gas_data['H2O']['CpL']
     sensible_heat = water_moles *water_cp * (t- 298) 
     return sensible_heat
@@ -1049,10 +1054,10 @@ def sensible_in(g, T, t_fuel, t_air, oxidiser):
     return fuel_in + air_in
     
 @memoize
-def sensible_out(g, T):
+def sensible_out(g, T, oxidiser):
     """Sensible heat needed to'heat' flue gas from 298 to exit temp"""
-    flue_out = sensible_flue(g, T) # yes, for 1 mole fuel
-    water_out = sensible_water(g, T) # for one mole fuel
+    flue_out = sensible_flue(g, T, oxidiser) # yes, for 1 mole fuel
+    water_out = sensible_water(g, T, oxidiser) # for one mole fuel
     return flue_out + water_out
     
 def d_condense(T, pressure, g, oxidiser):
@@ -1078,7 +1083,7 @@ def condense(T, pressure, g, oxidiser):
     _, _, hc_MJ = get_Hc(g, 298) 
     hc = hc_MJ * 1000 * 1000
 
-    heat_out = hc - latent_lost(g, T) - sensible_in(g, T, t_fuel, t_air, oxidiser) - sensible_out(g, T)
+    heat_out = hc - latent_lost(g, T, oxidiser) - sensible_in(g, T, t_fuel, t_air, oxidiser) - sensible_out(g, T, oxidiser)
     η = 100 * heat_out/hc
     return η
 
@@ -1328,13 +1333,19 @@ def main():
     plt.close()
     
     # Plot the condensing curves at different % oxygen  - - - - - - - - - - -
+    get_Cp
     p = Atm
     t_condense = np.linspace(273.15+20, 273.15+100, 1000)  
     plt.figure(figsize=(10, 6))
     for o in air_list:
+        # print(f"Cp {o:8} {get_Cp(o):.3f}")
         c_NG = [condense(T, p, 'NG', o) for T in t_condense]
         
-        plt.plot(t_condense-273.15, c_NG, label='Natural Gas + '+ o, **plot_kwargs(o))
+        if o == 'Air':
+            k = 'NG'
+        else:
+            k = o
+        plt.plot(t_condense-273.15, c_NG, label='Natural Gas + '+ o, **plot_kwargs(k))
        
     plt.xlabel('Flue gas temperature (°C)')
     plt.ylabel('Maximum boiler efficiency (%)')
