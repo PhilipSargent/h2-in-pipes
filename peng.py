@@ -146,6 +146,21 @@ for g in ag:
     air[g] = ag[g]*(1 - air['H2O'])
 gas_mixtures['Air'] = air
 
+enrich = [0.3, 0.6, 0.8]
+air_list = ['Air']
+for o in enrich:
+    original_o = gas_mixtures['Air']['O2']
+    increase = o - original_o  # i.e. 9.1 % for 30%O2
+    factor  = (1 - o) / ( 1 - original_o)
+    name_airN = f"Air{o:.0%}O2"
+    airN = {}
+    ag = gas_mixtures['Air']
+    for g in ag:
+        airN[g] = ag[g] * factor
+    airN['O2'] = o
+    gas_mixtures[name_airN] = airN
+    air_list.append(name_airN)
+air_list.append('O2') # pure oxygen
 
 # Binary interaction parameters for hydrocarbons for Peng-Robinson
 # based on the Chueh-Prausnitz correlation
@@ -1307,7 +1322,7 @@ def main():
     plt.xlabel('Flue gas temperature (°C)')
     plt.ylabel('Maximum boiler efficiency (%)')
     plt.legend()
-    # plt.grid(True)
+    plt.grid(True)
 
     plt.savefig(fn["η"])
     plt.close()
@@ -1316,16 +1331,15 @@ def main():
     p = Atm
     t_condense = np.linspace(273.15+20, 273.15+100, 1000)  
     plt.figure(figsize=(10, 6))
-    for o in ['Air']:
+    for o in air_list:
         c_NG = [condense(T, p, 'NG', o) for T in t_condense]
         
-        plt.plot(t_condense-273.15, c_NG, label='Natural Gas '+ o, **plot_kwargs('NG'))
+        plt.plot(t_condense-273.15, c_NG, label='Natural Gas + '+ o, **plot_kwargs(o))
        
-        #plt.title(f'Maximum boiler efficiency vs Condensing Temperature at {p} bar')
-        plt.xlabel('Flue gas temperature (°C)')
-        plt.ylabel('Maximum boiler efficiency (%)')
-        plt.legend()
-        # plt.grid(True)
+    plt.xlabel('Flue gas temperature (°C)')
+    plt.ylabel('Maximum boiler efficiency (%)')
+    plt.legend()
+    plt.grid(True)
 
     plt.savefig(fn["ηη"])
     plt.close()
