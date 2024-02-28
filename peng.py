@@ -90,6 +90,8 @@ gas_mixtures = {
     # 'Fordoun': { 'CH4':  0.900253, 'C2H6':  0.051467, 'C3H8':  0.013621, 'iC4':  0.001276, 'nC4':  0.002173, 'neoC5':  0.000020,'iC5':  0.000346, 'nC5':  0.003490,  'C6':  0.002390, 'CO2':  0.020853, 'N2':  0.009404, }, # original email John Baldwin 30/12/2023, unnormalized
     'Groening': {'CH4': 0.813, 'C2H6': 0.0285, 'C3H8': 0.0037, 'nC4': 0.0014, 'nC5': 0.0004, 'C6': 0.0006, 'CO2': 0.0089, 'N2': 0.1435, 'O2': 0}, # Groeningen gas https://en.wikipedia.org/wiki/Groningen_gas_field
     
+    'AHBJ': {'CH4': 0.9376, 'C2H6': 0.0314, 'C3H8': 0.0062, 'nC4': 0.002, 'nC5': 0.0007, 'CO2': 0.0018, 'N2': 0.0203, 'O2': 0}, # Abbas, Hassani, Burby, John (2021)
+    
     'Tokyo': {'CH4': 0.896, 'C2H6': 0.056, 'C3H8': 0.0034, 'iC4': 0.0007, 'nC4': 0.0007, 'N2': 0.0432 }, # Tokyo town gas, with assumed missing gas all N2 http://members.igu.org/html/wgc2009/papers/docs/wgcFinal00580.pdf
     
     'Biomethane': {'CH4': 0.92,  'C3H8': 0.04, 'CO2': 0.04 }, # wobbe central, not a real natural gas  https://www.gasgovernance.co.uk/sites/default/files/ggf/Impact%20of%20Natural%20Gas%20Composition%20-%20Paper_0.pdf
