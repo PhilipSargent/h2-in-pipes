@@ -1,3 +1,4 @@
+import sys
 
 # "In this Schedule, the reference conditions are 15C and 1.01325 bar"
 # UK law for legal Wobbe limits and their calculation.
@@ -93,3 +94,72 @@ gas_mixture_properties = {
     'Algerian': {'Wb': 49.992, 'HHV': 39.841, 'RD': 0.6351}, #Algerian NG, Romeo 2022, C6+ BUT not according to my calcs. for Hc and wobbe.
     # 'Air': {'Hc': 0} 
 }
+
+# 20% H2, remainder N.Sea gas. BUT may need adjusting to maintain Wobbe value, by adding N2 probably.
+fifth = {}
+fifth['H2'] = 0.2
+ng = gas_mixtures['NG']
+for g in ng:
+    fifth[g] = ng[g]*0.8
+gas_mixtures['NG+20%H2'] = fifth
+
+air = {}
+air['H2O'] = 0.0084 # 50% RH at 15
+ag = gas_mixtures['dryAir']
+for g in ag:
+    air[g] = ag[g]*(1 - air['H2O'])
+gas_mixtures['Air'] = air
+
+enrich = [0.3, 0.5, 0.8]
+air_list = ['Air']
+for o in enrich:
+    original_o = gas_mixtures['Air']['O2']
+    increase = o - original_o  # i.e. 9.1 % for 30%O2
+    factor  = (1 - o) / ( 1 - original_o)
+    name_airN = f"Air{o:.0%}O2"
+    airN = {}
+    ag = gas_mixtures['Air']
+    for g in ag:
+        airN[g] = ag[g] * factor
+    airN['O2'] = o
+    gas_mixtures[name_airN] = airN
+    air_list.append(name_airN)
+air_list.append('O2') # pure oxygen
+
+# Binary interaction parameters for hydrocarbons for Peng-Robinson
+# based on the Chueh-Prausnitz correlation
+# from https://wiki.whitson.com/eos/cubic_eos/
+# also from Privat & Jaubert, 2023 (quoting a 1987 paper).
+# Note that the default value (in the code) is -0.019 as this represents ideal gas behaviour.
+
+# There is a full table of BIP using teh GCM method on https://wiki.whitson.com/eos/bips/index.html#coutinho-et-al-correlation
+# using these might be better than the Coutinho equation - future work.
+
+# These are used in function estimate_k_?(g1, g2) which estimates these parameters from gas data.
+# NOT NOW USED, instead weuse the Coutinho estimation procedure in estimate_k()
+# The difference is undetectable in our use at ambient conditions.
+k_ij = {
+    'CH4': {'C2H6': 0.0021, 'C3H8': 0.007, 'iC4': 0.013, 'nC4': 0.012, 'iC5': 0.018, 'nC5': 0.018, 'C6': 0.021, 'CO2': 0},
+    'C2H6': {'C3H8': 0.001, 'iC4': 0.005, 'nC4': 0.004, 'iC5': 0.008, 'nC5': 0.008, 'C6': 0.010},
+    'C3H8': {'iC4': 0.001, 'nC4': 0.001, 'iC5': 0.003, 'nC5': 0.003, 'C6': 0.004},
+    'iC4': {'nC4': 0.0, 'iC5': 0.0, 'nC5': 0.0, 'C6': 0.001}, # ?
+    'nC4': {'iC5': 0.001, 'nC5': 0.001, 'C6': 0.001}, # ?
+    'iC5': {'C6': -0.019}, # placeholder
+    'nC5': {'C6': -0.019}, # placeholder    
+    #'C6': {'C6': -0.019}, # placeholder
+    'CO2': {'C6': -0.019}, # placeholder
+    'H2O': {'C6': -0.019}, # placeholder
+    'N2': {'C6': -0.019}, # placeholder
+    'He': {'C6': -0.019}, # placeholder
+    'H2': {'C6': -0.019}, # placeholder
+    'O2': {'C6': -0.019}, # placeholder
+    'Ar': {'C6': -0.019}, # placeholder
+}
+
+
+def main():
+    program = sys.argv[0]
+    print(f"This program '{program}' is not intended to be run as a standalone program.")
+
+if __name__ == '__main__':
+    sys.exit(main())  
