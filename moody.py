@@ -421,7 +421,10 @@ def plot_diagram(title, filename, plot="loglog", fff=colebrook, gradient=False, 
     if h2:
         #plt.ylim(-20,150)
         plt.xlabel('Reynolds number Re for natural gas')
-        plt.ylabel('Pressure drop ratio ')
+        if fff==p2_h2_ratio:
+            plt.ylabel('Pressure drop ratio ')
+        else:
+            plt.ylabel('Darcy-Weisbach friction factor ratio ')
     if w2:
         #plt.ylim(-80,500)
         plt.ylabel('Compressor power ratio ')
