@@ -1186,7 +1186,6 @@ def main():
     
     # Plot the condensing curves at different % oxygen  - - - - - - - - - - -
     p = Atm
-    t_condense = np.linspace(273.15+20, 273.15+100, 1000)  
     for g in ['NG', 'H2']:
         plt.figure(figsize=(10, 6))
         c_g = {}
@@ -1231,7 +1230,6 @@ def main():
       
     # Plot the Differential of the condensing curve  - - - - - - - - - - -
     p = Atm
-    t_condense = np.linspace(273.15+20, 273.15+100, 1000)  
     plt.figure(figsize=(10, 6))
     c_H2 = [d_condense(T, p, 'H2', 'Air') for T in t_condense]
     c_g = [d_condense(T, p, 'NG', 'Air') for T in t_condense]
