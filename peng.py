@@ -6,6 +6,8 @@ import sys
 
 import sonntag as st
 
+# from scipy.optimize import newton_raphson
+
 from cycler import cycler
 from gas_data import gas_data, gas_mixtures,gas_mixture_properties, enrich, air_list, k_ij
 
@@ -440,6 +442,43 @@ def peng_robinson(T, P, gas): # Peng-Robinson Equation of State
     Z = solve_for_Z(T, P, a, b)
     return Z
 
+
+# # Define the function to be solved (a - 0.45724 * (R * Tc)**2 / Pc * alpha)
+# def func(Tc, a, Pc, R, alpha):
+  # return a - 0.45724 * (R * Tc)**2 / Pc * alpha
+
+# # Define the derivative of the function (d/dTc (a - 0.45724 * (R * Tc)**2 / Pc * alpha))
+# def func_prime(Tc, a, Pc, R, alpha):
+  # return -1.82896 * R * Tc * Pc * alpha / a
+
+# # Define known values (replace with your actual values)
+# a = 0.45724
+# Pc = 100000  # Pa (replace with actual critical pressure)
+# R = 8.314  # kPa L/mol K (universal gas constant)
+# alpha = 0.5  # (replace with actual acentric factor)
+
+# # Initial guess for Tc (adjust as needed)
+# initial_guess = 300  # K
+
+# # Solve for Tc using Newton-Raphson method
+# solved_Tc = newton_raphson(func, initial_guess, args=(a, Pc, R, alpha), fprime=func_prime)
+
+# # Print the result
+# print("Estimated critical temperature (Tc):", solved_Tc, "K")
+
+@memoize
+def peng_robinson_invert(gas): # Peng-Robinson Equation of State
+    if gas not in gas_mixtures:    
+        Tc = gas_data[gas]['Tc']
+        Pc = gas_data[gas]['Pc']
+    else:
+        constants = z_mixture_rules(gas, 300)
+        a = constants[gas]['a_mix']
+        b = constants[gas]['b_mix'] 
+        Tc = (8*a / 27*b*R)
+        Pc = (a / 27*b^2)*R
+        
+    return Tc, Pc
 
 def viscosity_LGE(Mw, T_k, ϱ):
     """The  Lee, Gonzalez, and Eakin method, originally expressed in 'oilfield units'
@@ -1091,7 +1130,7 @@ def main():
     program = sys.argv[0]
     stem = str(pl.Path(program).with_suffix(""))
     fn={}
-    for s in ["z", "ϱ", "μ", "bf", "bf_NG", "η", "ηη", "ηηη","dη","Tη"]:
+    for s in ["z", "ϱ", "μ", "bf", "bf_NG", "η", "η20", "ηη", "ηηη","dη","Tη"]:
         f = stem  + "_" + s
         fn[s] = pl.Path(f).with_suffix(".png") 
 
@@ -1109,7 +1148,10 @@ def main():
     T15C = T273 + tp # K
     T8C = T273 + t8 # K
 
-    display_gases = ["NG"]    
+    display_gases = ["NG"]   
+    # for g in display_gases:
+        # a, b, Tc, Pc = a_and_b(g, 1)
+        # print(f"{g:8} {Tc=} {Pc=}")
 
     # Print the densities at 8 C and 15 C  - - - - - - - - - - -
 
@@ -1170,6 +1212,7 @@ def main():
     plt.figure(figsize=(10, 6))
     c_H2 = [condense(T, p, 'H2', 'Air') for T in t_condense]
     c_NG = [condense(T, p, 'NG', 'Air') for T in t_condense]
+    c_20H = [condense(T, p, 'NG+20%H2', 'Air') for T in t_condense]
     
     plt.plot(t_condense-273.15, c_H2, label='Pure hydrogen', **plot_kwargs('H2'))
     plt.plot(t_condense-273.15, c_NG, label='Natural Gas', **plot_kwargs('NG'))
@@ -1182,6 +1225,11 @@ def main():
     plt.grid(True)
 
     plt.savefig(fn["η"])
+    plt.plot(t_condense-273.15, c_20H, label='NG+20%H2', **plot_kwargs('NG+20%H2'))
+    plt.legend()
+    plt.savefig(fn["η20"])
+  
+    
     plt.close()
     
     # Plot the condensing curves at different % oxygen  - - - - - - - - - - -
@@ -1445,15 +1493,16 @@ def main():
     plt.close()
 
     # Density plot  - - - - - - - - - - -
-
+    pressure = Atm + 20
     # pure gases
-    for g in ["H2", "CH4"]: 
+    for g in ["H2"]: 
         ϱ_pg = [pressure * gas_data[g]['Mw'] / (peng_robinson(T, pressure, g) * R * T)  for T in temperatures]
         plt.plot(temperatures - T273, ϱ_pg, label = "pure " + g, **plot_kwargs(g))
 
     # Density plots for gas mixtures
     for mix in display_gases:
-        plt.plot(temperatures - T273, ϱ_ng[mix], label=mix, **plot_kwargs(mix))
+         ϱ_ng[mix] =  [get_density(mix, pressure, T) for T in temperatures]
+         plt.plot(temperatures - T273, ϱ_ng[mix], label=mix, **plot_kwargs(mix))
 
     plt.title(f'Density vs Temperature at {pressure} bar')
     plt.xlabel('Temperature (°C)')
@@ -1469,11 +1518,11 @@ def main():
     P= None
 
     # Plot Z compressibility factor for pure hydrogen and natural gases
-    pressures = np.linspace(0, 80, 100)  # bar
+    pressures = np.linspace(0, 250, 100)  # bar
 
     plt.figure(figsize=(10, 6))
 
-    for g, txt in [('H2','Pure hydrogen'), ('CH4','Pure methane'),('He','Pure helium')]:
+    for g, txt in [('H2','Pure hydrogen'), ('NG','Natural gas')]:
         Z = [peng_robinson(T, p, g) for p in pressures]
         plt.plot(pressures, Z, label=txt, **plot_kwargs(g))
 
@@ -1500,7 +1549,7 @@ def main():
             ϱ_mix = p * mm / (Z_mix * R * T)
             ϱ_ng[mix].append(ϱ_mix)
 
-        plt.plot(pressures , Z_ng, label=mix, **plot_kwargs(mix))
+        # plt.plot(pressures , Z_ng, label=mix, **plot_kwargs(mix))
 
     plt.title(f'Z  Compressibility Factor vs Pressure at {T} K')
     plt.xlabel('Pressure (bar)')
@@ -1565,7 +1614,7 @@ def main():
     plt.close()
 
     # Plot density as a function of pressure - looking for bugs
-    pressures = np.linspace(0, 4.5, 100)  # bar
+    pressures = np.linspace(0, 100, 100)  # bar
     T = T273+25
 
     plt.figure(figsize=(10, 6))
