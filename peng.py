@@ -1429,9 +1429,9 @@ def main():
             bf_g[mix][i] = bf_g[mix][i]/ bf_g['NG'][i]
         plt.plot(temperatures - T273, bf_g[mix], label= mix, **plot_kwargs(mix))
 
-    plt.title(f'Blasius Parameter ϱ^3/4.μ^1/4  normalised to NG value at {pressure} bar')
+    plt.title(f'Normalised Blasius Parameter ϱ^3/4.μ^1/4  wrt to NG value at {pressure} bar')
     plt.xlabel('Temperature (°C)')
-    plt.ylabel('Blasius Parameter ratio ')
+    plt.ylabel('Normalised Blasius Parameter ratio ')
     plt.legend()
     plt.grid(True)
 
@@ -1440,7 +1440,7 @@ def main():
     
     bf_g = {}
     t = 0
-    for P in [pressure, 4+Atm, 7+Atm]:
+    for P in [pressure, 7+Atm, 20+Atm]:
         t += 1
         print(f"\nBlasius Parameter ϱ^3/4.μ^1/4 (normalised by NG) between {temperatures[0]-T273:4.1f}C and {temperatures[-1]-T273:4.1f}C at {P} bar")
         for mix in bf_gases:
@@ -1554,7 +1554,7 @@ def main():
 
         # plt.plot(pressures , Z_ng, label=mix, **plot_kwargs(mix))
 
-    plt.title(f'Z  Compressibility Factor vs Pressure at {T} K')
+    plt.title(f'Z  Compressibility Factor vs Pressure at {T-T273:4.1f}C')
     plt.xlabel('Pressure (bar)')
     plt.ylabel('Z Compressibility Factor')
     plt.legend()
@@ -1580,7 +1580,7 @@ def main():
 
         plt.plot(pressures , bf_g[g], label=g, **plot_kwargs(g))
 
-    plt.title(f'Blasius Parameter vs Pressure at {T} K')
+    plt.title(f'Blasius Parameter vs Pressure at{T-T273:4.1f}C')
     plt.xlabel('Pressure (bar)')
     plt.ylabel('Blasius Parameter ϱ^3/4.μ^1/4')
     plt.legend()
