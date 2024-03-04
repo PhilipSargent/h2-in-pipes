@@ -1494,6 +1494,8 @@ def main():
 
     # Density plot  - - - - - - - - - - -
     pressure = Atm + 20
+    plt.figure(figsize=(10, 5))
+
     # pure gases
     for g in ["H2"]: 
         ϱ_pg = [pressure * gas_data[g]['Mw'] / (peng_robinson(T, pressure, g) * R * T)  for T in temperatures]
@@ -1516,13 +1518,14 @@ def main():
     # Plot the compressibility  as a function of Pressure - - - - - - - - - - -
     T = T273+8
     P= None
+    plt.figure(figsize=(10, 6))
 
     # Plot Z compressibility factor for pure hydrogen and natural gases
     pressures = np.linspace(0, 250, 100)  # bar
 
-    plt.figure(figsize=(10, 6))
+    plt.figure(figsize=(10, 5))
 
-    for g, txt in [('H2','Pure hydrogen'), ('NG','Natural gas')]:
+    for g, txt in [('H2','Pure hydrogen'), ('NG','Natural gas'), ('CH4','Pure methane')]:
         Z = [peng_robinson(T, p, g) for p in pressures]
         plt.plot(pressures, Z, label=txt, **plot_kwargs(g))
 

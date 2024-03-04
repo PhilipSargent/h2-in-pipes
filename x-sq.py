@@ -18,11 +18,6 @@ plt.plot(x, y, label=f"y = {P} - x^2")
 plt.xlabel("x")
 plt.ylabel("y")
 
-# Add legend
 plt.legend()
 
-# Save the plot as an image
-plt.savefig("x2.png")  # Change "plot.png" to your desired filename
-
-# Display the plot (optional)
-# plt.show()
+plt.savefig("x2.png")  
