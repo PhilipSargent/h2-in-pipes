@@ -1061,13 +1061,13 @@ def get_h2o_pp(g, oxidiser):
 def dew_point(g, oxidiser):
     h2o_pp = get_h2o_pp(g, oxidiser)
     dew_C = st.get_dew_point(h2o_pp)-T273
-    #print(f"{h2o_out/tot_out:.4f} {dew_C:.4f} C")
+    #print(f"{h2o_out/tot_out:.4f} {dew_C:.4f}°C")
     return dew_C
 
 def print_gas(g, oxidiser):
     dew_C = dew_point(g, oxidiser)
     if dew_C:
-        print(f"{g} Dew point: {dew_C:.4f} C")
+        print(f"{g} Dew point: {dew_C:.4f}°C")
      
 def print_fuel(g, s, oxidiser):
     print(f"\n{s}")
@@ -1145,6 +1145,7 @@ def main():
     T15C = T273 + tp # K
     T8C = T273 + t8 # K
     T3C = T273 + t3 # K
+    T230 = T273 -40 #  -40 C
 
     display_gases = ["NG"]   
     # for g in display_gases:
@@ -1532,7 +1533,7 @@ def main():
 
         # plt.plot(pressures , Z_ng, label=mix, **plot_kwargs(mix))
 
-    plt.title(f'Z  Compressibility Factor vs Pressure at {T-T273:4.1f} C')
+    plt.title(f'Z  Compressibility Factor vs Pressure at {T-T273:4.1f}°C')
     plt.xlabel('Pressure (bar)')
     plt.ylabel('Z Compressibility Factor')
     plt.legend()
@@ -1547,7 +1548,7 @@ def main():
         p_z = [pz(T, p, g) for p in pressures]
         plt.plot(pressures, p_z, label=txt, **plot_kwargs(g))
         
-    plt.title(f'P / Z  vs Pressure at {T-T273:4.1f} C')
+    plt.title(f'P / Z  vs Pressure at {T-T273:4.1f}°C')
     plt.xlabel('Pressure (bar)')
     plt.ylabel('Pressure / Z')
     plt.legend()
@@ -1563,16 +1564,16 @@ def main():
     _, _, hc_h2 = get_Hc('H2', T25C) # molar_volume, hc/molar_volume, hc = get_Hc(g, T)
     _, _, hc_ng = get_Hc('NG', T25C)
     hhvr = hc_ng / hc_h2
-    print(f"{hhvr=} {hc_h2=}  {hc_ng=} at {T25C-T273:4.1f} C")
+    print(f"{hhvr=} {hc_h2=}  {hc_ng=} at {T25C-T273:4.1f}°C")
     
-    for T in [T3C, T15C, T25C]:
+    for T in [T230, T3C, T15C, T25C]:
     
         v_ratio = [hhvr * pz(T, p,'NG')/pz(T, p,'H2') for p in pressures]
         
         vr_max = max(v_ratio)
-        print(f"Velocity ratio min:{v_ratio[1]:.3f} max:{vr_max:.3f} at  {T-T273:4.1f} C")
+        print(f"Velocity ratio min:{v_ratio[1]:.3f} max:{vr_max:.3f} at  {T-T273:4.1f}°C")
 
-        plt.plot(pressures, v_ratio, label=f"{T-T273:4.0f} C")
+        plt.plot(pressures, v_ratio, label=f"{T-T273:4.0f}°C")
     
     plt.title(f'Velocity ratio v(H2)/v(NG)  vs Pressure ')
     plt.xlabel('Pressure (bar)')
@@ -1600,7 +1601,7 @@ def main():
 
         plt.plot(pressures , bf_g[g], label=g, **plot_kwargs(g))
 
-    plt.title(f'Blasius Parameter vs Pressure at {T-T273:4.1f} C')
+    plt.title(f'Blasius Parameter vs Pressure at {T-T273:4.1f}°C')
     plt.xlabel('Pressure (bar)')
     plt.ylabel('Blasius Parameter ϱ^3/4.μ^1/4')
     plt.legend()
@@ -1627,7 +1628,7 @@ def main():
 
         plt.plot(pressures , bf_g[g], label=g, **plot_kwargs(g))
 
-    plt.title(f'Viscosity vs Pressure at  {T-T273:4.1f} C')
+    plt.title(f'Viscosity vs Pressure at  {T-T273:4.1f}°C')
     plt.xlabel('Pressure (bar)')
     plt.ylabel('Dynamic Viscosity (μPa.s)')
     plt.legend()
