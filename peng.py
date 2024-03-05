@@ -587,6 +587,7 @@ def get_Hc(g, T):
     else:
         return molar_volume, None, None
 
+
 def get_Cp(g):
     """If the data is there, return the specific heat in J/mol.K, 
     """
@@ -1508,7 +1509,7 @@ def main():
     plt.figure(figsize=(10, 6))
 
     # Plot Z compressibility factor for pure hydrogen and natural gases
-    pressures = np.linspace(0, 250, 100)  # bar
+    pressures = np.linspace(1, 250, 100)  # bar
 
     plt.figure(figsize=(10, 5))
 
@@ -1564,6 +1565,28 @@ def main():
 
     plt.savefig("peng_z_pp.png")
     plt.close()
+
+    # Plot velocity ratio for pure hydrogen and natural gas
+    # molar_volume, hc/molar_volume, hc = get_Hc(g, T)
+    # T15C = T273 + tp # K
+    T = T15C
+    _, _, hc_h2 = get_Hc('H2', T)
+    _, _, hc_ng = get_Hc('NG', T)
+    hhvr = hc_ng / hc_h2
+    print(f"{hhvr=} {hc_h2=}  {hc_ng=}")
+    v_ratio = [hhvr * pz(T, p,'NG')/pz(T, p,'H2') for p in pressures]
+
+    plt.plot(pressures, v_ratio, label="v ratio")
+    
+    plt.title(f'Velocity ratio v(H2)/v(NG)  vs Pressure at {T-T273:4.1f} C')
+    plt.xlabel('Pressure (bar)')
+    plt.ylabel('Velocity ratio v(H2)/v(NG)')
+    plt.legend()
+    plt.grid(True)
+
+    plt.savefig("peng_v_ratio.png")
+    plt.close()
+    
     # Plot Blasius Parameter for pure hydrogen and natural gases
     pressures = np.linspace(1, 8.1, 100)  # bar
     T = T273+8
