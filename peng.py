@@ -10,6 +10,7 @@ import sonntag as st
 
 from cycler import cycler
 from gas_data import gas_data, gas_mixtures,gas_mixture_properties, enrich, air_list, k_ij
+from peng_utils import memoize
 
 """This code written Philip Sargent, starting in December 2023, by  to support
 a paper on the replacement of natural gas in the UK distribution grid with hydrogen.
@@ -42,22 +43,9 @@ T273 = 273.15 # K
 
 # gas_data now imported from a separate file. It is initialised on import.
 
-# We memoize some functions so that they do not get repeadtedly called with
+
+# We memoize some functions so that they do not get repeatedly called with
 # the same arguments. Yet still be retain a more obvius way of writing the program.
-
-def memoize(func):
-    """Standard memoize function to use in a decorator, see
-    https://medium.com/@nkhaja/memoization-and-decorators-with-python-32f607439f84
-    """
-    cache = func.cache = {}
-    @functools.wraps(func)
-    def memoized_func(*args, **kwargs):
-        key = str(args) + str(kwargs)
-        if key not in cache:
-            cache[key] = func(*args, **kwargs)
-        return cache[key]
-    return memoized_func
-
 @memoize   
 def estimate_k_fixed(gas1, gas2, T=298):
     """Using the data table for k_ij"""
