@@ -461,7 +461,7 @@ plt.rcParams.update(params)
 moody_ylim = True
 
 reynolds_laminar = np.logspace(2.9, 3.9, 5) # 10^2.7 = 501, 10^3.4 = 2512
-reynolds = np.logspace(2.4, 9.0, 1000) # 10^7.7 = 5e7
+reynolds = np.logspace(2.4, 12.0, 1000) # 10^7.7 = 5e7
 relative_roughness_values = [0.01, 0.001, 0.0001, 0.00001,  0.000001] #
 #relative_roughness_values = list(reversed(relative_roughness_values))
 fp = piggot()

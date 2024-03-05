@@ -669,7 +669,7 @@ def print_density(g, p, T):
     mm = do_mm_rules(g) # mean molar mass
     μ =  get_viscosity(g, p, T)
     z =  get_z(g, p, T)
-    print(f"{g:15} {mm:6.3f}  {ϱ:.5f}   {μ:8.5f} {z:9.6f}")
+    print(f"{g:15} {mm:6.3f}  {ϱ:9.5f}   {μ:8.5f} {z:9.6f} {ϱ/μ:9.5f}")
  
 def print_wobbe(g, T15C):
     """HHV and Wobbe much be in MJ/m³, but at 15 C and 1 atm, not p and T as given
@@ -1144,9 +1144,11 @@ def main():
     dp = 40
     tp = 15 # C
     t8 = 8 # C
+    t3 = 3 # C
     pressure =  Atm + dp/1000 # 1atm + 47.5 mbar, halfway between 20 mbar and 75 mbar
     T15C = T273 + tp # K
     T8C = T273 + t8 # K
+    T3C = T273 + t3 # K
 
     display_gases = ["NG"]   
     # for g in display_gases:
@@ -1154,28 +1156,32 @@ def main():
         # print(f"{g:8} {Tc=} {Pc=}")
 
     # Print the densities at 8 C and 15 C  - - - - - - - - - - -
-
-    print(f"\nDensity of gas at (kg/m³)at T={tp:.1f}°C and P={dp:.1f} mbar above 1 atm, i.e. P={pressure:.5f} bar")
-
     plot_gases = []
     for g in display_gases:
         plot_gases.append(g)
     for g in ["H2", "CH4"]:
         plot_gases.append(g)
+        
+    high_pressure = 220
+    print(f"\nDensity of gas at (kg/m³)at T={t3:.1f}°C and P={dp:.1f} mbar above 1 atm, i.e. P={high_pressure:.5f} bar")
+    print(f"{'gas':13}{'Mw(g/mol)':6}  {'ϱ(kg/m³)':5}  {'μ(Pa.s)':5}    {'z (-)':5}      {'ϱ/μ(Mkg/sm)':5} T={tp:.1f}°C ")
+    for g in plot_gases:
+        print_density(g, high_pressure, T3C)
 
+    print(f"\nDensity of gas at (kg/m³)at T={tp:.1f}°C and P={dp:.1f} mbar above 1 atm, i.e. P={pressure:.5f} bar")
 
-    print(f"{'gas':13}{'Mw(g/mol)':6}  {'ϱ(kg/m³)':5}  {'μ(Pa.s)':5} {'z (-)':5} T={tp:.1f}°C ")
+    print(f"{'gas':13}{'Mw(g/mol)':6}  {'ϱ(kg/m³)':5}  {'μ(Pa.s)':5}    {'z (-)':5}      {'ϱ/μ(Mkg/sm)':5} T={tp:.1f}°C ")
     for g in plot_gases:
         print_density(g, pressure, T15C)
 
-    print(f"\n{'gas':13}{'Mw(g/mol)':6}  {'ϱ(kg/m³)':5}  {'μ(Pa.s)':5}  {'z (-)':5} T={t8:.1f}°C ")
+    print(f"\n{'gas':13}{'Mw(g/mol)':6}  {'ϱ(kg/m³)':5}  {'μ(Pa.s)':5}     {'z (-)':5}      {'ϱ/μ(Mkg/sm)':5} T={t8:.1f}°C ")
     for g in plot_gases:
         print_density(g, pressure, T8C)
 
     dp = 55
     pressure =  Atm + dp/1000
-    print(f"\nDensity of gas at (kg/m³)at T={8:.1f}°C and P={dp:.1f} mbar above 1 atm, i.e. P={pressure:.5f} bar")
-    print(f"\n{'gas':13}{'Mw(g/mol)':6}  {'ϱ(kg/m³)':5}  {'μ(Pa.s)':5}  {'z (-)':5} T={8:.1f}°C ")
+    print(f"\nDensity of gas at (kg/m³)at T={t8:.1f}°C and P={dp:.1f} mbar above 1 atm, i.e. P={pressure:.5f} bar")
+    print(f"\n{'gas':13}{'Mw(g/mol)':6}  {'ϱ(kg/m³)':5}  {'μ(Pa.s)':5}     {'z (-)':5}      {'ϱ/μ(Mkg/sm)':5} T={8:.1f}°C ")
     for g in plot_gases:
         print_density(g, pressure, T8C)
 
