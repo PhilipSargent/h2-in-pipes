@@ -280,7 +280,7 @@ def afzal(reynolds, relative_roughness):
     return f_solution
 
 # roughness range for piggot line
-rr_piggot = np.logspace(-1.3, -6.1, 100) # roughness values between 0.01 and 0.00001
+rr_piggot = np.logspace(-1.3, -9.1, 100) # roughness values between 0.01 and 0.00001
 
 def piggot_point(rr):
     """The Piggot line is where the Colebrook curve flattens out as a function of Re
@@ -345,7 +345,7 @@ def piggot():
         if pp := piggot_point(rr):
             f, re = pp
             if f < 0.043:
-                # do not ahve the Piggot lie too far above the roughest pipe
+                # do not have the Piggot lie too far above the roughest pipe
                 points[re] = f
 
     piggot_list = []
@@ -461,8 +461,8 @@ plt.rcParams.update(params)
 moody_ylim = True
 
 reynolds_laminar = np.logspace(2.9, 3.9, 5) # 10^2.7 = 501, 10^3.4 = 2512
-reynolds = np.logspace(2.4, 12.0, 1000) # 10^7.7 = 5e7
-relative_roughness_values = [0.01, 0.001, 0.0001, 0.00001,  0.000001] #
+reynolds = np.logspace(2.4, 14.0, 1000) # 10^7.7 = 5e7
+relative_roughness_values = [0.01, 0.001, 0.0001, 0.00001,  1e-7, 1e-9] #
 #relative_roughness_values = list(reversed(relative_roughness_values))
 fp = piggot()
 
