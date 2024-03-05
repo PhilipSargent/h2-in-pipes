@@ -8,6 +8,8 @@ This is reseach code. It is **not qualified for any design purpose whatsoever**.
 We have a paper just accepted for publication (29/02/2024) in J.Intl Hydrogen Energy which documents and uses these calculations for the case where UK distribution gas pipes are repurposed to carry hydrogen.
 If you would like a preprint of this paper, please just look at the file https://github.com/PhilipSargent/h2-in-pipes/blob/main/_SUBMIT3-BOTH-Hydrogen_pipe_friction.pdf in this repo.
 
+The oxygen-firing effect on the dew point and thus the efficiency of condensing boilers is describe in an online article: https://philipsargent.wordpress.com/2024/03/01/oxygen-boilers-making-condensing-boilers-more-efficient/
+
 )![p2_h2_ratio](https://github.com/PhilipSargent/h2-in-pipes/assets/5623885/f8d56427-4b60-459e-a01f-bdbe93a717fe)
 ![moody_afzal](https://github.com/PhilipSargent/h2-in-pipes/assets/5623885/06769e5b-2bf3-4444-86ae-99622bd48139)
 
