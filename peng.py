@@ -442,6 +442,11 @@ def peng_robinson(T, P, gas): # Peng-Robinson Equation of State
     Z = solve_for_Z(T, P, a, b)
     return Z
 
+@memoize
+def pz(T, P, gas): # return the Pressure divided by Z        
+    Z = peng_robinson(T, P, gas)
+    return P/Z
+
 
 # # Define the function to be solved (a - 0.45724 * (R * Tc)**2 / Pc * alpha)
 # def func(Tc, a, Pc, R, alpha):
@@ -1315,11 +1320,8 @@ def main():
 
     plt.figure(figsize=(10, 6))
 
-
     # Plot for pure hydrogen
     Z_H2 = [peng_robinson(T, pressure, 'H2') for T in temperatures]
-
-
     plt.plot(temperatures - T273, Z_H2, label='Pure hydrogen', **plot_kwargs('H2'))
 
         
@@ -1516,26 +1518,26 @@ def main():
 
 
     # Plot for natural gas compositions. Now using correct temperature dependence of 'a'
-    ϱ_ng = {}
-    μ_ng = {}
+    # ϱ_ng = {}
+    # μ_ng = {}
 
-    for mix in gas_mixtures:
-        mm = do_mm_rules(mix) # mean molar mass
-        ϱ_ng[mix] = []
-        μ_ng[mix] = []
+    # for mix in gas_mixtures:
+        # mm = do_mm_rules(mix) # mean molar mass
+        # ϱ_ng[mix] = []
+        # μ_ng[mix] = []
 
-        Z_ng = []
-        for p in pressures:
-            # for Z, the averaging across the mixture (a, b) is done before the calc. of Z
-            constants = z_mixture_rules(mix, T)
-            a = constants[mix]['a_mix']
-            b = constants[mix]['b_mix']
-            Z_mix = solve_for_Z(T, p, a, b)
-            Z_ng.append(Z_mix)
+        # Z_ng = []
+        # for p in pressures:
+            # # for Z, the averaging across the mixture (a, b) is done before the calc. of Z
+            # constants = z_mixture_rules(mix, T)
+            # a = constants[mix]['a_mix']
+            # b = constants[mix]['b_mix']
+            # Z_mix = solve_for_Z(T, p, a, b)
+            # Z_ng.append(Z_mix)
             
-            # For density, the averaging across the mixture (Mw) is done before the calc. of ϱ
-            ϱ_mix = p * mm / (Z_mix * R * T)
-            ϱ_ng[mix].append(ϱ_mix)
+            # # For density, the averaging across the mixture (Mw) is done before the calc. of ϱ
+            # ϱ_mix = p * mm / (Z_mix * R * T)
+            # ϱ_ng[mix].append(ϱ_mix)
 
         # plt.plot(pressures , Z_ng, label=mix, **plot_kwargs(mix))
 
@@ -1548,6 +1550,20 @@ def main():
     plt.savefig("peng_z_p.png")
     plt.close()
 
+    # Plot P/Z  for pure hydrogen and natural gases
+
+    for g, txt in [('H2','Pure hydrogen'), ('NG','Natural gas'), ('CH4','Pure methane')]:
+        p_z = [pz(T, p, g) for p in pressures]
+        plt.plot(pressures, p_z, label=txt, **plot_kwargs(g))
+        
+    plt.title(f'P / Z  vs Pressure at {T-T273:4.1f} C')
+    plt.xlabel('Pressure (bar)')
+    plt.ylabel('Pressure / Z')
+    plt.legend()
+    plt.grid(True)
+
+    plt.savefig("peng_z_pp.png")
+    plt.close()
     # Plot Blasius Parameter for pure hydrogen and natural gases
     pressures = np.linspace(1, 8.1, 100)  # bar
     T = T273+8
