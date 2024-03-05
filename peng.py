@@ -1148,10 +1148,12 @@ def main():
     print_fuel('NG', "NatGas at Fordoun NTS 20th Jan.2021", 'dryAir')
     
     dp = 40
+    ts = 25 # C
     tp = 15 # C
     t8 = 8 # C
     t3 = 3 # C
     pressure =  Atm + dp/1000 # 1atm + 47.5 mbar, halfway between 20 mbar and 75 mbar
+    T25C = T273 + ts # K
     T15C = T273 + tp # K
     T8C = T273 + t8 # K
     T3C = T273 + t3 # K
@@ -1567,18 +1569,24 @@ def main():
     plt.close()
 
     # Plot velocity ratio for pure hydrogen and natural gas
-    # molar_volume, hc/molar_volume, hc = get_Hc(g, T)
-    # T15C = T273 + tp # K
-    T = T15C
-    _, _, hc_h2 = get_Hc('H2', T)
-    _, _, hc_ng = get_Hc('NG', T)
-    hhvr = hc_ng / hc_h2
-    print(f"{hhvr=} {hc_h2=}  {hc_ng=}")
-    v_ratio = [hhvr * pz(T, p,'NG')/pz(T, p,'H2') for p in pressures]
-
-    plt.plot(pressures, v_ratio, label="v ratio")
     
-    plt.title(f'Velocity ratio v(H2)/v(NG)  vs Pressure at {T-T273:4.1f} C')
+    # T15C = T273 + tp # K
+    # Note that Hc does not depend on T, it is defined at 25C
+    _, _, hc_h2 = get_Hc('H2', T25C) # molar_volume, hc/molar_volume, hc = get_Hc(g, T)
+    _, _, hc_ng = get_Hc('NG', T25C)
+    hhvr = hc_ng / hc_h2
+    print(f"{hhvr=} {hc_h2=}  {hc_ng=} at {T25C-T273:4.1f} C")
+    
+    for T in [T3C, T15C, T25C]:
+    
+        v_ratio = [hhvr * pz(T, p,'NG')/pz(T, p,'H2') for p in pressures]
+        
+        vr_max = max(v_ratio)
+        print(f"Velocity ratio min:{v_ratio[1]:.3f} max:{vr_max:.3f} at  {T-T273:4.1f} C")
+
+        plt.plot(pressures, v_ratio, label=f"{T-T273:4.0f} C")
+    
+    plt.title(f'Velocity ratio v(H2)/v(NG)  vs Pressure ')
     plt.xlabel('Pressure (bar)')
     plt.ylabel('Velocity ratio v(H2)/v(NG)')
     plt.legend()
