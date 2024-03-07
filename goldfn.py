@@ -77,14 +77,20 @@ plt.savefig("goldenf_2.png")
 plt.close()
 
 # - - - - - - - - - - - -- - - - - -- - - - - -- - - - - -- - - - - -
+eta = 0.02
+denom = 8 + 3*eta
+nom = 2+3*eta
+expon =  nom/denom
+expon2 = 6 / denom
+
 x = {}
 y = {}
 for r in fdata:
     x[r] = []
     y[r] = []
     for k in range(len(Redata[r])):
-        xx = np.power(Redata[r][k], 3/4) / r
-        yy = np.power(Redata[r][k], 1/4) * fdata[r][k]
+        xx = np.power(Redata[r][k], expon2) / r
+        yy = np.power(Redata[r][k], expon) * fdata[r][k]
         
         x[r].append(xx)
         y[r].append(yy)
@@ -98,69 +104,34 @@ for r in fdata:
     sym = mk[j]
     col = colours[j]
     j += 1
-    plt.scatter(x[r], y[r], label=f"D/ε = {r:.0f}", marker=sym, color=col)
-    
-plt.ylabel("$Re^{1/4} \cdot f$")
-plt.xlabel("$Re^{3/4} \cdot (ε/D)$")
+    plt.scatter(x[r], y[r], label=f"ε/D = 1/{r:.0f}", marker=sym, color=col)
+
+plt.title(f"Nikuradse (1933) original results: {len(data)} data points")
+plt.ylabel("$f \\cdot Re^{((2+3\\eta)/(8+3\\eta))}$")
+plt.xlabel("$Re^{6/(8+3\\eta)} \\cdot (ε/D)$")
 plt.legend()
 plt.grid(True)
 plt.savefig("goldenf_fre.png")
 plt.close()
-exit()
 
-for n in [ 2]:
-    # Fit a second degree polynomial to the data
-    coefficients = np.polyfit(x, y, n)
+ax = plt.gca()
+ax.set_xscale('linear')
+ax.set_yscale('linear')
 
-    # Create a polynomial function from the coefficients
-    polynomial = np.poly1d(coefficients)
+j = 0
+for r in fdata:
+    sym = mk[j]
+    col = colours[j]
+    j += 1
+    plt.scatter(x[r], y[r], label=f"ε/D = 1/{r:.0f}", marker=sym, color=col)
 
-    # Generate y-values for the polynomial on a set of x-values
-    x_fit = np.linspace(min(x), max(x), 500)
-    y_fit = polynomial(x_fit)
-
- 
-    # Plot the fitted polynomial
-    #plt.plot(x_fit, y_fit, 'r', label=f'polynomial order-{n}')
-
-
-
-# Take the logarithm of the data
-log_x = np.log(x)
-log_y = np.log(y)
-
-# Fit a line to the logarithmic data
-coefficients = np.polyfit(log_x, log_y, 1)
-
-# Create a polynomial function from the coefficients
-polynomial = np.poly1d(coefficients)
-
-# Generate y-values for the polynomial on a set of x-values
-x2_fit = np.linspace(min(x), max(x), 500)
-y2_fit = np.exp(polynomial(np.log(x_fit)))
-
-
-
-# Plot the fitted power law
-plt.plot(x2_fit, y2_fit, 'r', label='Fitted power law')
-
-
-# Fit a cubic spline to the data
-# cs = CubicSpline(x, y)
-
-# Generate y-values for the spline on a set of x-values
-# x_fit = np.linspace(min(x), max(x), 500)
-# y_fit = cs(x_fit)
-
-# Plot the fitted cubic spline
-# plt.plot(x_fit, y_fit, 'r', label='Fitted cubic spline')
-
-plt.xlabel('(ε/D)Re^6/(8+3η)')
-
-plt.ylabel('100f Re^(2+3η)/(8+3η)')
-
-
+plt.title(f"Nikuradse (1933) original results: {len(data)} data points")
+plt.ylabel("$f \\cdot Re^{((2+3\\eta)/(8+3\\eta))}$")
+plt.xlabel("$Re^{6/(8+3\\eta)} \\cdot (ε/D)$")
 plt.legend()
 plt.grid(True)
-plt.savefig("goldenf_1.png")
+plt.savefig("goldenf_fre_lin.png")
 plt.close()
+exit()
+
+
