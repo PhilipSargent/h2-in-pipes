@@ -71,7 +71,8 @@ print(len(Re),f" Nikuradse + Princeton points")
 
 # This colour scheme and marker symbol exactly match those used by Jianjun Tao in
 # Critical Instability and Friction Scaling of Fluid Flows through Pipes with Rough Inner Surfaces
-mk = ['+', 
+mk = [mks.MarkerStyle("o", fillstyle='none'), 
+    '+', 
     mks.MarkerStyle('<'), 
     mks.MarkerStyle("^", fillstyle='none'), 
     mks.MarkerStyle("<", fillstyle='none'), 
@@ -80,7 +81,7 @@ mk = ['+',
     'x',
     '+']
 
-colours =['m', 'black','red', 'orange', 'lightblue', 'm', 'lightgreen', 'blue', ]
+colours =['olive', 'black','red', 'orange', 'lightblue', 'm', 'lightgreen', 'blue', ]
 
 # Restructure this into one list per roughness
 fdata = {}
@@ -107,10 +108,11 @@ for r in fdata:
     plt.scatter(Redata[r], fdata[r], label=f"D/ε = {r:.0f}", marker=sym, color=col)
     
 #plt.scatter(Re, f, label='Digitised data')
+title = f"Nikuradse, Princeton, Oregon: {len(Re)} data points"
 symbols = ['+', 'x', ]
 plt.ylabel('Darcy-Weisbach friction factor  f')
 plt.xlabel("Reynolds' number")
-plt.title(f"Nikuradse, Princeton: {len(Re)} data points")
+plt.title(title)
 
 plt.legend()
 plt.grid(True)
@@ -147,7 +149,7 @@ for r in fdata:
     j += 1
     plt.scatter(x[r], y[r], label=f"ε/D = 1/{r:.0f}", marker=sym, color=col)
 
-plt.title(f"Nikuradse, Princeton: {len(Re)} data points")
+plt.title(title)
 plt.ylabel("$f \\cdot Re^{((2+3\\eta)/(8+3\\eta))}$")
 plt.xlabel("$Re^{6/(8+3\\eta)} \\cdot (ε/D)$")
 plt.legend()
@@ -166,7 +168,7 @@ for r in fdata:
     j += 1
     plt.scatter(x[r], y[r], label=f"ε/D = 1/{r:.0f}", marker=sym, color=col)
 
-plt.title(f"Nikuradse, Princeton: {len(Re)} data points")
+plt.title(title)
 plt.ylabel("$f \\cdot Re^{((2+3\\eta)/(8+3\\eta))}$")
 plt.xlabel("$Re^{6/(8+3\\eta)} \\cdot (ε/D)$")
 plt.legend()
