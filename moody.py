@@ -15,6 +15,10 @@ from peng_utils import memoize
 # the same arguments. Yet still be retain a more obvius way of writing the program.
 
 lowest_f = 0.000001
+η = 0.02
+b_exponent = (2+3*η)/(8+3*η)
+ib_factor = 0.316 *   3e3**(b_exponent- 0.25)
+print(f"Intermittent-Blasius factor: {ib_factor:.3f}")
 
 def logistic_transition(x, v1, v2, midpoint, steepness):
     """
@@ -45,17 +49,27 @@ def d_func(func, reynolds, rr):
 
 
 # Define laminar flow (Re < 2000)
+@memoize 
 def laminar(reynolds):
     f_laminar = 64 / reynolds
     return f_laminar
     
+@memoize 
 def blasius(reynolds):
     f = (0.316 / (reynolds**0.25))
     if f > 0.005 and reynolds < 1e10 : # to get diagram the right shape
         return f
     
     return None
-
+    
+@memoize 
+def iblasius(reynolds):
+    # with intermittency correction
+    f = (ib_factor / (reynolds**b_exponent))
+    if f > 0.005 and reynolds < 1e10 : # to get diagram the right shape
+        return f
+    
+    return None
 @memoize 
 def gioia_chakraborty_friction_factor(Re, epsilon):
     """
@@ -364,16 +378,19 @@ def plot_diagram(title, filename, plot="loglog", fff=colebrook, gradient=False, 
     friction_laminars = [laminar(re) for re in reynolds_laminar]
     friction_smooth = [smooth(re) for re in reynolds]
     friction_blasius = [blasius(re) for re in reynolds]
+    friction_iblasius = [iblasius(re) for re in reynolds]
     if not gradient and not h2:
         
         if plot == "loglog":
             plt.loglog(reynolds_laminar, friction_laminars, label=f'Laminar', linestyle='dotted')
             plt.loglog(reynolds, friction_blasius, label=f'Blasius', linestyle='dashed')
+            plt.loglog(reynolds, friction_iblasius, label=f'i-Blasius', linestyle='dashed')
             if fp:
                 plt.loglog(reynolds, fp, label='Piggot line', linestyle='dashdot')
         if plot == "linear":
             plt.plot(reynolds_laminar, friction_laminars, label=f'Laminar', linestyle='dotted')
             plt.plot(reynolds, friction_blasius, label=f'Blasius', linestyle='dashed')
+            plt.plot(reynolds, friction_iblasius, label=f'i-Blasius', linestyle='dashed')
             if fp:
                 plt.plot(reynolds, fp, label='Piggot')
 
