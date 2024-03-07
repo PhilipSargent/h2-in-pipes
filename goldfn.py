@@ -23,6 +23,36 @@ f = data.iloc[:, 0].values
 r = data.iloc[:, 1].values
 Re = data.iloc[:, 2].values
 
+print(len(Re),f" Nikuradse points")
+# Data from Orgeon and Princeton machines is published in
+# Friction factors for smooth pipe flow, J. Fluid Mech. (2004), vol. 511, pp. 41–44
+# DOI: 10.1017/S0022112004009796
+# https://www.researchgate.net/publication/231901224_Friction_factors_for_smooth_pipe_flow
+
+# roughness 3.8e-4 for Bauer & Galavics in steam pipes.
+
+# roughness 1/26000 for Langelands and same pipe Shultz et al "Flow in a Commercial Steel Pipe"
+# Shultz : 16th Australasian Fluid Mechanics Conference
+# Crown Plaza, Gold Coast, Australia
+# 2-7 December 2007
+
+# Load the data from a CSV file
+data = pd.read_csv('ff_princeton.csv')
+
+# Extract the x and y values
+x = data.iloc[:, 0].values
+y = data.iloc[:, 1].values
+
+print(len(x),f" Princeton points")
+rr_princeton = 26000
+z = np.ones(len(x))*rr_princeton
+
+f = np.concatenate((y, f))
+r = np.concatenate((z, r))
+Re = np.concatenate((x, Re))
+print(len(Re),f" Nikuradse + Princeton points")
+
+
 # Plot the original data
 
 
@@ -30,16 +60,16 @@ print(len(data))
 
 # This colour scheme and marker symbol exactly match those used by Jianjun Tao in
 # Critical Instability and Friction Scaling of Fluid Flows through Pipes with Rough Inner Surfaces
-mk = [mks.MarkerStyle('<'), 
-     mks.MarkerStyle("^", fillstyle='none'), 
-     mks.MarkerStyle("<", fillstyle='none'), 
+mk = ['+', 
+    mks.MarkerStyle('<'), 
+    mks.MarkerStyle("^", fillstyle='none'), 
+    mks.MarkerStyle("<", fillstyle='none'), 
     '+', 
-      mks.MarkerStyle('s', fillstyle='none'), 
+    mks.MarkerStyle('s', fillstyle='none'), 
     'x',
-    '+', 
     '+']
 
-colours =['red', 'orange', 'lightblue', 'm', 'lightgreen', 'blue']
+colours =['black','red', 'orange', 'lightblue', 'm', 'lightgreen', 'blue', ]
 
 # Restructure this into one list per roughness
 fdata = {}
@@ -69,7 +99,7 @@ for r in fdata:
 symbols = ['+', 'x', ]
 plt.ylabel('Darcy-Weisbach friction factor  f')
 plt.xlabel("Reynolds' number")
-plt.title(f"Nikuradse (1933) original results: {len(data)} data points")
+plt.title(f"Nikuradse, Princeton: {len(Re)} data points")
 
 plt.legend()
 plt.grid(True)
@@ -106,7 +136,7 @@ for r in fdata:
     j += 1
     plt.scatter(x[r], y[r], label=f"ε/D = 1/{r:.0f}", marker=sym, color=col)
 
-plt.title(f"Nikuradse (1933) original results: {len(data)} data points")
+plt.title(f"Nikuradse, Princeton: {len(Re)} data points")
 plt.ylabel("$f \\cdot Re^{((2+3\\eta)/(8+3\\eta))}$")
 plt.xlabel("$Re^{6/(8+3\\eta)} \\cdot (ε/D)$")
 plt.legend()
@@ -125,7 +155,7 @@ for r in fdata:
     j += 1
     plt.scatter(x[r], y[r], label=f"ε/D = 1/{r:.0f}", marker=sym, color=col)
 
-plt.title(f"Nikuradse (1933) original results: {len(data)} data points")
+plt.title(f"Nikuradse, Princeton: {len(Re)} data points")
 plt.ylabel("$f \\cdot Re^{((2+3\\eta)/(8+3\\eta))}$")
 plt.xlabel("$Re^{6/(8+3\\eta)} \\cdot (ε/D)$")
 plt.legend()
