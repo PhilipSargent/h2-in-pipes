@@ -36,27 +36,38 @@ print(len(Re),f" Nikuradse points")
 # Crown Plaza, Gold Coast, Australia
 # 2-7 December 2007
 
+# Oregon data CJ Swanson, B Julian, GG Ihas, RJ Donnelly
+# Journal of Fluid Mechanics, 2002
+# https://scholar.google.com/scholar_lookup?&title=&journal=J.%20Fluid%20Mech.&doi=10.1017%2FS0022112002008595&volume=461&publication_year=2002&author=Swanson%2CC.J&author=Julian%2CB&author=Ihas%2CG.G&author=Donnelly%2CR.J
+
+#  diameter to be 0.4672 ± 0.0010 cm i.e. 4.672 mm
+# e < 0.1 microns
+
+# ff_oregon_lam.csv is the data before the turbulent region
 # Load the data from a CSV file
-data = pd.read_csv('ff_princeton.csv')
+for csv in ['ff_princeton.csv', 'ff_oregon.csv']:
+    data = pd.read_csv(csv)
 
-# Extract the x and y values
-x = data.iloc[:, 0].values
-y = data.iloc[:, 1].values
+    # Extract the x and y values
+    x = data.iloc[:, 0].values
+    y = data.iloc[:, 1].values
 
-print(len(x),f" Princeton points")
-rr_princeton = 26000
-z = np.ones(len(x))*rr_princeton
+    if csv == 'ff_princeton.csv':
+        print(len(x),f" Princeton points")
+        rr = 26000
+    else:
+        print(len(x),f" Oregon points")
+        rr = 4.672 /(0.1 * 1e-3)
+    z = np.ones(len(x))*rr
 
-f = np.concatenate((y, f))
-r = np.concatenate((z, r))
-Re = np.concatenate((x, Re))
+    f = np.concatenate((y, f))
+    r = np.concatenate((z, r))
+    Re = np.concatenate((x, Re))
 print(len(Re),f" Nikuradse + Princeton points")
 
 
 # Plot the original data
 
-
-print(len(data))
 
 # This colour scheme and marker symbol exactly match those used by Jianjun Tao in
 # Critical Instability and Friction Scaling of Fluid Flows through Pipes with Rough Inner Surfaces
@@ -69,7 +80,7 @@ mk = ['+',
     'x',
     '+']
 
-colours =['black','red', 'orange', 'lightblue', 'm', 'lightgreen', 'blue', ]
+colours =['m', 'black','red', 'orange', 'lightblue', 'm', 'lightgreen', 'blue', ]
 
 # Restructure this into one list per roughness
 fdata = {}
