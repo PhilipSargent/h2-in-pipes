@@ -1159,13 +1159,13 @@ def main():
     for g in ["H2", "CH4"]:
         plot_gases.append(g)
         
-    high_pressure = 220
-    print(f"\nDensity of gas at (kg/m³)at T={t3:.1f}°C and P={dp:.1f} mbar above 1 atm, i.e. P={high_pressure:.5f} bar")
-    print(f"{'gas':13}{'Mw(g/mol)':6}  {'ϱ(kg/m³)':5}  {'μ(Pa.s)':5}    {'z (-)':5}      {'ϱ/μ(Mkg/sm)':5} T={tp:.1f}°C ")
+    high_pressure = 20
+    print(f"\nDensity of gas (kg/m³) at {T8C=} T={t8:.1f}°C and P={high_pressure:.5f} bar")
+    print(f"{'gas':13}{'Mw(g/mol)':6}  {'ϱ(kg/m³)':5}  {'μ(Pa.s)':5}    {'z (-)':5}      {'ϱ/μ(Mkg/sm)':5} T={t8:.1f}°C ")
     for g in plot_gases:
         print_density(g, high_pressure, T3C)
 
-    print(f"\nDensity of gas at (kg/m³)at T={tp:.1f}°C and P={dp:.1f} mbar above 1 atm, i.e. P={pressure:.5f} bar")
+    print(f"\nDensity of gas (kg/m³) at T={tp:.1f}°C and P={dp:.1f} mbar above 1 atm, i.e. P={pressure:.5f} bar")
 
     print(f"{'gas':13}{'Mw(g/mol)':6}  {'ϱ(kg/m³)':5}  {'μ(Pa.s)':5}    {'z (-)':5}      {'ϱ/μ(Mkg/sm)':5} T={tp:.1f}°C ")
     for g in plot_gases:
@@ -1177,7 +1177,7 @@ def main():
 
     dp = 55
     pressure =  Atm + dp/1000
-    print(f"\nDensity of gas at (kg/m³)at T={t8:.1f}°C and P={dp:.1f} mbar above 1 atm, i.e. P={pressure:.5f} bar")
+    print(f"\nDensity of gas  (kg/m³) at T={t8:.1f}°C and P={dp:.1f} mbar above 1 atm, i.e. P={pressure:.5f} bar")
     print(f"\n{'gas':13}{'Mw(g/mol)':6}  {'ϱ(kg/m³)':5}  {'μ(Pa.s)':5}     {'z (-)':5}      {'ϱ/μ(Mkg/sm)':5} T={8:.1f}°C ")
     for g in plot_gases:
         print_density(g, pressure, T8C)
@@ -1438,7 +1438,7 @@ def main():
             rng = (mx - mn)/2
             pct = 100*rng/mean
             print(f"{mix:5} {mean:9.4f} ±{rng:7.4f}  {pct:5.2f}%")
-    plt.title(f'Normalised Blasius Parameter ϱ^3/4.μ^1/4  wrt to NG value at {P} bar')
+    plt.title(f'Normalised Blasius Parameter ϱ^3/4.μ^1/4  ratio of H2/NG values')
     plt.xlabel('Temperature (°C)')
     plt.ylabel('Normalised Blasius Parameter ratio wrt NG ')
     plt.grid(True)
