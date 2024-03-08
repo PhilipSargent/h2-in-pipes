@@ -551,6 +551,23 @@ def get_blasius_factor(g, p, T):
     b_factor = pow(μ, 0.25) * pow(ϱ, 0.75)
     return b_factor
     
+def get_v_ratio(g, p, T):
+    T25C = 273.15 + 25
+    _, _, hc_g = get_Hc(g, T25C) # molar_volume, hc/molar_volume, hc = get_Hc(g, T)
+    _, _, hc_ng = get_Hc('NG', T25C)
+    hhvr = hc_ng / hc_g
+    v_ratio = hhvr * pz(T, p,'NG')/pz(T, p, g)
+    return v_ratio
+
+@memoize
+def get_Δp_ratio(g, p, T):
+    # Only used to calc the ratios of H2:NG inthe Blasius regime
+    b_ratio = get_blasius_factor(g, p, T) / get_blasius_factor('NG', p, T)
+    v_ratio = get_v_ratio(g, p, T)
+    Δp_ratio = b_ratio * pow(v_ratio, 7/4)
+    
+    return Δp_ratio
+    
 def get_Hc(g, T):
     """If the data is there, return the standard heat of combustion, 
     but in MJ/m³ not MJ/mol
@@ -1447,9 +1464,39 @@ def main():
     plt.savefig(f"peng_bf_NG_.png")
     plt.close()
 
-
+    # Pressure-drop plot NORMALIZED wrt NG  - - - - - - - - - - -
+    Δp_g = {}
+    t = 0
+    for P in [pressure, 2+Atm, 7+Atm, 19+Atm, 199+Atm]:
+        t += 1
+        print(f"\nΔp Blasius-fit Pressure drop ratio (normalised by NG) between {temperatures[0]-T273:4.1f}C and {temperatures[-1]-T273:4.1f}C at {P} bar")
+        for mix in bf_gases:
+            Δp_g[mix] = []
+            if mix == "NG":
+                 continue            
+            for i in range(len(temperatures)):
+                T = temperatures[i]
+                # print(f"{i=} {T=} {mix=}")
+                Δp_g[mix].append(get_Δp_ratio(mix,P,T))
+            # plt.plot(temperatures - T273, Δp_g[mix], label= mix+f" {P:5.0f} bar", **plot_kwargs(mix))
+            plt.plot(temperatures - T273, Δp_g[mix], label= mix+f" {P:5.0f} bar")
+            Δp_g[mix].sort()
+            mn = Δp_g[mix][0]
+            mx = Δp_g[mix][-1]
+            mean = (mx + mn)/2
+            rng = (mx - mn)/2
+            pct = 100*rng/mean
+            print(f"Δp {mix:5} {mean:9.4f} ±{rng:7.4f}  {pct:5.2f}%")
+    plt.title(f'Δp Blasius-fit Pressure drop - ratio of H2/NG values')
+    plt.xlabel('Temperature (°C)')
+    plt.ylabel('Δp Pressure drop  ratio wrt NG ')
+    plt.grid(True)
+    plt.legend()
+    #plt.savefig(f"p_h2_ratio_{t}.png")
+    plt.savefig(f"peng_Δp_ratio.png")
+    plt.close()
+    
     # ϱ/Viscosity plot Kinematic EXPTL values at 298K - - - - - - - - - - -
-
     P = pressure
     re_g = {}
 
@@ -1568,7 +1615,10 @@ def main():
     
     for T in [T230, T3C, T15C, T25C]:
     
-        v_ratio = [hhvr * pz(T, p,'NG')/pz(T, p,'H2') for p in pressures]
+        #v_ratio2 = [hhvr * pz(T, p,'NG')/pz(T, p,'H2') for p in pressures]
+        v_ratio = [ get_v_ratio('H2',p,T) for p in pressures]
+        # for ip in range(len(pressures)):
+            # print(f"{T=} {v_ratio[ip]/v_ratio2[ip]}")
         
         vr_max = max(v_ratio)
         print(f"Velocity ratio min:{v_ratio[1]:.3f} max:{vr_max:.3f} at  {T-T273:4.1f}°C")
