@@ -109,6 +109,7 @@ for r in fdata:
     
 #plt.scatter(Re, f, label='Digitised data')
 title = f"Nikuradse, Princeton, Oregon: {len(Re)} data points"
+xlabel = "$Re^{6/(8+3\\eta)} \\cdot (2ε/D)$"
 symbols = ['+', 'x', ]
 plt.ylabel('Darcy-Weisbach friction factor  f')
 plt.xlabel("Reynolds' number")
@@ -132,7 +133,7 @@ for r in fdata:
     x[r] = []
     y[r] = []
     for k in range(len(Redata[r])):
-        xx = np.power(Redata[r][k], expon2) / r
+        xx = np.power(Redata[r][k], expon2) * 2 / (r)
         yy = np.power(Redata[r][k], expon) * fdata[r][k]
         
         x[r].append(xx)
@@ -151,7 +152,7 @@ for r in fdata:
 
 plt.title(title)
 plt.ylabel("$f \\cdot Re^{((2+3\\eta)/(8+3\\eta))}$")
-plt.xlabel("$Re^{6/(8+3\\eta)} \\cdot (ε/D)$")
+plt.xlabel(xlabel)
 plt.legend()
 plt.grid(True)
 plt.savefig("goldenf_fre.png")
@@ -170,7 +171,7 @@ for r in fdata:
 
 plt.title(title)
 plt.ylabel("$f \\cdot Re^{((2+3\\eta)/(8+3\\eta))}$")
-plt.xlabel("$Re^{6/(8+3\\eta)} \\cdot (ε/D)$")
+plt.xlabel(xlabel)
 plt.legend()
 plt.grid(True)
 plt.savefig("goldenf_fre_lin.png")
