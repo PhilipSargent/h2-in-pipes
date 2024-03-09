@@ -858,7 +858,7 @@ def get_moles_flue_for_1mol_fuel_gas(g, oxidiser):
     n = 0
     for c in flue_gas:
         n += flue_gas[c]
-    print(f"Number of moles in flue gas for 1 mole fuel: {n:8.4f} for {g:6} and {oxidiser}")
+    # print(f"Number of moles in flue gas for 1 mole fuel: {n:8.4f} for {g:6} and {oxidiser}")
       
       # Normalise
     for c in flue_gas:
@@ -1158,10 +1158,12 @@ def main():
     t8 = 8 # C
     t3 = 3 # C
     pressure =  Atm + dp/1000 # 1atm + 47.5 mbar, halfway between 20 mbar and 75 mbar
+    T50C = T273 + 50 # K
     T25C = T273 + ts # K
     T15C = T273 + tp # K
     T8C = T273 + t8 # K
     T3C = T273 + t3 # K
+    T250 = T273 -20 #  -20 C
     T230 = T273 -40 #  -40 C
 
     display_gases = ["NG"]   
@@ -1606,23 +1608,11 @@ def main():
 
     # Plot velocity ratio for pure hydrogen and natural gas
     
-    # T15C = T273 + tp # K
-    # Note that Hc does not depend on T, it is defined at 25C
-    _, _, hc_h2 = get_Hc('H2', T25C) # molar_volume, hc/molar_volume, hc = get_Hc(g, T)
-    _, _, hc_ng = get_Hc('NG', T25C)
-    hhvr = hc_ng / hc_h2
-    print(f"{hhvr=} {hc_h2=}  {hc_ng=} at {T25C-T273:4.1f}°C")
+    for T in [T230, T250, T3C, T25C, T50C]:
     
-    for T in [T230, T3C, T15C, T25C]:
-    
-        #v_ratio2 = [hhvr * pz(T, p,'NG')/pz(T, p,'H2') for p in pressures]
-        v_ratio = [ get_v_ratio('H2',p,T) for p in pressures]
-        # for ip in range(len(pressures)):
-            # print(f"{T=} {v_ratio[ip]/v_ratio2[ip]}")
-        
+        v_ratio = [ get_v_ratio('H2',p,T) for p in pressures]        
         vr_max = max(v_ratio)
         print(f"Velocity ratio min:{v_ratio[1]:.3f} max:{vr_max:.3f} at  {T-T273:4.1f}°C")
-
         plt.plot(pressures, v_ratio, label=f"{T-T273:4.0f}°C")
     
     plt.title(f'Velocity ratio v(H2)/v(NG)  vs Pressure ')
@@ -1634,6 +1624,46 @@ def main():
     plt.savefig("peng_v_ratio.png")
     plt.close()
     
+    # Plot velocity ratio DATA COLLAPSE for pure hydrogen and natural gas
+    for T in [T230, T250, T3C, T25C, T50C]:
+        t = 0.1 *(T50C - T)
+        v_ratio = [ get_v_ratio('H2',p,T)*p for p in pressures]        
+        plt.plot(pressures, v_ratio, label=f"{T-T273:4.0f}°C")
+    
+    plt.title(f'P/(T$_0$-T) * Velocity ratio v(H2)/v(NG)  vs Pressure ')
+    plt.xlabel('Pressure (bar)')
+    plt.ylabel('Velocity ratio v(H2)/v(NG)')
+    plt.legend()
+    plt.grid(True)
+
+    plt.savefig("peng_v_ratio_c.png")
+    plt.close()
+    
+    # Plot Blasius Parameter for pure hydrogen and natural gases
+    pressures = np.linspace(1, 8.1, 100)  # bar
+    T = T273+8
+
+    plt.figure(figsize=(10, 5))
+
+    bf_g = {}
+
+    for g in plot_gases:
+        bf_g[g] = []
+
+        for p in pressures:
+            bf = get_blasius_factor(g,p,T)
+            bf_g[g].append(bf)
+
+        plt.plot(pressures , bf_g[g], label=g, **plot_kwargs(g))
+
+    plt.title(f'Blasius Parameter vs Pressure at {T-T273:4.1f}°C')
+    plt.xlabel('Pressure (bar)')
+    plt.ylabel('Blasius Parameter ϱ^3/4.μ^1/4')
+    plt.legend()
+    plt.grid(True)
+
+    plt.savefig("peng_bf_p.png")
+    plt.close()    
     # Plot Blasius Parameter for pure hydrogen and natural gases
     pressures = np.linspace(1, 8.1, 100)  # bar
     T = T273+8
