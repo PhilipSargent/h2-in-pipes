@@ -1494,7 +1494,6 @@ def main():
     plt.ylabel('Δp Pressure drop  ratio wrt NG ')
     plt.grid(True)
     plt.legend()
-    #plt.savefig(f"p_h2_ratio_{t}.png")
     plt.savefig(f"peng_Δp_ratio.png")
     plt.close()
     
@@ -1623,21 +1622,7 @@ def main():
 
     plt.savefig("peng_v_ratio.png")
     plt.close()
-    
-    # Plot velocity ratio DATA COLLAPSE for pure hydrogen and natural gas
-    for T in [T230, T250, T3C, T25C, T50C]:
-        t = 0.1 *(T50C - T)
-        v_ratio = [ get_v_ratio('H2',p,T)*p for p in pressures]        
-        plt.plot(pressures, v_ratio, label=f"{T-T273:4.0f}°C")
-    
-    plt.title(f'P/(T$_0$-T) * Velocity ratio v(H2)/v(NG)  vs Pressure ')
-    plt.xlabel('Pressure (bar)')
-    plt.ylabel('Velocity ratio v(H2)/v(NG)')
-    plt.legend()
-    plt.grid(True)
 
-    plt.savefig("peng_v_ratio_c.png")
-    plt.close()
     
     # Plot Blasius Parameter for pure hydrogen and natural gases
     pressures = np.linspace(1, 8.1, 100)  # bar
