@@ -544,13 +544,18 @@ def get_density(mix, p, T):
     return ϱ
 
 @memoize
-def get_blasius_factor(g, p, T):
-    ϱ = get_density(g, p, T)
-    μ =  get_viscosity(g, p, T)
-
-    b_factor = pow(μ, 0.25) * pow(ϱ, 0.75)
-    return b_factor
+def get_μ_ratio(g, p, T):
+    '''Used by moody.py but not in this file'''
+    μ_ratio = get_viscosity(g, p, T)/get_viscosity('NG', p, T)
+    return μ_ratio
     
+@memoize
+def get_ϱ_ratio(g, p, T):
+    '''Used by moody.py but not in this file'''
+    ϱ_ratio = get_density(g, p, T)/get_density('NG', p, T)
+    return ϱ_ratio
+    
+
 def get_v_ratio(g, p, T):
     T25C = 273.15 + 25
     _, _, hc_g = get_Hc(g, T25C) # molar_volume, hc/molar_volume, hc = get_Hc(g, T)
@@ -560,14 +565,22 @@ def get_v_ratio(g, p, T):
     return v_ratio
 
 @memoize
-def get_Δp_ratio(g, p, T):
-    # Only used to calc the ratios of H2:NG inthe Blasius regime
+def get_Δp_ratio_br(g, p, T):
+    # Only used to calc the ratios of H2:NG in the Blasius regime
     b_ratio = get_blasius_factor(g, p, T) / get_blasius_factor('NG', p, T)
     v_ratio = get_v_ratio(g, p, T)
     Δp_ratio = b_ratio * pow(v_ratio, 7/4)
     
     return Δp_ratio
-    
+
+@memoize
+def get_blasius_factor(g, p, T):
+    ϱ = get_density(g, p, T)
+    μ =  get_viscosity(g, p, T)
+
+    b_factor = pow(μ, 0.25) * pow(ϱ, 0.75)
+    return b_factor
+     
 def get_Hc(g, T):
     """If the data is there, return the standard heat of combustion, 
     but in MJ/m³ not MJ/mol
@@ -1479,7 +1492,7 @@ def main():
             for i in range(len(temperatures)):
                 T = temperatures[i]
                 # print(f"{i=} {T=} {mix=}")
-                Δp_g[mix].append(get_Δp_ratio(mix,P,T))
+                Δp_g[mix].append(get_Δp_ratio_br(mix,P,T))
             # plt.plot(temperatures - T273, Δp_g[mix], label= mix+f" {P:5.0f} bar", **plot_kwargs(mix))
             plt.plot(temperatures - T273, Δp_g[mix], label= mix+f" {P:5.0f} bar")
             Δp_g[mix].sort()
@@ -1494,7 +1507,7 @@ def main():
     plt.ylabel('Δp Pressure drop  ratio wrt NG ')
     plt.grid(True)
     plt.legend()
-    plt.savefig(f"peng_Δp_ratio.png")
+    plt.savefig(f"peng_Δp_ratio_br.png")
     plt.close()
     
     # ϱ/Viscosity plot Kinematic EXPTL values at 298K - - - - - - - - - - -

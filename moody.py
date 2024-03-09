@@ -10,6 +10,7 @@ import warnings
 
 from scipy.interpolate import interp1d
 from peng_utils import memoize
+from peng import get_v_ratio, get_Δp_ratio_br, get_ϱ_ratio, get_μ_ratio, get_viscosity
 
 # We memoize some functions so that they do not get repeadtedly called with
 # the same arguments. Yet still be retain a more obvius way of writing the program.
@@ -216,8 +217,18 @@ def h2_ratio(reynolds, relative_roughness):
 
 @memoize 
 def p2_h2_ratio(reynolds, relative_roughness):
-    """ rho_ratio * v_ratio**2  = 1.03512 """
+    """ rho_ratio * v_ratio**2  = 1.03512 at 1atm
+    For other temperatures and pressures we must call the Peng-Robinson EOS
+    functions.
+    """
+    g = 'H2'
+    p = 1
+    T = 273.15+15
+    v_ratio = get_v_ratio(g, p, T)
+    Δp_ratio = get_Δp_ratio_br(g, p, T)
+    μ_ratio = get_viscosity(g, p, T)
     re_ratio = 0.4103
+    
     
     v_ratio  = 3.076
     rho_ratio = 0.1094
@@ -417,13 +428,13 @@ def plot_diagram(title, filename, plot="loglog", fff=colebrook, gradient=False, 
 
     plt.xlabel('Reynolds number, Re')
     if not gradient:
-        plt.ylabel('Darcy-Weisbach friction factor, f')
+        plt.ylabel('Darcy-Weisbach friction factor $f$')
     else:
-        plt.ylabel('d(f)/d(Re) Darcy-Weisbach friction factor gradient')
+        plt.ylabel('$d(f)/d(Re)$ Darcy-Weisbach friction factor gradient')
     if h2:
         #plt.ylim(-20,150)
         plt.xlabel('Reynolds number Re for natural gas')
-        if fff==p2_h2_ratio:
+        if f == p2_h2_ratio:
             plt.ylabel('Pressure drop ratio ')
         else:
             plt.ylabel('Darcy-Weisbach friction factor ratio ')
@@ -464,22 +475,19 @@ moody_ylim = True
 
 reynolds_laminar = np.logspace(2.9, 3.9, 5) # 10^2.7 = 501, 10^3.4 = 2512
 reynolds = np.logspace(2.4, 14.0, 1000) # 10^7.7 = 5e7
-relative_roughness_values = [0.01, 0.001, 0.0001, 0.00001,  1e-7, 1e-9] #
+relative_roughness_values = [0.01, 0.001, 0.0001, 0.00003,  3e-7, 1e-9] #
 #relative_roughness_values = list(reversed(relative_roughness_values))
 fp = piggot()
 
-# plot_diagram('Moody Diagram (Colebrook)', 'moody_colebrook.png', plot="loglog")
-
 moody_ylim = False
-#plot_diagram('Moody Diagram (Afzal)', 'moody_afzal.png', plot="loglog", fff=afzal_mod)
 plot_diagram('', 'moody_afzal.png', plot="loglog", fff=afzal_mod)
 
-plot_diagram('factor increase in f between H2 and NG', 'h2_ratio.png', plot="linlog", fff=h2_ratio, h2=True)
+plot_diagram('$f$ factor ratio between H2 and NG', 'h2_ratio.png', plot="linlog", fff=h2_ratio, h2=True)
 
 #plot_diagram('factor increase in Pressure drop between H2 and NG', 'p2_h2_ratio.png', plot="linlog", fff=p2_h2_ratio, h2=True)
-plot_diagram('', 'p2_h2_ratio.png', plot="linlog", fff=p2_h2_ratio, h2=True)
+plot_diagram('Pressure drop ratio between H2 and NG', 'p2_h2_ratio.png', plot="linlog", fff=p2_h2_ratio, h2=True)
 
-plot_diagram('factor increase in compressor work between H2 and NG', 'w2_h2_ratio.png', plot="linlog", fff=w2_h2_ratio, w2=True)
+plot_diagram('Ratio of compressor work between H2 and NG', 'w2_h2_ratio.png', plot="linlog", fff=w2_h2_ratio, w2=True)
 
 plot_diagram('Moody Diagram (Swarmee)', 'moody_swarmee.png', plot="loglog", fff=swarmee)
 # plot_diagram('Moody Diagram (Virtual Nikuradze)', 'moody_vm.png', plot="loglog", fff=[virtual_nikuradse,gioia_chakraborty_friction_factor])
@@ -492,7 +500,7 @@ relative_roughness_values = [0.01, 0.003, 0.001, 1e-5]
 
 # fp = piggot() # not in view on the enlarged plot
 fp = None
-plot_diagram('factor increase in f between H2 and NG', 'h2_ratio_enlarge.png', plot="linlog", fff=h2_ratio, h2=True)
+plot_diagram('$f$ ratio between H2 and NG', 'h2_ratio_enlarge.png', plot="linlog", fff=h2_ratio, h2=True)
 
 # plot_diagram('Moody (Colebrook) Transition region', 'moody_colebrook_enlarge.png',plot="loglog")
 plot_diagram('Moody (Afzal) Transition region', 'moody_afzal_enlarge.png',plot="loglog", fff=[afzal_mod]) #, afzal_shift
@@ -508,7 +516,6 @@ reynolds = np.logspace(3.0, 4.0, 500)
 
 plot_diagram('factor increase in f between H2 and NG', 'h2_ratio_enlarge_lin.png', plot="linear", fff=h2_ratio, h2=True)
 
-# plot_diagram('Moody (Colebrook) Transition region', 'moody_colebrook_enlarge_lin.png',plot="linear")
 plot_diagram('Moody (Afzal) Transition region', 'moody_afzal_enlarge_lin.png',plot="linear", fff=[afzal_mod]) #, afzal_shift
 # plot_diagram('Moody Diagram (Virtual Nikuradze)', 'moody_vm_enlarge_lin.png', plot="linear", fff=[virtual_nikuradse,gioia_chakraborty_friction_factor])
 
