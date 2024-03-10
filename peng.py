@@ -1620,7 +1620,10 @@ def main():
     plt.close()
 
     # Plot velocity ratio for pure hydrogen and natural gas
-    
+    T8C = T273 + 8
+    v_ratio = get_v_ratio('H2',94,T8C) 
+    print(f"Velocity ratio {v_ratio:.3f} at 94 bar {T8C-T273:4.1f}°C")
+   
     for T in [T230, T250, T3C, T25C, T50C]:
     
         v_ratio = [ get_v_ratio('H2',p,T) for p in pressures]        
