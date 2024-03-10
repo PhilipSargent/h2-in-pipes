@@ -15,6 +15,7 @@ from peng import get_v_ratio, get_Δp_ratio_br, get_ϱ_ratio, get_μ_ratio, get_
 # We memoize some functions so that they do not get repeadtedly called with
 # the same arguments. Yet still be retain a more obvius way of writing the program.
 
+global P, T
 lowest_f = 0.000001
 η = 0.02
 b_exponent = (2+3*η)/(8+3*η)
@@ -23,6 +24,8 @@ ib_factor = 0.316 *   3e3**(b_exponent- 0.25)
 T8C = T273 + 3 # 3 degrees C
 T = T8C # default temp
 P = Atm + 40/1000 # 40 mbar default pressure
+
+
 print(f"Intermittent-Blasius factor: {ib_factor:.3f}")
 
 def logistic_transition(x, v1, v2, midpoint, steepness):
@@ -217,15 +220,16 @@ def get_re_ratio(g, p, T):
     v_ratio = get_v_ratio(g, P, T)
     μ_ratio = get_μ_ratio(g, P, T)
     ϱ_ratio = get_ϱ_ratio(g, P, T)
-    print(f"{T=:.0f} {P=:8.4f} {v_ratio=:.4f} {μ_ratio=:.4f} {ϱ_ratio=:.4f}")
     re_ratio = ϱ_ratio * v_ratio / μ_ratio
+    print(f"{T=:.0f} {P=:8.4f} {v_ratio=:.4f} {μ_ratio=:.4f} {ϱ_ratio=:.4f}  {re_ratio=:.4f}")
     return re_ratio
     
-@memoize 
+#@memoize 
 def h2_ratio(reynolds, relative_roughness):
     # Just the friction factor, but still needs re_ratio
-    re_ratio1 = get_re_ratio('H2', P, T)
-    re_ratio = 0.4103
+    global P, T
+    re_ratio = get_re_ratio('H2', P, T)
+    # re_ratio = 0.4103
     
     a = afzal_mod(reynolds, relative_roughness)
     h2 = afzal_mod(reynolds*re_ratio, relative_roughness)
@@ -233,40 +237,43 @@ def h2_ratio(reynolds, relative_roughness):
     increase = h2/a # 100 * (h2-a)/a
     return increase
 
-@memoize 
+#@memoize # not memoize when using P and T globally
 def p2_h2_ratio(reynolds, relative_roughness):
     """ rho_ratio * v_ratio**2  = 1.03512 at 1atm
     For other temperatures and pressures we must call the Peng-Robinson EOS
     functions.
     """
+    global P, T
     g='H2'
-    Δp_ratio = get_Δp_ratio_br(g, P, T)
-    re_ratio = 0.4103
+    Δp_ratio = get_Δp_ratio_br(g, P, T) # just for Blasius, do NOT use
+    re_ratio = get_re_ratio(g, P, T)
     
     
-    v_ratio  = 3.076 # this includes the boielr efficiency number
-    rho_ratio = 0.1094
+    v_ratio  = get_v_ratio(g, P, T) #3.076 # this includes the boielr efficiency number
+    rho_ratio = get_ϱ_ratio(g, P, T) # 0.1094
     
-    a = afzal_mod(reynolds, relative_roughness)
-    h2 = afzal_mod(reynolds*re_ratio, relative_roughness)
+    f = afzal_mod(reynolds, relative_roughness)
+    f_h2 = afzal_mod(reynolds*re_ratio, relative_roughness)
     
-    increase =  (h2/a) * rho_ratio * v_ratio**2 # 100 * ((h2-a)/a) * rho_ratio * v_ratio**2
+    increase =  (f_h2/f) * rho_ratio * v_ratio**2 
     return increase
 
-@memoize 
+#@memoize 
 def w2_h2_ratio(reynolds, relative_roughness):
     """ rho_ratio * v_ratio**2  = 1.03512 
     Work = pressure_drop * v_ratio
     """
+    global P, T
      
-    v_ratio  = 3.076
+    v_ratio  = get_v_ratio('H2', P, T) #3.076 # this includes the boielr efficiency number
         
     increase = p2_h2_ratio(reynolds, relative_roughness) * v_ratio
     return increase
     
 @memoize 
 def afzal_shift(reynolds, relative_roughness):
-    re_ratio = 0.4103
+    global P, T
+    re_ratio = get_re_ratio('H2',P,T)
     
     h2 = afzal_mod(reynolds*re_ratio, relative_roughness)
     
@@ -387,13 +394,69 @@ def piggot():
             # print(f"{i}:{p[i]:.5f} {p[i]-p[i+1]:.5f}")
     return p
 
+def plot_pt_diagram(title, filename, plot="loglog", fff=colebrook, gradient=False,  w2=False):
+    # Derived from plot_diagram(), both need refactoring
+    global P, T
+    rr = 1e-7
+    title = title + f" (ε/D = {rr})"
+    if not type(fff) is list:
+        fff = [fff]
+    plt.figure(figsize=(10, 6))
     
-def plot_diagram(title, filename, plot="loglog", fff=colebrook, gradient=False, h2=False, w2=False, T=T8C):
+    for f in fff: # several different friction factor functions
+        friction_factors = {}
+        
+        for pt in [(1,50), (30,8), (150,-40)]:
+            P = pt[0]
+            t = pt[1]
+            T = T273+t
+            label =  f" ({T-T273:.0f}°C, {P:.0f} bar)"
+            # Calculate the curves 
+            if gradient:
+                friction_factors[rr] = [ d_func(f, re, rr) for re in reynolds]
+            else:
+                friction_factors[rr] = [f(re, rr) for re in reynolds]
+            # Plot the calculated curves on the Moody diagram
+            if plot == "loglog":
+                for rr, ff in friction_factors.items():
+                    plt.loglog(reynolds, ff, label=label)
+            if plot == "linear":
+                for rr, ff in friction_factors.items():
+                    plt.plot(reynolds, ff, label=label)
+            if plot == "linlog":
+                for rr, ff in friction_factors.items():
+                    plt.semilogx(reynolds, ff, label=label)
+
+        plt.xlabel('Reynolds number, Re')
+        if not gradient:
+            plt.ylabel('Darcy-Weisbach friction factor $f$')
+        else:
+            plt.ylabel('$d(f)/d(Re)$ Darcy-Weisbach friction factor gradient')
+        if not w2:
+            plt.xlabel('Reynolds number Re for natural gas')
+            if f == p2_h2_ratio:
+                plt.ylabel('Pressure drop ratio ')
+            else:
+                plt.ylabel('Darcy-Weisbach friction factor ratio ')
+        else:
+            #plt.ylim(-80,500)
+            plt.ylabel('Compressor power ratio ')
+        plt.title(title)
+        plt.grid(True, which='both', ls='--')
+        plt.legend()
+        plt.savefig(filename)
+
+    
+
+def plot_diagram(title, filename, plot="loglog", fff=colebrook, gradient=False, h2=False, w2=False):
     """Calculate the friction factor for each relative roughness,
-    OK this does stuff several times and should be disentangled really
+    OK this does stuff several times and should be disentangled and refactored
     
     fff : the friction factor function
     """
+    global P, T
+    if title:
+        title = title + f" ({T-T273:.0f}°C, {P:.0f} bar)"
     if not type(fff) is list:
         fff = [fff]
 
@@ -405,6 +468,7 @@ def plot_diagram(title, filename, plot="loglog", fff=colebrook, gradient=False, 
     friction_blasius = [blasius(re) for re in reynolds]
     friction_iblasius = [iblasius(re) for re in reynolds]
     if not gradient and not h2:
+        # These are the theory lines for restricted theories, shoudl add PvK here
         
         if plot == "loglog":
             plt.loglog(reynolds_laminar, friction_laminars, label=f'Laminar', linestyle='dotted')
@@ -419,7 +483,7 @@ def plot_diagram(title, filename, plot="loglog", fff=colebrook, gradient=False, 
             if fp:
                 plt.plot(reynolds, fp, label='Piggot')
 
-    for f in fff:
+    for f in fff: # several different friction factor functions
         friction_factors = {}
         for rr in relative_roughness_values:
             if gradient:
@@ -428,7 +492,7 @@ def plot_diagram(title, filename, plot="loglog", fff=colebrook, gradient=False, 
             else:
                 friction_factors[rr] = [f(re, rr) for re in reynolds]
  
-        # Plot the Moody diagram
+        # Plot the calculated curves on the Moody diagram
         if plot == "loglog":
             for rr, ff in friction_factors.items():
                 plt.loglog(reynolds, ff, label=f'ε/D = {rr}')
@@ -439,7 +503,7 @@ def plot_diagram(title, filename, plot="loglog", fff=colebrook, gradient=False, 
             for rr, ff in friction_factors.items():
                 plt.semilogx(reynolds, ff, label=f'ε/D = {rr}')
 
-
+    # Plot all the diagrams with ratios of H2 to NG
     plt.xlabel('Reynolds number, Re')
     if not gradient:
         plt.ylabel('Darcy-Weisbach friction factor $f$')
@@ -485,6 +549,10 @@ params = {'legend.fontsize': 'x-large',
          'ytick.labelsize':'x-large'}
 plt.rcParams.update(params)
 
+T250 = T273 +8
+T = T250
+P = 30
+
 moody_ylim = True
 
 reynolds_laminar = np.logspace(2.9, 3.9, 5) # 10^2.7 = 501, 10^3.4 = 2512
@@ -498,9 +566,6 @@ plot_diagram('', 'moody_afzal.png', plot="loglog", fff=afzal_mod)
 
 plot_diagram('$f$  ratio between H2 and NG', 'h2_ratio.png', plot="linlog", fff=h2_ratio, h2=True)
 
-P = 19 + Atm
-T250 = T273 -20
-T = T250
 plot_diagram('Pressure drop ratio between H2 and NG', 'p2_h2_ratio.png', plot="linlog", fff=p2_h2_ratio, h2=True)
 
 plot_diagram('Ratio of compressor work between H2 and NG', 'w2_h2_ratio.png', plot="linlog", fff=w2_h2_ratio, w2=True)
@@ -508,7 +573,19 @@ plot_diagram('Ratio of compressor work between H2 and NG', 'w2_h2_ratio.png', pl
 plot_diagram('Moody Diagram (Swarmee)', 'moody_swarmee.png', plot="loglog", fff=swarmee)
 # plot_diagram('Moody Diagram (Virtual Nikuradze)', 'moody_vm.png', plot="loglog", fff=[virtual_nikuradse,gioia_chakraborty_friction_factor])
 
-# Plot enlarged diagram
+# now do comparative plot, but for just one roughness valuesT250 = T273 -40
+reynolds = np.logspace(2.4, 11.0, 1000) # 10^7.7 = 5e7
+
+relative_roughness_values = [1e-5] # not used
+
+# This re-sets global variables P, T
+plot_pt_diagram('Pressure drop ratio between H2 and NG', 'p2_h2_ratio_pt.png', plot="linlog", fff=p2_h2_ratio)
+plot_pt_diagram('Ratio of compressor work between H2 and NG', 'w2_h2_ratio_pt.png', plot="linlog", fff=w2_h2_ratio, w2=True)
+# so reset them afterwards
+T = T250
+P = 30
+
+# Plot enlarged diagrams
 
 reynolds_laminar = np.logspace(2.9, 3.4, 5) # 10^2.7 = 501, 10^3.4 = 2512
 reynolds = np.logspace(2.8, 5.0, 500) 
@@ -535,14 +612,9 @@ plot_diagram('$f$ ratio between H2 and NG', 'h2_ratio_enlarge_lin.png', plot="li
 plot_diagram('Moody (Afzal) Transition region', 'moody_afzal_enlarge_lin.png',plot="linear", fff=[afzal_mod]) #, afzal_shift
 # plot_diagram('Moody Diagram (Virtual Nikuradze)', 'moody_vm_enlarge_lin.png', plot="linear", fff=[virtual_nikuradse,gioia_chakraborty_friction_factor])
 
-exit()
 
-re = 1e9
-print(f"For high Re = {re:6.0e}")
-for rr in [0.01, 0.001, 0.0001, 0.00001,  0.000001]:
-    for fff in [colebrook, afzal, swarmee, virtual_nikuradse]:
-        print(f"{fff.__name__:17} {rr:6} {fff(re, rr):.5f}")
-    print("")
+
+exit()
 
 '''
 Before running this program, ensure you have the required libraries installed. You can install them using pip:
