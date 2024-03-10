@@ -10,7 +10,7 @@ import warnings
 
 from scipy.interpolate import interp1d
 from peng_utils import memoize
-from peng import get_v_ratio, get_Δp_ratio_br, get_ϱ_ratio, get_μ_ratio, get_viscosity
+from peng import get_v_ratio, get_Δp_ratio_br, get_ϱ_ratio, get_μ_ratio, get_viscosity, Atm, T273
 
 # We memoize some functions so that they do not get repeadtedly called with
 # the same arguments. Yet still be retain a more obvius way of writing the program.
@@ -19,6 +19,10 @@ lowest_f = 0.000001
 η = 0.02
 b_exponent = (2+3*η)/(8+3*η)
 ib_factor = 0.316 *   3e3**(b_exponent- 0.25)
+
+T8C = T273 + 3 # 3 degrees C
+T = T8C # default temp
+P = Atm + 40/1000 # 40 mbar default pressure
 print(f"Intermittent-Blasius factor: {ib_factor:.3f}")
 
 def logistic_transition(x, v1, v2, midpoint, steepness):
@@ -204,9 +208,23 @@ def afzal_mod(reynolds, relative_roughness):
     midpoint = 0.6 * (Re_upper - Re_lower)
     steepness = 0.01
     return logistic_transition(reynolds, L, a, midpoint, steepness)
+
+@memoize
+def get_re_ratio(g, p, T):
+    '''Used by moody.py but not in this file'''
+    #Re = density . v . D / viscosity
+    # All the ratio funcitons are for the value for g divided by the value for NG
+    v_ratio = get_v_ratio(g, P, T)
+    μ_ratio = get_μ_ratio(g, P, T)
+    ϱ_ratio = get_ϱ_ratio(g, P, T)
+    print(f"{T=:.0f} {P=:8.4f} {v_ratio=:.4f} {μ_ratio=:.4f} {ϱ_ratio=:.4f}")
+    re_ratio = ϱ_ratio * v_ratio / μ_ratio
+    return re_ratio
     
 @memoize 
 def h2_ratio(reynolds, relative_roughness):
+    # Just the friction factor, but still needs re_ratio
+    re_ratio1 = get_re_ratio('H2', P, T)
     re_ratio = 0.4103
     
     a = afzal_mod(reynolds, relative_roughness)
@@ -221,16 +239,12 @@ def p2_h2_ratio(reynolds, relative_roughness):
     For other temperatures and pressures we must call the Peng-Robinson EOS
     functions.
     """
-    g = 'H2'
-    p = 1
-    T = 273.15+15
-    v_ratio = get_v_ratio(g, p, T)
-    Δp_ratio = get_Δp_ratio_br(g, p, T)
-    μ_ratio = get_viscosity(g, p, T)
+    g='H2'
+    Δp_ratio = get_Δp_ratio_br(g, P, T)
     re_ratio = 0.4103
     
     
-    v_ratio  = 3.076
+    v_ratio  = 3.076 # this includes the boielr efficiency number
     rho_ratio = 0.1094
     
     a = afzal_mod(reynolds, relative_roughness)
@@ -374,7 +388,7 @@ def piggot():
     return p
 
     
-def plot_diagram(title, filename, plot="loglog", fff=colebrook, gradient=False, h2=False, w2=False):
+def plot_diagram(title, filename, plot="loglog", fff=colebrook, gradient=False, h2=False, w2=False, T=T8C):
     """Calculate the friction factor for each relative roughness,
     OK this does stuff several times and should be disentangled really
     
@@ -475,16 +489,18 @@ moody_ylim = True
 
 reynolds_laminar = np.logspace(2.9, 3.9, 5) # 10^2.7 = 501, 10^3.4 = 2512
 reynolds = np.logspace(2.4, 14.0, 1000) # 10^7.7 = 5e7
-relative_roughness_values = [0.01, 0.001, 0.0001, 0.00003,  3e-7, 1e-9] #
+relative_roughness_values = [0.01, 0.001, 0.0001, 0.000003,  1e-7, 1e-9] #
 #relative_roughness_values = list(reversed(relative_roughness_values))
 fp = piggot()
 
 moody_ylim = False
 plot_diagram('', 'moody_afzal.png', plot="loglog", fff=afzal_mod)
 
-plot_diagram('$f$ factor ratio between H2 and NG', 'h2_ratio.png', plot="linlog", fff=h2_ratio, h2=True)
+plot_diagram('$f$  ratio between H2 and NG', 'h2_ratio.png', plot="linlog", fff=h2_ratio, h2=True)
 
-#plot_diagram('factor increase in Pressure drop between H2 and NG', 'p2_h2_ratio.png', plot="linlog", fff=p2_h2_ratio, h2=True)
+P = 19 + Atm
+T250 = T273 -20
+T = T250
 plot_diagram('Pressure drop ratio between H2 and NG', 'p2_h2_ratio.png', plot="linlog", fff=p2_h2_ratio, h2=True)
 
 plot_diagram('Ratio of compressor work between H2 and NG', 'w2_h2_ratio.png', plot="linlog", fff=w2_h2_ratio, w2=True)
@@ -514,7 +530,7 @@ plot_diagram('Moody (Afzal) Transition region', 'moody_afzal_enlarge_d_ll.png',p
 reynolds_laminar = np.logspace(2.9, 3.4, 500) # 10^2.7 = 501, 10^3.4 = 2512
 reynolds = np.logspace(3.0, 4.0, 500) 
 
-plot_diagram('factor increase in f between H2 and NG', 'h2_ratio_enlarge_lin.png', plot="linear", fff=h2_ratio, h2=True)
+plot_diagram('$f$ ratio between H2 and NG', 'h2_ratio_enlarge_lin.png', plot="linear", fff=h2_ratio, h2=True)
 
 plot_diagram('Moody (Afzal) Transition region', 'moody_afzal_enlarge_lin.png',plot="linear", fff=[afzal_mod]) #, afzal_shift
 # plot_diagram('Moody Diagram (Virtual Nikuradze)', 'moody_vm_enlarge_lin.png', plot="linear", fff=[virtual_nikuradse,gioia_chakraborty_friction_factor])

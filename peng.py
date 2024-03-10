@@ -562,6 +562,7 @@ def get_v_ratio(g, p, T):
     _, _, hc_ng = get_Hc('NG', T25C)
     hhvr = hc_ng / hc_g
     v_ratio = hhvr * pz(T, p,'NG')/pz(T, p, g)
+    #print(f"{T=:.0f} {p=:8.4f} {v_ratio=:.4f} ")
     return v_ratio
 
 @memoize
@@ -1624,7 +1625,7 @@ def main():
     
         v_ratio = [ get_v_ratio('H2',p,T) for p in pressures]        
         vr_max = max(v_ratio)
-        print(f"Velocity ratio min:{v_ratio[1]:.3f} max:{vr_max:.3f} at  {T-T273:4.1f}°C")
+        print(f"Velocity ratio min:{v_ratio[0]:.3f} max:{vr_max:.3f} at  {T-T273:4.1f}°C")
         plt.plot(pressures, v_ratio, label=f"{T-T273:4.0f}°C")
     
     plt.title(f'Velocity ratio v(H2)/v(NG)  vs Pressure ')
