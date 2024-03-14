@@ -4,7 +4,7 @@ import matplotlib.markers as mks
 import pandas as pd
 from scipy.interpolate import CubicSpline
 
-"""This script will plot the original data and the fitted parabola. The numpy.polyfit function returns the coefficients of the fitted polynomial, highest power first. In this case, it returns the coefficients a, b, and c of the parabola equation y=ax2+bx+c
+"""This script will plot the original data and the fitted curve. The numpy.polyfit function returns the coefficients of the fitted polynomial, highest power first. In this case, it returns the coefficients a, b, and c of the parabola equation y=ax2+bx+c
 """
 params = {'legend.fontsize': 'x-large',
           'figure.figsize': (10, 6),
