@@ -53,7 +53,7 @@ gas_mixtures = {
     # 'Fordoun': { 'CH4':  0.900253, 'C2H6':  0.051467, 'C3H8':  0.013621, 'iC4':  0.001276, 'nC4':  0.002173, 'neoC5':  0.000020,'iC5':  0.000346, 'nC5':  0.003490,  'C6':  0.002390, 'CO2':  0.020853, 'N2':  0.009404, }, # original email John Baldwin 30/12/2023, unnormalized
     'Groening': {'CH4': 0.813, 'C2H6': 0.0285, 'C3H8': 0.0037, 'nC4': 0.0014, 'nC5': 0.0004, 'C6': 0.0006, 'CO2': 0.0089, 'N2': 0.1435, 'O2': 0}, # Groeningen gas https://en.wikipedia.org/wiki/Groningen_gas_field
     
-    'UW': {'CH4': 0.96803, 'C2H6': 0.01773, 'C3H8': 0.00395, 'iC4': 0.000603, 'nC4': 0.00057, 'nC5': 0.0007,  'iC5': 0.0001, 'C6': 0.0009, 'CO2': 0.00115, 'N2': 0.00768, 'O2': 0}, # DOI: 10.15199/17.2023.12.1 Uilhoorn & Witek 2023 Polish gas, no provenance recorded, blended with H2 at 10% and 30% in calcs. As printed, this gas is  100.14130% so the %s are a bit wrong.
+    'UW': {'CH4': 0.96803, 'C2H6': 0.01773, 'C3H8': 0.00395, 'iC4': 0.00063, 'nC4': 0.00057, 'nC5': 0.00007,  'iC5': 0.0001, 'C6': 0.00009, 'CO2': 0.00115, 'N2': 0.00768, 'O2': 0}, # DOI: 10.15199/17.2023.12.1 Uilhoorn & Witek 2023 Polish gas, no provenance recorded, blended with H2 at 10% and 30% in calcs. 
    
     
     
