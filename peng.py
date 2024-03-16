@@ -230,7 +230,7 @@ def explog_mix_rule(mix, values):
     values: dict {gas1: v1, gas2: v2, gas3: v3 etc}
                  where gas1 is one of the component gases in the mix, and v1 is value for that gas
                  
-    This exp(log()) mixing rue was used by Xiong 2023 for the Peng-Robinson FT case. eqn.(6).
+    This exp(log()) mixing rule was used by Xiong 2023 for the Peng-Robinson FT case. eqn.(6).
     """
     ln_mix = 0
     composition = gas_mixtures[mix]
@@ -329,8 +329,7 @@ def z_mixture_rules(mix, T):
          }
     }
 
-"""This function uses simple mixing rules to calculate the mixture’s critical properties. The kij parameter, which accounts for the interaction between different gases, is assumed to be 0 for simplicity. In practice, kij may need to be adjusted based on experimental data or literature values for more accurate results.
- """
+
 
 
 def get_LMN(omega):
@@ -357,6 +356,8 @@ def a_and_b(gas, T):
     
     Assume  temperature of 25 C if temp not given
     """
+    """This function uses simple mixing rules to calculate the mixture’s critical properties. The kij parameter, which accounts for the interaction between different gases, is assumed to be 0 for simplicity. In practice, kij may need to be adjusted based on experimental data or literature values for more accurate results.
+ """
     # Reduced temperature and pressure
     Tc = gas_data[gas]['Tc']
     Pc = gas_data[gas]['Pc']
@@ -436,29 +437,6 @@ def pz(T, P, gas): # return the Pressure divided by Z
     return P/Z
 
 
-# # Define the function to be solved (a - 0.45724 * (R * Tc)**2 / Pc * alpha)
-# def func(Tc, a, Pc, R, alpha):
-  # return a - 0.45724 * (R * Tc)**2 / Pc * alpha
-
-# # Define the derivative of the function (d/dTc (a - 0.45724 * (R * Tc)**2 / Pc * alpha))
-# def func_prime(Tc, a, Pc, R, alpha):
-  # return -1.82896 * R * Tc * Pc * alpha / a
-
-# # Define known values (replace with your actual values)
-# a = 0.45724
-# Pc = 100000  # Pa (replace with actual critical pressure)
-# R = 8.314  # kPa L/mol K (universal gas constant)
-# alpha = 0.5  # (replace with actual acentric factor)
-
-# # Initial guess for Tc (adjust as needed)
-# initial_guess = 300  # K
-
-# # Solve for Tc using Newton-Raphson method
-# solved_Tc = newton_raphson(func, initial_guess, args=(a, Pc, R, alpha), fprime=func_prime)
-
-# # Print the result
-# print("Estimated critical temperature (Tc):", solved_Tc, "K")
-
 @memoize
 def peng_robinson_invert(gas): # Peng-Robinson Equation of State
     if gas not in gas_mixtures:    
@@ -479,6 +457,8 @@ def viscosity_LGE(Mw, T_k, ϱ):
     doi.org/10.2118/1340-PA 1966
     Updated to SI: PetroWiki. (2023). 
     https://petrowiki.spe.org/Natural_gas_properties. 
+    
+    I could not get this to work: produced results at variance from tabulated viscosities
     """
     raise # don't use this 
     
@@ -682,6 +662,7 @@ def print_fuelgas(g, oxidiser):
     
 @memoize
 def get_viscosity(g, p, T):
+
     if g in gas_data:
         μ = viscosity_actual(g, T, p)
     else:
@@ -743,16 +724,6 @@ def print_wobbe(g, T15C):
         flag = f"{'  -            '}"
     
     print(f"{g:15} {hc} {mv:.7f} {hcmv}{wobbe_factor_ϱ:>11.5f}   {w} {flag} {too_light}")
-    
-# @memoize  
-# def condensing_fraction(g, t):
-    # """The fraction of water in the flue gas that condenses to a liquid,
-    # for this fuel gas g
-    # for this condensing temperature t
-    # """
-    
-    # #print(f"{g:4} {t-273.15:8.2f} {water_fraction=:8.4f}")
-    # return water_fraction
 
 @memoize  
 def get_vapour_moles(g, t, oxidiser):
@@ -799,19 +770,6 @@ def get_water_moles(g, t, oxidiser):
 
     return liq_mol
     
-# @memoize  
-# def get_vapour_moles__(g, t):
-    # """get number of moles of  water vapour, NOT condensed for fuel g
-    # and at temperature t 
-    # for one mole of fuel gas"""
-    # flue_moles = get_moles_flue_for_1mol_fuel_gas(g)
-    # h2o_moles = flue_moles * gas_mixtures['flue']['H2O']
-    
-    # vapour_fraction =  1 - condensing_fraction(g, t)
-    # vapour = vapour_fraction * h2o_moles
-    # v2 = vapour_moles2(g, t)
-    # print(f"{g:4} {t-273.15:8.2f} v1:{vapour:8.4f} v2:{v2:8.4f} ")
-    # return vapour
    
 @memoize
 def latent_lost(g, t, oxidiser):
@@ -1451,7 +1409,7 @@ def main():
     t = 0
     for P in [pressure, 2+Atm, 7+Atm, 19+Atm, 199+Atm]:
         t += 1
-        print(f"\nBlasius Parameter ϱ^3/4.μ^1/4 (normalised by NG) between {temperatures[0]-T273:4.1f}C and {temperatures[-1]-T273:4.1f}C at {P} bar")
+        #print(f"\nBlasius Parameter ϱ^3/4.μ^1/4 (normalised by NG) between {temperatures[0]-T273:4.1f}C and {temperatures[-1]-T273:4.1f}C at {P} bar")
         for mix in bf_gases:
             bf_g[mix] = []
             for T in temperatures:
@@ -1470,7 +1428,7 @@ def main():
             mean = (mx + mn)/2
             rng = (mx - mn)/2
             pct = 100*rng/mean
-            print(f"{mix:5} {mean:9.4f} ±{rng:7.4f}  {pct:5.2f}%")
+            #print(f"{mix:5} {mean:9.4f} ±{rng:7.4f}  {pct:5.2f}%")
     plt.title(f'Normalised Blasius Parameter ϱ^3/4.μ^1/4  ratio of H2/NG values')
     plt.xlabel('Temperature (°C)')
     plt.ylabel('Normalised Blasius Parameter ratio wrt NG ')
@@ -1485,7 +1443,7 @@ def main():
     t = 0
     for P in [pressure, 2+Atm, 7+Atm, 19+Atm, 199+Atm]:
         t += 1
-        print(f"\nΔp Blasius-fit Pressure drop ratio (normalised by NG) between {temperatures[0]-T273:4.1f}C and {temperatures[-1]-T273:4.1f}C at {P} bar")
+        #print(f"\nΔp Blasius-fit Pressure drop ratio (normalised by NG) between {temperatures[0]-T273:4.1f}C and {temperatures[-1]-T273:4.1f}C at {P} bar")
         for mix in bf_gases:
             Δp_g[mix] = []
             if mix == "NG":
@@ -1502,7 +1460,7 @@ def main():
             mean = (mx + mn)/2
             rng = (mx - mn)/2
             pct = 100*rng/mean
-            print(f"Δp {mix:5} {mean:9.4f} ±{rng:7.4f}  {pct:5.2f}%")
+            #print(f"Δp {mix:5} {mean:9.4f} ±{rng:7.4f}  {pct:5.2f}%")
     plt.title(f'Δp Blasius-fit Pressure drop - ratio of H2/NG values')
     plt.xlabel('Temperature (°C)')
     plt.ylabel('Δp Pressure drop  ratio wrt NG ')
@@ -1622,13 +1580,13 @@ def main():
     # Plot velocity ratio for pure hydrogen and natural gas
     T8C = T273 + 8
     v_ratio = get_v_ratio('H2',94,T8C) 
-    print(f"Velocity ratio {v_ratio:.3f} at 94 bar {T8C-T273:4.1f}°C")
+    #print(f"Velocity ratio {v_ratio:.3f} at 94 bar {T8C-T273:4.1f}°C")
    
     for T in [T230, T250, T3C, T25C, T50C]:
     
         v_ratio = [ get_v_ratio('H2',p,T) for p in pressures]        
         vr_max = max(v_ratio)
-        print(f"Velocity ratio min:{v_ratio[0]:.3f} max:{vr_max:.3f} at  {T-T273:4.1f}°C")
+        #print(f"Velocity ratio min:{v_ratio[0]:.3f} max:{vr_max:.3f} at  {T-T273:4.1f}°C")
         plt.plot(pressures, v_ratio, label=f"{T-T273:4.0f}°C")
     
     plt.title(f'Velocity ratio v(H2)/v(NG)  vs Pressure ')
