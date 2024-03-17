@@ -694,7 +694,7 @@ def print_viscosity(g, p, T):
     print(f"{g:15} {mm:6.3f}   {μ:8.5f} {visc_f.__name__}")
 
 
-def print_wobbe(g, T15C):
+def print_wobbe(plot_gases, g, T15C):
     """HHV and Wobbe much be in MJ/m³, but at 15 C and 1 atm, not p and T as given
     UK NTS WObbe limits from     https://www.nationalgas.com/data-and-operations/quality
     
@@ -708,39 +708,46 @@ def print_wobbe(g, T15C):
     highest = 51.41
     width = 51.41 - 47.20
     
-    # Wobbe is at STP: 15 C and 1 atm
-    ϱ_0 = get_density(g, Atm, T15C)
-    ϱ_air = get_density('Air', Atm, T15C)
-    
-    relative_ϱ = (ϱ_0/ϱ_air)
- 
-    wobbe_factor_ϱ = 1/np.sqrt(ϱ_0/ϱ_air)
-    
-    mv, hcmv, hc = get_Hc(g, T15C) 
+    print(f"\nHc etc. all at 15°C and 1 atm = {Atm} bar. Wobbe limit is  47.20 to 51.41 MJ/m³")
+    print(f"W_factor_ϱ =  1/(sqrt(ϱ/ϱ(air))) ")
+    print(f"{'gas':13} {'Hc(MJ/mol)':12} {'MV₀(m³/mol)':11} {'Hc(MJ/m³)':11}{'W_factor_ϱ':11} Wobbe(MJ/m³) ")
 
-    if relative_ϱ > 0.7:
-        too_light = f"Rϱ > 0.7 ({relative_ϱ:.3f} = {ϱ_0:.3f} kg/m³)"
+
+    for g in plot_gases:
+        # Wobbe is at STP: 15 C and 1 atm
+        ϱ_0 = get_density(g, Atm, T15C)
+        ϱ_air = get_density('Air', Atm, T15C)
         
-    # yeah, yeah: 'f' strings are great
-    if hc:
-        w = wobbe_factor_ϱ * hcmv
-        niceness = 100*(w - best)/width  # 100*w/best - 100
-        flag = f"{'nice':^8} {niceness:+.1f} %"
-        if w < lowest:
-            flag = f"{'LOW':^8}"
-        if w  > highest:
-            flag = f"{'HIGH':^8}"
+        relative_ϱ = (ϱ_0/ϱ_air)
+     
+        wobbe_factor_ϱ = 1/np.sqrt(ϱ_0/ϱ_air)
+        
+        mv, hcmv, hc = get_Hc(g, T15C) 
 
-        w = f"{w:>.5f}"
-        hc = f"{hc:^12.4f}"
-        hcmv = f"{hcmv:^11.4f}"
-    else:
-        w = f"{'-':^10}"
-        hc = f"{'-':^12}"
-        hcmv = f"{'-':^11}"
-        flag = f"{'  -            '}"
-    
-    print(f"{g:15} {hc} {mv:.7f} {hcmv}{wobbe_factor_ϱ:>11.5f}   {w} {flag} {too_light}")
+        if relative_ϱ > 0.7:
+            too_light = f"Rϱ > 0.7 ({relative_ϱ:.3f} = {ϱ_0:.3f} kg/m³)"
+            
+        # yeah, yeah: 'f' strings are great
+        if hc:
+            w = wobbe_factor_ϱ * hcmv
+            niceness = 100*(w - best)/width  # 100*w/best - 100
+            flag = f"{'nice':^8} {niceness:+.1f} %"
+            if w < lowest:
+                flag = f"{'LOW':^8}"
+            if w  > highest:
+                flag = f"{'HIGH':^8}"
+
+            w = f"{w:>.5f}"
+            hc = f"{hc:^12.4f}"
+            hcmv = f"{hcmv:^11.4f}"
+        else:
+            w = f"{'-':^10}"
+            hc = f"{'-':^12}"
+            hcmv = f"{'-':^11}"
+            flag = f"{'  -            '}"
+        
+        print(f"{g:15} {hc} {mv:.7f} {hcmv}{wobbe_factor_ϱ:>11.5f}   {w} {flag} {too_light}")
+    print("'nice' values range from -50% to +50% from the centre of the valid Wobbe range.")
 
 @memoize  
 def get_vapour_moles(g, t, oxidiser):
@@ -1093,6 +1100,22 @@ def print_fuel(g, s, oxidiser):
             print(f"{f:5}\t{nts[f]*100:8.5f} %{gas_data[f]['C_']:3}{gas_data[f]['H_']:3} {hc*1000:6.1f} kJ/mol ")
     print_gas(g, oxidiser) 
 
+def print_some_gas_data(plot_gases, P, dp=None):
+    # ignore P if dp (mbar) supplied
+    global T50C, T25C, T15C, T8C, T3C, T250, T230, T273
+
+    if dp:
+        P = Atm + dp/1000
+        pstr = f"P={dp:.1f} mbar above 1 atm, i.e. P={P:.5f} bar"
+    else:
+        pstr = f"P={P:.0f} bar" 
+        
+    print(f"\nDensity of gas (kg/m³) at {pstr}")
+    for T in [T8C, T15C]:
+        print(f"{'gas':13}{'Mw(g/mol)':6}  {'ϱ(kg/m³)':5}  {'μ(Pa.s)':5}    {'z (-)':5}      {'ϱ/μ(Mkg/sm)':5} T={T-T273:.1f}°C ")
+        for g in plot_gases:
+            print_density(g, P, T)
+        
 def style(mix):
     if mix in gas_data:
         return 'dashed'
@@ -1128,6 +1151,7 @@ def plot_kwargs(g):
 # ---------- ----------main program starts here---------- ------------- #
 def main():
     global visc_f
+    global T50C, T25C, T15C, T8C, T3C, T250, T230, T273
     
     program = sys.argv[0]
     stem = str(pl.Path(program).with_suffix(""))
@@ -1140,20 +1164,17 @@ def main():
         composition = gas_mixtures[mix]
         check_composition(mix, composition)
 
-    print_fuel('H2', "Hydrogen", 'dryAir')
-    print_fuel('NG', "NatGas at Fordoun NTS 20th Jan.2021", 'dryAir')
+    # print_fuel('H2', "Hydrogen", 'dryAir')
+    # print_fuel('NG', "NatGas at Fordoun NTS 20th Jan.2021", 'dryAir')
     
     dp = 40
-    ts = 25 # C
-    tp = 15 # C
-    t8 = 8 # C
-    t3 = 3 # C
+ 
     pressure =  Atm + dp/1000 # 1atm + 47.5 mbar, halfway between 20 mbar and 75 mbar
     T50C = T273 + 50 # K
-    T25C = T273 + ts # K
-    T15C = T273 + tp # K
-    T8C = T273 + t8 # K
-    T3C = T273 + t3 # K
+    T25C = T273 + 25 # K
+    T15C = T273 + 15 # K
+    T8C = T273 + 8 # K
+    T3C = T273 + 3 # K
     T250 = T273 -20 #  -20 C
     T230 = T273 -40 #  -40 C
 
@@ -1167,7 +1188,7 @@ def main():
      
         for PP in [1, 220]:
             #print(f"Viscosity of gas (kg/m³) at {T8C=} T={t8:.1f}°C and P={PP:.5f} bar")
-            print(f"{'gas':13} {'μ(Pa.s)':5}   T={t8:.1f}°C P={PP:.0f}")
+            print(f"{'gas':13} {'μ(Pa.s)':5}   T={T8C-T273:.1f}°C P={PP:.0f}")
             for visc_f in [linear_mix_rule, explog_mix_rule, hernzip_mix_rule]:
                 print_viscosity(g, PP, T3C)
 
@@ -1179,45 +1200,22 @@ def main():
         plot_gases.append(g)
     for g in ["H2", "CH4"]:
         plot_gases.append(g)
+    
+    if False:
+        print_some_gas_data(plot_gases, 0, 50)
+        print_some_gas_data(plot_gases, 20)
+        print_some_gas_data(plot_gases, 220)
+
+        print_wobbe(plot_gases,g, T15C)
+
+
+        print(f"\n[H2O][CO2] of fuel gas")
+        print(f"{'gas':13}{'Mw(g/mol)':6} {'Dew Pt':6}  {'C_':5}   {'H_':5}{'Hc(kJ/mol)':5}  fuel")
+        for g in ['H2', 'CH4', 'C2H6']:
+            print_fuelgas(g, 'Air')
+        for g in gas_mixtures:
+            print_fuelgas(g, 'Air')
         
-    high_pressure = 20
-    print(f"\nDensity of gas (kg/m³) at {T8C=} T={t8:.1f}°C and P={high_pressure:.5f} bar")
-    print(f"{'gas':13}{'Mw(g/mol)':6}  {'ϱ(kg/m³)':5}  {'μ(Pa.s)':5}    {'z (-)':5}      {'ϱ/μ(Mkg/sm)':5} T={t8:.1f}°C ")
-    for g in plot_gases:
-        print_density(g, high_pressure, T3C)
-
-    print(f"\nDensity of gas (kg/m³) at T={tp:.1f}°C and P={dp:.1f} mbar above 1 atm, i.e. P={pressure:.5f} bar")
-
-    print(f"{'gas':13}{'Mw(g/mol)':6}  {'ϱ(kg/m³)':5}  {'μ(Pa.s)':5}    {'z (-)':5}      {'ϱ/μ(Mkg/sm)':5} T={tp:.1f}°C ")
-    for g in plot_gases:
-        print_density(g, pressure, T15C)
-
-    print(f"\n{'gas':13}{'Mw(g/mol)':6}  {'ϱ(kg/m³)':5}  {'μ(Pa.s)':5}     {'z (-)':5}      {'ϱ/μ(Mkg/sm)':5} T={t8:.1f}°C ")
-    for g in plot_gases:
-        print_density(g, pressure, T8C)
-
-    dp = 55
-    pressure =  Atm + dp/1000
-    print(f"\nDensity of gas  (kg/m³) at T={t8:.1f}°C and P={dp:.1f} mbar above 1 atm, i.e. P={pressure:.5f} bar")
-    print(f"\n{'gas':13}{'Mw(g/mol)':6}  {'ϱ(kg/m³)':5}  {'μ(Pa.s)':5}     {'z (-)':5}      {'ϱ/μ(Mkg/sm)':5} T={8:.1f}°C ")
-    for g in plot_gases:
-        print_density(g, pressure, T8C)
-
-    print(f"\nHc etc. all at 15°C and 1 atm = {Atm} bar. Wobbe limit is  47.20 to 51.41 MJ/m³")
-    print(f"W_factor_ϱ =  1/(sqrt(ϱ/ϱ(air))) ")
-    print(f"{'gas':13} {'Hc(MJ/mol)':12} {'MV₀(m³/mol)':11} {'Hc(MJ/m³)':11}{'W_factor_ϱ':11} Wobbe(MJ/m³) ")
-    for g in plot_gases:
-        print_wobbe(g, T15C)
-     
-    print("'nice' values range from -50% to +50% from the centre of the valid Wobbe range.")
-
-    print(f"\n[H2O][CO2] of fuel gas")
-    print(f"{'gas':13}{'Mw(g/mol)':6} {'Dew Pt':6}  {'C_':5}   {'H_':5}{'Hc(kJ/mol)':5}  fuel")
-    for g in ['H2', 'CH4', 'C2H6']:
-        print_fuelgas(g, 'Air')
-    for g in gas_mixtures:
-        print_fuelgas(g, 'Air')
-
     export_η_table('Air')
     
     #- - - - - - - - - - - - - - - - - - - - - -- - - - - - - - - - -- - - - - - - - - - -
@@ -1545,7 +1543,7 @@ def main():
     plt.close()
 
     # Plot the compressibility  as a function of Pressure - - - - - - - - - - -
-    T = T273+8
+    T = T8C
     P= None
     plt.figure(figsize=(10, 6))
 
