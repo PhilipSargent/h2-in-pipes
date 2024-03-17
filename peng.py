@@ -1185,10 +1185,10 @@ def main():
 
     # Viscosity averaging function global - - - - - - - - - - -
     for g in ['NG', 'Groening', 'Tokyo', 'North Sea', 'UW']:
-     
+        print(" ")
         for PP in [1, 220]:
             #print(f"Viscosity of gas (kg/m³) at {T8C=} T={t8:.1f}°C and P={PP:.5f} bar")
-            print(f"{'gas':13} {'μ(Pa.s)':5}   T={T8C-T273:.1f}°C P={PP:.0f}")
+            print(f"{'':15} {'μ(Pa.s)':5}  T={T8C-T273:.1f}°C P={PP:.0f}")
             for visc_f in [linear_mix_rule, explog_mix_rule, hernzip_mix_rule]:
                 print_viscosity(g, PP, T3C)
 
@@ -1202,12 +1202,11 @@ def main():
         plot_gases.append(g)
     
     if False:
-        print_some_gas_data(plot_gases, 0, 50)
-        print_some_gas_data(plot_gases, 20)
+        print_some_gas_data(plot_gases, 0, 50) # 50 mbar
+        print_some_gas_data(plot_gases, 20) # 20 bar
         print_some_gas_data(plot_gases, 220)
 
         print_wobbe(plot_gases,g, T15C)
-
 
         print(f"\n[H2O][CO2] of fuel gas")
         print(f"{'gas':13}{'Mw(g/mol)':6} {'Dew Pt':6}  {'C_':5}   {'H_':5}{'Hc(kJ/mol)':5}  fuel")
