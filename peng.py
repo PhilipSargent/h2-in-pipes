@@ -159,7 +159,8 @@ def viscosity_actual(gas, T, P):
     vs = pow(T/t, power) * vs0 # at 1 atm
 
     return vs
-
+    
+@memoize   
 def viscosity_values(mix, T, P):
 
     values = {}
@@ -211,6 +212,7 @@ def do_flue_rules(mix, X_):
 @memoize
 def linear_mix_rule(mix, values):
     """Calculate the mean value of a property for a mixture
+    https://en.wikipedia.org/wiki/Viscosity_models_for_mixtures
     
     values: dict {gas1: v1, gas2: v2, gas3: v3 etc}
                  where gas1 is one of the component gases in the mix, and v1 is value for that gas
@@ -226,6 +228,8 @@ def linear_mix_rule(mix, values):
 @memoize
 def explog_mix_rule(mix, values):
     """Calculate the mean value of a property for a mixture
+    https://en.wikipedia.org/wiki/Viscosity_models_for_mixtures
+    This is the Arrhenius law for viscosity of mixtures of liquids
     
     values: dict {gas1: v1, gas2: v2, gas3: v3 etc}
                  where gas1 is one of the component gases in the mix, and v1 is value for that gas
@@ -244,6 +248,7 @@ def explog_mix_rule(mix, values):
 def hernzip_mix_rule(mix, values):
     """Calculate the mean value of a property for a mixture
     using the Herning & Zipper mixing rule
+    https://en.wikipedia.org/wiki/Viscosity_models_for_mixtures
     
     values: dict {gas1: v1, gas2: v2, gas3: v3 etc}
                  where gas1 is one of the component gases in the mix, and v1 is value for that gas
@@ -264,7 +269,9 @@ def hernzip_mix_rule(mix, values):
 
         
 def do_notwilke_rules(mix):
-    """Calculate the mean viscosity of the gas mixture"""
+    """Calculate the mean viscosity of the gas mixture, ignore T
+    https://en.wikipedia.org/wiki/Viscosity_models_for_mixtures
+    """
     vs_mix = 0
     composition = gas_mixtures[mix]
     for gas, x in composition.items():
@@ -328,8 +335,6 @@ def z_mixture_rules(mix, T):
             'b_mix': b_mix,
          }
     }
-
-
 
 
 def get_LMN(omega):
@@ -660,14 +665,16 @@ def print_fuelgas(g, oxidiser):
         dew_C = dew_point(g, oxidiser)
         print(f"{g:15} {mm:6.3f} {dew_C:5.3f} {c_:5.3f}   {h_:5.3f} {hc*1000:9.3f} {mff*100:8.4f} %")
     
-@memoize
+#@memoize
 def get_viscosity(g, p, T):
-
+    # NOT memoized because it uses global variable visc_f()
+    global visc_f
+    
     if g in gas_data:
         μ = viscosity_actual(g, T, p)
     else:
         values = viscosity_values(g, T, p)
-        μ = linear_mix_rule(g, values)
+        μ = visc_f(g, values)
     return  μ
 
 def print_density(g, p, T):
@@ -676,7 +683,15 @@ def print_density(g, p, T):
     μ =  get_viscosity(g, p, T)
     z =  get_z(g, p, T)
     print(f"{g:15} {mm:6.3f}  {ϱ:9.5f}   {μ:8.5f} {z:9.6f} {ϱ/μ:9.5f}")
- 
+
+def print_viscosity(g, p, T):
+    #print("\nViscosity mix rule: ",visc_f.__name__)
+
+    mm = do_mm_rules(g) # mean molar mass
+    μ =  get_viscosity(g, p, T)
+    print(f"{g:15} {mm:6.3f}   {μ:8.5f} {visc_f.__name__}")
+
+
 def print_wobbe(g, T15C):
     """HHV and Wobbe much be in MJ/m³, but at 15 C and 1 atm, not p and T as given
     UK NTS WObbe limits from     https://www.nationalgas.com/data-and-operations/quality
@@ -1110,6 +1125,8 @@ def plot_kwargs(g):
     return  {'color': color, 'linestyle': linestyle}
 # ---------- ----------main program starts here---------- ------------- #
 def main():
+    global visc_f
+    
     program = sys.argv[0]
     stem = str(pl.Path(program).with_suffix(""))
     fn={}
@@ -1143,6 +1160,17 @@ def main():
         # a, b, Tc, Pc = a_and_b(g, 1)
         # print(f"{g:8} {Tc=} {Pc=}")
 
+    # Viscosity averaging function global - - - - - - - - - - -
+    for g in ['NG', 'Groening', 'Tokyo', 'North Sea', 'UW']:
+     
+        for PP in [1, 220]:
+            #print(f"Viscosity of gas (kg/m³) at {T8C=} T={t8:.1f}°C and P={PP:.5f} bar")
+            print(f"{'gas':13} {'μ(Pa.s)':5}   T={t8:.1f}°C P={PP:.0f}")
+            for visc_f in [linear_mix_rule, explog_mix_rule, hernzip_mix_rule]:
+                print_viscosity(g, PP, T3C)
+
+    visc_f = linear_mix_rule
+    print("---")
     # Print the densities at 8 C and 15 C  - - - - - - - - - - -
     plot_gases = []
     for g in display_gases:
