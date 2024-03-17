@@ -86,7 +86,9 @@ gas_mixtures = {
     #'Air':  {'N2': 0.761749, 'O2': 0.204355, 'CO2': 0.00039, 'Ar': 0.009112, 'He': 5.0e-06, 'H2O': 0.024389} # https://www.thoughtco.com/chemical-composition-of-air-604288
     # But ALSO adding 2.5% moisture to the air and normalising
     
-    'O2':  { 'O2': 1.0}, # for the 'oxidiser' list
+    'O2':  { 'O2': 1.0}, # for the 'oxidiser' list, also test for gas 'mix'
+    'HeOx':  { 'O2': 0.2, 'He': 0.8}, # Heliox, for testing viscosity algorithms
+    'ArH2':  { 'Ar': 0.2, 'H2': 0.4, 'He': 0.4}, # Argon-H2, for testing viscosity algorithms
 }
 
 """reduce the lower limit for Wobbe Index from 47.2 MJ/m³  to 46.50 MJ/m³ was approved by HSE. 

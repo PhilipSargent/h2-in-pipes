@@ -147,9 +147,23 @@ def density_actual(gas, T, P):
     return ϱ
 
 @memoize   
+def viscosity_H2(T, P):
+    """Higher accuracy viscosity just for hydrogen because of its importance to this 
+    project.
+    C. Li, W. Jia, and X. Wu, “Temperature prediction for high pressure high temperature condensate gas flow through chokes,” Energies, vol. 5, no. 3, pp. 670–682, 2012, doi: 10.3390/en5030670.
+    """
+    # Equation used for other gases:
+    vs0, t, power  = gas_data['H2']['Vs'] # at T=t 
+    vs = pow(T/t, power) * vs0 # at 1 atm
+    return vs
+    
+@memoize   
 def viscosity_actual(gas, T, P):
     """Calculate viscosity for a pure gas at temperature T and pressure = P
     """
+    if gas == 'H2':
+        return viscosity_H2(T, P)
+        
     if len(gas_data[gas]['Vs']) == 3:
         vs0, t, power  = gas_data[gas]['Vs'] # at T=t  
     else:
@@ -269,20 +283,78 @@ def hernzip_mix_rule(mix, values):
     
     return value_mix
 
-        
-def do_notwilke_rules(mix):
-    """Calculate the mean viscosity of the gas mixture, ignore T
-    https://en.wikipedia.org/wiki/Viscosity_models_for_mixtures
-    """
-    vs_mix = 0
-    composition = gas_mixtures[mix]
-    for gas, x in composition.items():
-        # Linear mixing rule for volume factor
-        vs, _ = gas_data[gas]['Vs'] # ignore T, so value for hexane will be bad
-        vs_mix += x * vs
+@memoize
+def M_terms(i, j):
+    """Dimensionless constant formed from pairwise interactions of the 
+    component gases. Independent of T and P
     
-    return vs_mix
+    This is not symmetric in (i, j): it divides i  by j
+    """
+    mi = gas_data[i]['Mw']
+    mj = gas_data[j]['Mw']
 
+    denom = np.sqrt(8 * (1 + mi/mj))
+    M_bit = np.power(mj/mi, 1/4)
+    return denom, M_bit
+
+@memoize
+def Φ(i, j, μi, μj):
+    """Dimensionless constant formed from pairwise interactions of the 
+    component gases
+    Depends on viscosity so deopends on T and P
+    
+    Equation (4) in Arrhenius & Buker (2022)
+    """
+    if i == j:
+        return None
+    denom, M_bit = M_terms(i, j)
+    μ_term = np.sqrt(μi/μj)
+    ϕ_ij = np.power((1 + μ_term * M_bit), 2) / denom
+    #print (i, j, f"{μi:.4f} {μj:.4f} {ϕ_ij:.4f}")
+    #print (i, j,f"  {ϕ_ij=:.4f}")
+    return ϕ_ij
+        
+@memoize
+def wilke_mix_rule(mix, values):
+    """Calculate the mean value of a property for a mixture
+    using the Wilke mixing rule. The Carr  (hernzip) rule is a simplified version of this
+    
+    The input viscosity values depend on P and T so vary a lot, but @memoize is valid
+    
+    Many typos in the literature.
+    https://idaes-pse.readthedocs.io/en/stable/explanations/components/property_package/general/transport_properties/viscosity_wilke.html is wrong
+    
+    but Davidson is correct
+    and the Arrhenius refactors Davidson'seqn.
+    
+    I have checked this, the Henning commnetd-out line dioes indeed reproduce the 
+    separate calcualtion of the Henning average.
+    
+    values: dict {gas1: v1, gas2: v2, gas3: v3 etc}
+                 where gas1 is one of the component gases in the mix, and v1 is value for that gas
+    """
+    composition = gas_mixtures[mix]
+    μ = 0
+    for i, xi in composition.items():
+        μi = values[i]
+        dn = 0
+        for j, xj in composition.items():
+            if i == j:
+                continue
+            μj = values[j]
+            ϕ_ij = Φ(i, j, μi, μj)
+            #ϕ_ij =  np.sqrt(gas_data[j]['Mw']/gas_data[i]['Mw']) # Herning simplification
+            t = xj * ϕ_ij # Davidson incorrectc too, copied into in Arrhenius & Buker
+            dn += t
+            #print (f"    {xj:.2f} * ϕ_ij  {t:.4f} ")
+        
+        num_i = xi * μi
+        denom_i = xi + dn
+        μ_inc = num_i /denom_i
+        μ += μ_inc 
+        #print (f"{num_i=:.4f} {denom_i=:.4f} {μ_inc=:.4f}")
+    return  μ
+    
 @memoize
 def z_mixture_rules(mix, T):
     """
@@ -691,7 +763,7 @@ def print_viscosity(g, p, T):
 
     mm = do_mm_rules(g) # mean molar mass
     μ =  get_viscosity(g, p, T)
-    print(f"{g:15} {mm:6.3f}   {μ:8.5f} {visc_f.__name__}")
+    print(f"{g:15} {mm:6.5f}   {μ:8.5f} {visc_f.__name__}")
 
 
 def print_wobbe(plot_gases, g, T15C):
@@ -1184,17 +1256,20 @@ def main():
         # print(f"{g:8} {Tc=} {Pc=}")
 
     # Viscosity averaging function global - - - - - - - - - - -
-    for g in ['NG', 'Groening', 'Tokyo', 'North Sea', 'UW']:
+
+    #for g in ['NG', 'Groening', 'Tokyo', 'North Sea', 'UW']:
+    for g in ['HeOx', 'NG', 'ArH2']:
         print(" ")
         for PP in [1, 220]:
             #print(f"Viscosity of gas (kg/m³) at {T8C=} T={t8:.1f}°C and P={PP:.5f} bar")
-            print(f"{'':15} {'μ(Pa.s)':5}  T={T8C-T273:.1f}°C P={PP:.0f}")
-            for visc_f in [linear_mix_rule, explog_mix_rule, hernzip_mix_rule]:
+            print(f"{'':14} {'Mw(g/mol)':8} {'μ(Pa.s)':5}  T={T8C-T273:.1f}°C P={PP:.0f}")
+            for visc_f in [linear_mix_rule, explog_mix_rule, hernzip_mix_rule, wilke_mix_rule]:
                 print_viscosity(g, PP, T3C)
 
     visc_f = linear_mix_rule
     print("---")
     # Print the densities at 8 C and 15 C  - - - - - - - - - - -
+    
     plot_gases = []
     for g in display_gases:
         plot_gases.append(g)
