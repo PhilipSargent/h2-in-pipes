@@ -248,6 +248,8 @@ def explog_mix_rule(mix, values):
 def hernzip_mix_rule(mix, values):
     """Calculate the mean value of a property for a mixture
     using the Herning & Zipper mixing rule
+    For viscosity, thsi is the Car model:
+    the momentum-weighted sum of partial viscosities
     https://en.wikipedia.org/wiki/Viscosity_models_for_mixtures
     
     values: dict {gas1: v1, gas2: v2, gas3: v3 etc}
@@ -529,31 +531,31 @@ def get_density(mix, p, T):
     return ϱ
 
 @memoize
-def get_μ_ratio(g, p, T):
+def get_μ_ratio(g, p, T, g2='NG'):
     '''Used by moody.py but not in this file'''
-    μ_ratio = get_viscosity(g, p, T)/get_viscosity('NG', p, T)
+    μ_ratio = get_viscosity(g, p, T)/get_viscosity(g2, p, T)
     return μ_ratio
     
 @memoize
-def get_ϱ_ratio(g, p, T):
+def get_ϱ_ratio(g, p, T, g2='NG'):
     '''Used by moody.py but not in this file'''
-    ϱ_ratio = get_density(g, p, T)/get_density('NG', p, T)
+    ϱ_ratio = get_density(g, p, T)/get_density(g2, p, T)
     return ϱ_ratio
     
 
-def get_v_ratio(g, p, T):
+def get_v_ratio(g, p, T, g2='NG'):
     T25C = 273.15 + 25
     _, _, hc_g = get_Hc(g, T25C) # molar_volume, hc/molar_volume, hc = get_Hc(g, T)
-    _, _, hc_ng = get_Hc('NG', T25C)
+    _, _, hc_ng = get_Hc(g2, T25C)
     hhvr = hc_ng / hc_g
     v_ratio = hhvr * pz(T, p,'NG')/pz(T, p, g)
     #print(f"{T=:.0f} {p=:8.4f} {v_ratio=:.4f} ")
     return v_ratio
 
 @memoize
-def get_Δp_ratio_br(g, p, T):
+def get_Δp_ratio_br(g, p, T, g2='NG'):
     # Only used to calc the ratios of H2:NG in the Blasius regime
-    b_ratio = get_blasius_factor(g, p, T) / get_blasius_factor('NG', p, T)
+    b_ratio = get_blasius_factor(g, p, T) / get_blasius_factor(g2, p, T)
     v_ratio = get_v_ratio(g, p, T)
     Δp_ratio = b_ratio * pow(v_ratio, 7/4)
     
