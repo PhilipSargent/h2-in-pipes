@@ -153,10 +153,19 @@ def viscosity_H2(T, P):
     C. Li, W. Jia, and X. Wu, “Temperature prediction for high pressure high temperature condensate gas flow through chokes,” Energies, vol. 5, no. 3, pp. 670–682, 2012, doi: 10.3390/en5030670.
     """
     # Equation used for other gases:
-    vs0, t, power  = gas_data['H2']['Vs'] # at T=t 
-    vs = pow(T/t, power) * vs0 # at 1 atm
-    return vs
+    vs0, t0, power  = gas_data['H2']['Vs'] # at T=t 
+    vs = pow(T/t0, power) * vs0 # at 1 atm
+    #return vs
     
+    ϱ = P * gas_data['H2']['Mw'] / (peng_robinson(T, P, 'H2') * R * T)
+    
+    # np.log() is natural log. np.log10() is log base 10.
+    A = np.exp(5.73 + np.log(ϱ) + 65.0 * np.power(ϱ, 3/2) - 6e-6 * np.exp(135*ϱ))
+     
+    B = t0 *(10 + 8*(np.power(ϱ/0.07,6) - np.power(ϱ/0.07,3/2)) - 18 * np.exp(-59*np.power(ϱ/0.07,3)))
+    print(f"H2   {P=:3.1f} {T=:3.0f} {A:10.5f} {A:10.5f}")
+    return vs
+     
 @memoize   
 def viscosity_actual(gas, T, P):
     """Calculate viscosity for a pure gas at temperature T and pressure = P
@@ -176,7 +185,8 @@ def viscosity_actual(gas, T, P):
     
 @memoize   
 def viscosity_values(mix, T, P):
-
+    if not P:
+        print(mix,  T, P)
     values = {}
     composition = gas_mixtures[mix]
     for gas, x in composition.items():
@@ -1418,7 +1428,6 @@ def main():
     # Plot for natural gas compositions. Now using correct temperature dependence of 'a'
     ϱ_ng = {}
     μ_ng = {}
-
     for mix in plot_gases:
         if mix in gas_data:
             continue
@@ -1457,6 +1466,7 @@ def main():
     # Viscosity plot  EXPTL values at 298K - - - - - - - - - - -
 
     P = pressure
+
     μ_g = {}
     for mix in plot_gases:
         μ_g[mix] = []
@@ -1615,7 +1625,7 @@ def main():
 
     plt.savefig(fn["ϱ"])
     plt.close()
-
+ 
     # Plot the compressibility  as a function of Pressure - - - - - - - - - - -
     T = T8C
     P= None
@@ -1758,14 +1768,13 @@ def main():
 
     plt.figure(figsize=(10, 5))
 
-
     bf_g = {}
 
     for g in bf_gases:
         bf_g[g] = []
 
         for p in pressures:
-            bf = get_viscosity(g,P,T)
+            bf = get_viscosity(g,p,T)
             bf_g[g].append(bf)
 
         plt.plot(pressures , bf_g[g], label=g, **plot_kwargs(g))
