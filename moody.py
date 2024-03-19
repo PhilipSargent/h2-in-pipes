@@ -437,7 +437,7 @@ def plot_pt_diagram(title, filename, plot="loglog", fff=colebrook, gradient=Fals
         if not w2:
             plt.xlabel('Reynolds number Re for natural gas')
             if f == p2_h2_ratio:
-                plt.ylabel('Pressure drop ratio ')
+                plt.ylabel('Pressure gradient ratio ')
             else:
                 plt.ylabel('Darcy-Weisbach friction factor ratio ')
         else:
@@ -515,7 +515,7 @@ def plot_diagram(title, filename, plot="loglog", fff=colebrook, gradient=False, 
         #plt.ylim(-20,150)
         plt.xlabel('Reynolds number Re for natural gas')
         if f == p2_h2_ratio:
-            plt.ylabel('Pressure drop ratio ')
+            plt.ylabel('Pressure gradient ratio ')
         else:
             plt.ylabel('Darcy-Weisbach friction factor ratio ')
     if w2:
@@ -568,7 +568,7 @@ plot_diagram('', 'moody_afzal.png', plot="loglog", fff=afzal_mod)
 
 plot_diagram('$f$  ratio between H2 and NG', 'h2_ratio.png', plot="linlog", fff=h2_ratio, h2=True)
 
-plot_diagram('Pressure drop ratio between H2 and NG', 'p2_h2_ratio.png', plot="linlog", fff=p2_h2_ratio, h2=True)
+plot_diagram('Pressure gradient ratio between H2 and NG', 'p2_h2_ratio.png', plot="linlog", fff=p2_h2_ratio, h2=True)
 
 plot_diagram('Ratio of compressor work between H2 and NG', 'w2_h2_ratio.png', plot="linlog", fff=w2_h2_ratio, w2=True)
 
@@ -581,7 +581,7 @@ reynolds = np.logspace(2.4, 11.0, 1000) # 10^7.7 = 5e7
 relative_roughness_values = [1e-5] # not used
 
 # This re-sets global variables P, T
-plot_pt_diagram('Pressure drop ratio between H2 and NG', 'p2_h2_ratio_pt.png', plot="linlog", fff=p2_h2_ratio)
+plot_pt_diagram('Pressure gradient ratio between H2 and NG', 'p2_h2_ratio_pt.png', plot="linlog", fff=p2_h2_ratio)
 plot_pt_diagram('Ratio of compressor work between H2 and NG', 'w2_h2_ratio_pt.png', plot="linlog", fff=w2_h2_ratio, w2=True)
 # so reset them afterwards
 T = T250

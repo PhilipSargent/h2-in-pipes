@@ -10,11 +10,20 @@ import sonntag as st
 # from scipy.optimize import newton_raphson
 
 from cycler import cycler
-from gas_data import gas_data, gas_mixtures,gas_mixture_properties, enrich, air_list, k_ij
+from gas_data import gas_data, gas_mixtures, gas_mixture_properties, ng_gases, enrich, air_list, k_ij
 from peng_utils import memoize
 
 """This code written Philip Sargent, starting in December 2023, by  to support
 a paper on the replacement of natural gas in the UK distribution grid with hydrogen.
+
+THIS IS NOT TO BE USED FOR ENGINEERING DESIGN
+
+The equation of state, mixing rules and viscosity models for the gases are "cartoon"
+versions of the real equations that should be used where real plant is being 
+designed and real human safety is at risk. 
+For engineering design use the GERG-2008 equation of state which is under preparation 
+for adoption as an international standard (ISO 20765-2 und ISO 20765-3).
+See https://pubs.acs.org/doi/10.1021/je300655b
 
 For general information, commercial natural gas typically contains 85 to 98 percent methane, with the remainder mainly nitrogen and ethane, and has a calorific value of approximately 38 megajoules (MJ) per cubic metre
 
@@ -233,14 +242,25 @@ def viscosity_H2(T, P):
     # print(f"H2   {P=:3.1f} {T-T273:6.1f} {ϱ=:0.4f} {μ=:10.5f} {vs_1=:10.5f} {Δvs=:10.5f} {Δvs_1=:10.5f} ")
     return μ
     
-     
+@memoize   
+def viscosity_ng(μ, T, P):
+    """Using gas industry approx. for natural gas mixtures"""
+    vs0 = μ
+    a2 = -0.00002207 # /K.bar
+    a3 = 0.00434531 # /bar
+    vs2 = a2 * 13 * P * (T-T273)
+    vs3 = a3 * 13 * P
+    vs = vs0 +   vs2 + vs3
+    #print(f"{T-T273:.1f} {P=:.0f} {vs2=:.5f} {vs3=:.5f} {vs0=:.5f}")
+    return vs
+    
 @memoize   
 def viscosity_actual(gas, T, P, force=False):
     """Calculate viscosity for a pure gas at temperature T and pressure = P
     """
     if not force and gas == 'H2':
         return viscosity_H2(T, P)
-        
+
     if len(gas_data[gas]['Vs']) == 3:
         vs0, t, power  = gas_data[gas]['Vs'] # at T=t  
     else:
@@ -823,7 +843,7 @@ def print_fuelgas(g, oxidiser):
         print(f"{g:15} {mm:6.3f} {dew_C:5.3f} {c_:5.3f}   {h_:5.3f} {hc*1000:9.3f} {mff*100:8.4f} %")
     
 #@memoize
-def get_viscosity(g, p, T):
+def get_viscosity(g, P, T):
     # NOT memoized because it uses global variable visc_f()
     global visc_f
     if 'visc_f' not in locals():
@@ -831,10 +851,13 @@ def get_viscosity(g, p, T):
         visc_f = set_mix_rule()
     
     if g in gas_data:
-        μ = viscosity_actual(g, T, p)
+        μ = viscosity_actual(g, T, P)
     else:
-        values = viscosity_values(g, T, p)
+        values = viscosity_values(g, T, P)
         μ = visc_f(g, values)
+        
+    if g in ng_gases:
+        μ = viscosity_ng(μ, T, P)
     return  μ
 
 def print_density(g, p, T):
@@ -1815,29 +1838,51 @@ def main():
 
     # Plot viscosity as a function of pressure - looking for bugs
     pressures = np.linspace(0.001, 220, 100)  # bar
-    T = T273+25
+    for g in ['NG','H2']:
+        plt.figure(figsize=(10, 5))
 
-    plt.figure(figsize=(10, 5))
+        mu_g = {}
+  
+        for T in [T50C, T25C, T8C, T250,T230]:
+            mu_g[g] = []
+            for p in pressures:
+                mu = get_viscosity(g,p,T)
+                mu_g[g].append(mu)
 
-    bf_g = {}
+            plt.plot(pressures , mu_g[g], label=f"{g} {T-T273:.0f}°C")
 
-    for g in bf_gases:
-        bf_g[g] = []
+        plt.title(f'Viscosity vs Pressure ')
+        plt.xlabel('Pressure (bar)')
+        plt.ylabel('Dynamic Viscosity (μPa.s)')
+        plt.legend()
+        plt.grid(True)
 
-        for p in pressures:
-            bf = get_viscosity(g,p,T)
-            bf_g[g].append(bf)
+        plt.savefig(f"peng_{g}μ_p.png")
+        plt.close()
 
-        plt.plot(pressures , bf_g[g], label=g, **plot_kwargs(g))
+    # Plot viscosity as a function of temp - looking for bugs
+    temps = np.linspace(-50, 50, 100)  # bar
+    for g in ['NG','H2']:
+        plt.figure(figsize=(10, 5))
 
-    plt.title(f'Viscosity vs Pressure at  {T-T273:4.1f}°C')
-    plt.xlabel('Pressure (bar)')
-    plt.ylabel('Dynamic Viscosity (μPa.s)')
-    plt.legend()
-    plt.grid(True)
+        mu_g = {}
+  
+        for P in [220, 150,30,1,0.01]:
+            mu_g[g] = []
+            for T in temps:
+                mu = get_viscosity(g,P,T+T273)
+                mu_g[g].append(mu)
 
-    plt.savefig("peng_μ_p.png")
-    plt.close()
+            plt.plot(temps , mu_g[g], label=f"{g} {P:.0f} bar")
+
+        plt.title(f'Viscosity vs Temperature ')
+        plt.xlabel('Temperature (°C)')
+        plt.ylabel('Dynamic Viscosity (μPa.s)')
+        plt.legend()
+        plt.grid(True)
+
+        plt.savefig(f"peng_{g}μ_T.png")
+        plt.close()
 
     # Plot density as a function of pressure - looking for bugs
     pressures = np.linspace(0.001, 100, 100)  # bar

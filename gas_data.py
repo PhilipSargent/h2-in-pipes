@@ -91,6 +91,9 @@ gas_mixtures = {
     'ArH2':  { 'Ar': 0.2, 'H2': 0.4, 'He': 0.4}, # Argon-H2, for testing viscosity algorithms
 }
 
+ng_gases = ['NG', 'Groening', 'AHBJ', 'Tokyo', 'Biomethane', '10C2-10N', '7C2-2N', 'mix6',
+    'NTS79', '11D', 'Algerian', 'North Sea' ]
+    
 """reduce the lower limit for Wobbe Index from 47.2 MJ/m³  to 46.50 MJ/m³ was approved by HSE. 
 This shall enter into force from 6 April 2025
 "Gas Ten Year Statement December 2023"
