@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pathlib as pl
 import sys
+import warnings
 
 import sonntag as st
 
@@ -42,7 +43,6 @@ Atm = 1.01325 # bar
 T273 = 273.15 # K
 
 # gas_data now imported from a separate file. It is initialised on import.
-
 
 # We memoize some functions so that they do not get repeatedly called with
 # the same arguments. Yet still be retain a more obvius way of writing the program.
@@ -146,31 +146,99 @@ def density_actual(gas, T, P):
     ϱ = P * gas_data[gas]['Mw'] / (peng_robinson(T, P, gas) * R * T)
     return ϱ
 
+@memoize  
+def μ_ϱ_gradient():
+    """Should only get run once, depsite being deeply nested"""
+    T25C = T273 + 25
+    μ_1 = viscosity_actual('H2', T25C, Atm, force=True) # STP
+    μ_100 = 9.1533 # microPa.s
+
+    ϱ_1 = get_density('H2',Atm, T25C)
+    ϱ_100 = get_density('H2',100, T25C)
+    gradient = (μ_100 - μ_1) / (ϱ_100 - ϱ_1) # microPa.s / kgm^-3
+    # print(f"μ_ϱ_gradient {μ_1=:0.4f} {ϱ_1=:0.4f} {gradient}")
+    return μ_1, ϱ_1, gradient
+
 @memoize   
 def viscosity_H2(T, P):
     """Higher accuracy viscosity just for hydrogen because of its importance to this 
     project.
+    
+    
+    So use "present correlation" Table 4:
+    valid: T:100 to 990 K, for 0.1 to 220 Mpa (1 to 2,200 bar)
+    
     C. Li, W. Jia, and X. Wu, “Temperature prediction for high pressure high temperature condensate gas flow through chokes,” Energies, vol. 5, no. 3, pp. 670–682, 2012, doi: 10.3390/en5030670.
     """
-    # Equation used for other gases:
+    @memoize  
+    def AB(ϱ):
+        warnings.filterwarnings("error")
+        # our function gives density in kg/m^3
+        # assume Li et al want g/cc
+        ϱ = ϱ /1000
+
+        try:
+            A = np.exp(5.73 + np.log(ϱ) + 65.0 * np.power(ϱ, 3/2) - 6e-6 * np.exp(135*ϱ))
+        except RuntimeWarning:
+            print('Runtime Warning')
+            print(f"H2   {P=:3.1f} {T=:3.0f} {ϱ=:0.4e}  {vs=:10.5f}  ")
+            A = 0
+        # np.log() is natural log. np.log10() is log base 10.
+        # We don't know what units Li et al. are using for density.
+         
+        B = 1 *(10 + 8*(np.power(ϱ/0.07,6) - np.power(ϱ/0.07,3/2)) - 18 * np.exp(-59*np.power(ϱ/0.07,3)))      
+        warnings.resetwarnings()
+        return A, B
+        
+    @memoize  
+    def ϱ_H2_g_cc(P,T):
+        # P is in bar for the density calc.
+        # we know the result is correct because we have checked it against data,
+        # density ~ 100x more than 1 bar at 100 bar etc.
+        ϱ = P * gas_data['H2']['Mw'] / (peng_robinson(T, P, 'H2') * R * T)
+        return ϱ
+        
+
+    @memoize  
+    def Δμ_linear(ϱ):
+        """Linear fit to REFPROP8 at 100 bar (10MPa) and 25C at 9.1533 microPa s
+        """
+        μ_1, ϱ_1, g = μ_ϱ_gradient()
+        
+        μ =  μ_1 + g * (ϱ - ϱ_1)
+        Δμ = μ - μ_1
+        return Δμ
+        
+    @memoize  
+    def Δvs_H2(ϱ):
+        A, B = AB(ϱ)
+        Δvs = A * np.exp(B/T) # this is far too large, by a factor 
+        # Assume undocumented units issue in published paper:
+        Δvs = Δvs /10
+        return Δvs
+        
+    # Equation as used for other gases to get vx0 for H2
     vs0, t0, power  = gas_data['H2']['Vs'] # at T=t 
-    vs = pow(T/t0, power) * vs0 # at 1 atm
-    #return vs
+    vs_1 = pow(T/t0, power) * vs0 # at 1 atm
     
-    ϱ = P * gas_data['H2']['Mw'] / (peng_robinson(T, P, 'H2') * R * T)
+    ϱ = ϱ_H2_g_cc(P,T)
+    ϱ_1 = ϱ_H2_g_cc(Atm,T) # at 1 bar
     
-    # np.log() is natural log. np.log10() is log base 10.
-    A = np.exp(5.73 + np.log(ϱ) + 65.0 * np.power(ϱ, 3/2) - 6e-6 * np.exp(135*ϱ))
-     
-    B = t0 *(10 + 8*(np.power(ϱ/0.07,6) - np.power(ϱ/0.07,3/2)) - 18 * np.exp(-59*np.power(ϱ/0.07,3)))
-    print(f"H2   {P=:3.1f} {T=:3.0f} {A:10.5f} {A:10.5f}")
-    return vs
+    Δvs = Δvs_H2(ϱ)
+    Δvs_1 = Δvs_H2(ϱ_1)
+    vs = vs_1 + Δvs - Δvs_1
+   
+    Δμ =  Δμ_linear(ϱ) 
+    μ = Δμ + vs_1
+    # print(f"H2   {P=:3.1f} {T-T273:6.1f} {ϱ=:0.4f} {μ=:10.5f} {vs_1=:10.5f} {Δvs=:10.5f} {Δvs_1=:10.5f} ")
+    return μ
+    
      
 @memoize   
-def viscosity_actual(gas, T, P):
+def viscosity_actual(gas, T, P, force=False):
     """Calculate viscosity for a pure gas at temperature T and pressure = P
     """
-    if gas == 'H2':
+    if not force and gas == 'H2':
         return viscosity_H2(T, P)
         
     if len(gas_data[gas]['Vs']) == 3:
@@ -232,7 +300,12 @@ def do_flue_rules(mix, X_):
         return X_mix/ff
    
     return 0
-    
+
+def set_mix_rule():
+    global visc_f
+    visc_f = wilke_mix_rule
+    return visc_f
+
 @memoize
 def linear_mix_rule(mix, values):
     """Calculate the mean value of a property for a mixture
@@ -753,6 +826,9 @@ def print_fuelgas(g, oxidiser):
 def get_viscosity(g, p, T):
     # NOT memoized because it uses global variable visc_f()
     global visc_f
+    if 'visc_f' not in locals():
+        #print("UNDEFINED viscosity mean value algorithm, using Wilke")
+        visc_f = set_mix_rule()
     
     if g in gas_data:
         μ = viscosity_actual(g, T, p)
@@ -1276,7 +1352,7 @@ def main():
             for visc_f in [linear_mix_rule, explog_mix_rule, hernzip_mix_rule, wilke_mix_rule]:
                 print_viscosity(g, PP, T3C)
 
-    visc_f = linear_mix_rule
+    visc_f = wilke_mix_rule
     print("---")
     # Print the densities at 8 C and 15 C  - - - - - - - - - - -
     
@@ -1640,31 +1716,6 @@ def main():
         Z = [peng_robinson(T, p, g) for p in pressures]
         plt.plot(pressures, Z, label=txt, **plot_kwargs(g))
 
-
-    # Plot for natural gas compositions. Now using correct temperature dependence of 'a'
-    # ϱ_ng = {}
-    # μ_ng = {}
-
-    # for mix in gas_mixtures:
-        # mm = do_mm_rules(mix) # mean molar mass
-        # ϱ_ng[mix] = []
-        # μ_ng[mix] = []
-
-        # Z_ng = []
-        # for p in pressures:
-            # # for Z, the averaging across the mixture (a, b) is done before the calc. of Z
-            # constants = z_mixture_rules(mix, T)
-            # a = constants[mix]['a_mix']
-            # b = constants[mix]['b_mix']
-            # Z_mix = solve_for_Z(T, p, a, b)
-            # Z_ng.append(Z_mix)
-            
-            # # For density, the averaging across the mixture (Mw) is done before the calc. of ϱ
-            # ϱ_mix = p * mm / (Z_mix * R * T)
-            # ϱ_ng[mix].append(ϱ_mix)
-
-        # plt.plot(pressures , Z_ng, label=mix, **plot_kwargs(mix))
-
     plt.title(f'Z  Compressibility Factor vs Pressure at {T-T273:4.1f}°C')
     plt.xlabel('Pressure (bar)')
     plt.ylabel('Z Compressibility Factor')
@@ -1763,7 +1814,7 @@ def main():
     plt.close()
 
     # Plot viscosity as a function of pressure - looking for bugs
-    pressures = np.linspace(0, 80, 100)  # bar
+    pressures = np.linspace(0.001, 220, 100)  # bar
     T = T273+25
 
     plt.figure(figsize=(10, 5))
@@ -1789,7 +1840,7 @@ def main():
     plt.close()
 
     # Plot density as a function of pressure - looking for bugs
-    pressures = np.linspace(0, 100, 100)  # bar
+    pressures = np.linspace(0.001, 100, 100)  # bar
     T = T273+25
 
     plt.figure(figsize=(10, 6))
