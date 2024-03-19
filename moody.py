@@ -10,7 +10,7 @@ import warnings
 
 from scipy.interpolate import interp1d
 from peng_utils import memoize
-from peng import get_v_ratio, get_Δp_ratio_br, get_ϱ_ratio, get_μ_ratio, get_viscosity, Atm, T273
+from peng import get_v_ratio, get_Δp_ratio_br, get_ϱ_ratio, get_μ_ratio, get_viscosity, Atm, T273, set_mix_rule
 
 # We memoize some functions so that they do not get repeadtedly called with
 # the same arguments. Yet still be retain a more obvius way of writing the program.
@@ -25,6 +25,8 @@ T8C = T273 + 3 # 3 degrees C
 T = T8C # default temp
 P = Atm + 40/1000 # 40 mbar default pressure
 
+# Set the default mixture rule for viscosities in a mixed gas
+visc_f = set_mix_rule()
 
 print(f"Intermittent-Blasius factor: {ib_factor:.3f}")
 
