@@ -128,6 +128,8 @@ def check_composition(mix, composition, n=0):
             print(f"######### BAD gas mixture '{mix}', molar fractions add up to {x} !!!")
             
         # Normalising is not done exactly, but with rounded numbers to 6 places of decimals.
+        for g in gas_mixtures[mix]:
+            print(f"{g:9}: {gas_mixtures[mix][g]*100:7.3f} %")
         print(f"Stated:\n   '{mix}': {gas_mixtures[mix]},") 
         for g in gas_mixtures[mix]:
             gas_mixtures[mix][g] = float(f"{gas_mixtures[mix][g]/norm:.6f}")
@@ -858,7 +860,7 @@ def get_viscosity(g, P, T, visc_f):
         μ = viscosity_ng(μ, T, P)
     return  μ
 
-def print_density(g, p, T):
+def print_density(g, p, T, visc_f):
     ϱ = get_density(g, p, T)
     mm = do_mm_rules(g) # mean molar mass
     μ =  get_viscosity(g, p, T, visc_f)
@@ -1358,15 +1360,27 @@ def main():
 
     display_gases = ["NG"]   
 
+    # Natural gases - print in order of density
+    T=T8C
+    print(f"{'gas':13}{'Mw(g/mol)':6}   {'ϱ(kg/m³)':5}   {'μ(Pa.s)':5}   {'z (-)':5}      {'ϱ/μ(Mkg/sm)':5} T={T-T273:.1f}°C P=1 atm")
+    ϱ={}
+    for g in ng_gases:
+        ϱ[g] =  get_density(g, Atm, T)
+     # Sort by value
+    ϱ = dict(sorted(ϱ.items(), key=lambda item: item[1]))
+    for g in ϱ:
+        print_density(g, Atm, T8C, wilke_mix_rule)
+        
     # Viscosity averaging function global - - - - - - - - - - -
 
-    for g in ['NG', 'Groening', 'Tokyo', 'North Sea', 'UW', 'HeOx','ArH2' ]:
-        print(" ")
-        for PP in [1, 220]:
-            print(f"Viscosity of gas (kg/m³) at {T8C=} T={T8C-T273:.1f}°C and P={PP:.5f} bar")
-            print(f"{'':14} {'Mw(g/mol)':8} {'μ(Pa.s)':5}  T={T8C-T273:.1f}°C P={PP:.0f}")
-            for visc_f in [linear_mix_rule, explog_mix_rule, hernzip_mix_rule, wilke_mix_rule]:
-                print_viscosity(g, PP, T3C,visc_f)
+    if False:
+        for g in ['NG', 'Groening', 'NoGas', 'North Sea', 'UW', 'HeOx','ArH2' ]:
+            print(" ")
+            for PP in [1, 220]:
+                print(f"Viscosity of gas (kg/m³) at {T8C=} T={T8C-T273:.1f}°C and P={PP:.5f} bar")
+                print(f"{'':14} {'Mw(g/mol)':8} {'μ(Pa.s)':5}  T={T8C-T273:.1f}°C P={PP:.0f}")
+                for visc_f in [linear_mix_rule, explog_mix_rule, hernzip_mix_rule, wilke_mix_rule]:
+                    print_viscosity(g, PP, T3C,visc_f)
 
     visc_f = wilke_mix_rule
      

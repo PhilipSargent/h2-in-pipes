@@ -55,6 +55,13 @@ gas_mixtures = {
     
     'UW': {'CH4': 0.96803, 'C2H6': 0.01773, 'C3H8': 0.00395, 'iC4': 0.00063, 'nC4': 0.00057, 'nC5': 0.00007,  'iC5': 0.0001, 'C6': 0.00009, 'CO2': 0.00115, 'N2': 0.00768, 'O2': 0}, # DOI: 10.15199/17.2023.12.1 Uilhoorn & Witek 2023 Polish gas, no provenance recorded, blended with H2 at 10% and 30% in calcs. 
    
+    # All these come from Grinten(2020) for gases in the 'OGE' network
+    # https://oge.net/en/we/purpose/oge-in-europe
+    'NoGas': {'CH4': 0.906, 'C2H6': 0.0578, 'C3H8': 0.0068, 'nC4': 0.0009, 'iC4': 0.001,'nC5': 0.0002, 'iC5': 0.0002, 'C6': 0.0002, 'CO2': 0.018, 'N2': 0.0088, 'O2': 0, 'neoC5': 0.0001}, 
+    'RuGas': {'CH4': 0.9624, 'C2H6': 0.0271, 'C3H8': 0.002, 'nC4': 0.0003, 'iC4': 0.0005,'nC5': 0.0, 'iC5': 0.0001, 'C6': 0.0001, 'CO2': 0.0034, 'N2': 0.0041, 'O2': 0, 'neoC5': 0.0}, 
+    'BioGas': {'CH4': 0.9615, 'CO2': 0.029, 'N2': 0.0075, 'O2': 0.002, }, 
+    'NL-H': {'CH4': 0.88853, 'C2H6': 0.05078, 'C3H8': 0.01133, 'nC4': 0.00221, 'iC4': 0.00154,'nC5': 0.00037, 'iC5': 0.00046, 'C6': 0.0005, 'CO2': 0.01208, 'N2': 0.0322, 'O2': 0, 'neoC5': 0.0}, 
+    'NL-L': {'CH4': 0.84343, 'C2H6': 0.03874, 'C3H8': 0.00512, 'nC4': 0.00089, 'iC4': 0.00085,'nC5': 0.00021, 'iC5': 0.00026, 'C6': 0.00052, 'CO2': 0.01504, 'N2': 0.09494, 'O2': 0, 'neoC5': 0.0}, 
     
     
     'AHBJ': {'CH4': 0.9376, 'C2H6': 0.0314, 'C3H8': 0.0062, 'nC4': 0.002, 'nC5': 0.0007, 'CO2': 0.0018, 'N2': 0.0203, 'O2': 0}, # Abbas, Hassani, Burby, John (2021)
@@ -92,7 +99,7 @@ gas_mixtures = {
 }
 
 ng_gases = ['NG', 'Groening', 'AHBJ', 'Tokyo', 'Biomethane', '10C2-10N', '7C2-2N', 'mix6',
-    'NTS79', '11D', 'Algerian', 'North Sea' ]
+    'NTS79', '11D', 'Algerian', 'North Sea', 'UW', 'NoGas', 'RuGas', 'BioGas', 'NL-H', 'NL-L']
     
 """reduce the lower limit for Wobbe Index from 47.2 MJ/m³  to 46.50 MJ/m³ was approved by HSE. 
 This shall enter into force from 6 April 2025
