@@ -220,10 +220,10 @@ def get_re_ratio(g, p, T):
     #Re = density . v . D / viscosity
     # All the ratio funcitons are for the value for g divided by the value for NG
     v_ratio = get_v_ratio(g, P, T)
-    μ_ratio = get_μ_ratio(g, P, T)
+    μ_ratio = get_μ_ratio(g, P, T, visc_f)
     ϱ_ratio = get_ϱ_ratio(g, P, T)
     re_ratio = ϱ_ratio * v_ratio / μ_ratio
-    print(f"{T=:.0f} {P=:8.4f} {v_ratio=:.4f} {μ_ratio=:.4f} {ϱ_ratio=:.4f}  {re_ratio=:.4f}")
+    print(f"{T=:.0f} {P=:8.4f} {v_ratio=:.4f} {μ_ratio=:.4f} {ϱ_ratio=:.4f}  {re_ratio=:.4f}  {visc_f.__name__}")
     return re_ratio
     
 #@memoize 

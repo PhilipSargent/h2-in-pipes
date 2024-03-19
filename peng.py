@@ -706,9 +706,9 @@ def get_density(mix, p, T):
     return ϱ
 
 @memoize
-def get_μ_ratio(g, p, T, g2='NG'):
+def get_μ_ratio(g, p, T, visc_f, g2='NG'):
     '''Used by moody.py but not in this file'''
-    μ_ratio = get_viscosity(g, p, T)/get_viscosity(g2, p, T)
+    μ_ratio = get_viscosity(g, p, T, visc_f)/get_viscosity(g2, p, T, visc_f)
     return μ_ratio
     
 @memoize
@@ -739,7 +739,7 @@ def get_Δp_ratio_br(g, p, T, g2='NG'):
 @memoize
 def get_blasius_factor(g, p, T):
     ϱ = get_density(g, p, T)
-    μ =  get_viscosity(g, p, T)
+    μ =  get_viscosity(g, p, T, visc_f)
 
     b_factor = pow(μ, 0.25) * pow(ϱ, 0.75)
     return b_factor
@@ -842,13 +842,11 @@ def print_fuelgas(g, oxidiser):
         dew_C = dew_point(g, oxidiser)
         print(f"{g:15} {mm:6.3f} {dew_C:5.3f} {c_:5.3f}   {h_:5.3f} {hc*1000:9.3f} {mff*100:8.4f} %")
     
-#@memoize
-def get_viscosity(g, P, T):
-    # NOT memoized because it uses global variable visc_f()
-    global visc_f
-    if 'visc_f' not in locals():
-        #print("UNDEFINED viscosity mean value algorithm, using Wilke")
-        visc_f = set_mix_rule()
+@memoize
+def get_viscosity(g, P, T, visc_f):
+    # if 'visc_f' not in locals():
+        # #print("UNDEFINED viscosity mean value algorithm, using Wilke")
+        # visc_f = set_mix_rule()
     
     if g in gas_data:
         μ = viscosity_actual(g, T, P)
@@ -863,15 +861,14 @@ def get_viscosity(g, P, T):
 def print_density(g, p, T):
     ϱ = get_density(g, p, T)
     mm = do_mm_rules(g) # mean molar mass
-    μ =  get_viscosity(g, p, T)
+    μ =  get_viscosity(g, p, T, visc_f)
     z =  get_z(g, p, T)
     print(f"{g:15} {mm:6.3f}  {ϱ:9.5f}   {μ:8.5f} {z:9.6f} {ϱ/μ:9.5f}")
 
-def print_viscosity(g, p, T):
-    #print("\nViscosity mix rule: ",visc_f.__name__)
-
+def print_viscosity(g, p, T, visc_f):
+ 
     mm = do_mm_rules(g) # mean molar mass
-    μ =  get_viscosity(g, p, T)
+    μ =  get_viscosity(g, p, T, visc_f)
     print(f"{g:15} {mm:6.5f}   {μ:8.5f} {visc_f.__name__}")
 
 
@@ -1360,23 +1357,20 @@ def main():
     T230 = T273 -40 #  -40 C
 
     display_gases = ["NG"]   
-    # for g in display_gases:
-        # a, b, Tc, Pc = a_and_b(g, 1)
-        # print(f"{g:8} {Tc=} {Pc=}")
 
     # Viscosity averaging function global - - - - - - - - - - -
 
-    #for g in ['NG', 'Groening', 'Tokyo', 'North Sea', 'UW']:
-    for g in ['HeOx', 'NG', 'ArH2']:
+    for g in ['NG', 'Groening', 'Tokyo', 'North Sea', 'UW', 'HeOx','ArH2' ]:
         print(" ")
         for PP in [1, 220]:
-            #print(f"Viscosity of gas (kg/m³) at {T8C=} T={t8:.1f}°C and P={PP:.5f} bar")
+            print(f"Viscosity of gas (kg/m³) at {T8C=} T={T8C-T273:.1f}°C and P={PP:.5f} bar")
             print(f"{'':14} {'Mw(g/mol)':8} {'μ(Pa.s)':5}  T={T8C-T273:.1f}°C P={PP:.0f}")
             for visc_f in [linear_mix_rule, explog_mix_rule, hernzip_mix_rule, wilke_mix_rule]:
-                print_viscosity(g, PP, T3C)
+                print_viscosity(g, PP, T3C,visc_f)
 
     visc_f = wilke_mix_rule
-    print("---")
+     
+    print(f"--- using '{visc_f.__name__}'")
     # Print the densities at 8 C and 15 C  - - - - - - - - - - -
     
     plot_gases = []
@@ -1548,7 +1542,7 @@ def main():
             ϱ_ng[mix].append(ϱ_mix)
 
             # μ_mix = viscosity_LGE(mm, T, ϱ_mix)
-            μ_mix = get_viscosity(mix, pressure, T)
+            μ_mix = get_viscosity(mix, pressure, T, visc_f)
             μ_ng[mix].append(μ_mix)
 
         plt.plot(temperatures - T273, Z_ng, label=mix, **plot_kwargs(mix))
@@ -1570,7 +1564,7 @@ def main():
     for mix in plot_gases:
         μ_g[mix] = []
         for T in temperatures:
-            μ = get_viscosity(mix,P,T)
+            μ = get_viscosity(mix,P,T, visc_f)
             # μ = hernzip_mix_rule(mix, values) # Makes no visible difference wrt to linear!
             # μ = explog_mix_rule(mix, values) # very slight change by eye
             μ_g[mix].append(μ)
@@ -1686,7 +1680,7 @@ def main():
 
     for mix in plot_gases + ['He']:
         ϱ_ng[mix] =  [get_density(mix, P, T) for T in temperatures]
-        μ_ng[mix] = [get_viscosity(mix, P, T) for T in temperatures]
+        μ_ng[mix] = [get_viscosity(mix, P, T, visc_f) for T in temperatures]
             
         re_g[mix] = []
         for i in range(len(μ_ng[mix])):
@@ -1846,7 +1840,7 @@ def main():
         for T in [T50C, T25C, T8C, T250,T230]:
             mu_g[g] = []
             for p in pressures:
-                mu = get_viscosity(g,p,T)
+                mu = get_viscosity(g,p,T, visc_f)
                 mu_g[g].append(mu)
 
             plt.plot(pressures , mu_g[g], label=f"{g} {T-T273:.0f}°C")
@@ -1870,7 +1864,7 @@ def main():
         for P in [220, 150,30,1,0.01]:
             mu_g[g] = []
             for T in temps:
-                mu = get_viscosity(g,P,T+T273)
+                mu = get_viscosity(g,P,T+T273, visc_f)
                 mu_g[g].append(mu)
 
             plt.plot(temps , mu_g[g], label=f"{g} {P:.0f} bar")
