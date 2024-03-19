@@ -63,6 +63,13 @@ gas_mixtures = {
     'NL-H': {'CH4': 0.88853, 'C2H6': 0.05078, 'C3H8': 0.01133, 'nC4': 0.00221, 'iC4': 0.00154,'nC5': 0.00037, 'iC5': 0.00046, 'C6': 0.0005, 'CO2': 0.01208, 'N2': 0.0322, 'O2': 0, 'neoC5': 0.0}, 
     'NL-L': {'CH4': 0.84343, 'C2H6': 0.03874, 'C3H8': 0.00512, 'nC4': 0.00089, 'iC4': 0.00085,'nC5': 0.00021, 'iC5': 0.00026, 'C6': 0.00052, 'CO2': 0.01504, 'N2': 0.09494, 'O2': 0, 'neoC5': 0.0}, 
     
+    #There are 19 gas compositions in this paper, but I only have the pages for 2 of them
+    # R. C. Johnson, “Real gas effects in the flow of methane and natural gas through critical flow nozzles.” [Online]. Available: https://ntrs.nasa.gov/citations/19710011855.
+    'NASA-1': {'CH4': 0.9535, 'C2H6': 0.0296, 'C3H8': 0.0046, 'nC4': 0.0006, 'iC4': 0.0007,'nC5': 0.00, 'iC5': 0.00, 'C6': 0.0, 'CO2': 0.007, 'N2': 0.004, 'O2': 0, 'neoC5': 0.0},
+    
+    'NASA-2': {'CH4': 0.8850, 'C2H6': 0.0795, 'C3H8': 0.011, 'nC4': 0.0017, 'iC4': 0.0007,'nC5': 0.00, 'iC5': 0.00, 'C6': 0.0, 'CO2': 0.0, 'N2': 0.0221, 'O2': 0, 'neoC5': 0.0}, 
+    
+    
     
     'AHBJ': {'CH4': 0.9376, 'C2H6': 0.0314, 'C3H8': 0.0062, 'nC4': 0.002, 'nC5': 0.0007, 'CO2': 0.0018, 'N2': 0.0203, 'O2': 0}, # Abbas, Hassani, Burby, John (2021)
     
@@ -98,8 +105,11 @@ gas_mixtures = {
     'ArH2':  { 'Ar': 0.2, 'H2': 0.4, 'He': 0.4}, # Argon-H2, for testing viscosity algorithms
 }
 
+# There are 19 more natural gas compositions from Texas  in RC Johnson(1971) 
+# R. C. Johnson, “Real gas effects in the flow of methane and natural gas through critical flow nozzles.” Available: https://ntrs.nasa.gov/citations/19710011855.
+
 ng_gases = ['NG', 'Groening', 'AHBJ', 'Tokyo', 'Biomethane', '10C2-10N', '7C2-2N', 'mix6',
-    'NTS79', '11D', 'Algerian', 'North Sea', 'UW', 'NoGas', 'RuGas', 'BioGas', 'NL-H', 'NL-L']
+    'NTS79', '11D', 'Algerian', 'North Sea', 'UW', 'NoGas', 'RuGas', 'BioGas', 'NL-H', 'NL-L','NASA-1','NASA-2']
     
 """reduce the lower limit for Wobbe Index from 47.2 MJ/m³  to 46.50 MJ/m³ was approved by HSE. 
 This shall enter into force from 6 April 2025
