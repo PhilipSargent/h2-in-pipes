@@ -69,6 +69,8 @@ gas_mixtures = {
     
     'NASA-2': {'CH4': 0.8850, 'C2H6': 0.0795, 'C3H8': 0.011, 'nC4': 0.0017, 'iC4': 0.0007,'nC5': 0.00, 'iC5': 0.00, 'C6': 0.0, 'CO2': 0.0, 'N2': 0.0221, 'O2': 0, 'neoC5': 0.0}, 
     
+     'ALGr': {'CH4': 0.8484, 'C2H6': 0.084, 'C3H8': 0.005, 'nC4': 0.00, 'nC5': 0.00, 'CO2': 0.0066, 'N2': 0.056, 'O2': 0}, # Air Liquide, Greece in 
+     #M. J. Assael, N. K. Dalaouti, and V. Vesovic, “Viscosity of Natural-Gas Mixtures :,” Int. J. Thermophys., vol. 22, no. 1, pp. 61–71, 2001.
     
     
     'AHBJ': {'CH4': 0.9376, 'C2H6': 0.0314, 'C3H8': 0.0062, 'nC4': 0.002, 'nC5': 0.0007, 'CO2': 0.0018, 'N2': 0.0203, 'O2': 0}, # Abbas, Hassani, Burby, John (2021)
@@ -109,7 +111,7 @@ gas_mixtures = {
 # R. C. Johnson, “Real gas effects in the flow of methane and natural gas through critical flow nozzles.” Available: https://ntrs.nasa.gov/citations/19710011855.
 
 ng_gases = ['NG', 'Groening', 'AHBJ', 'Tokyo', 'Biomethane', '10C2-10N', '7C2-2N', 'mix6',
-    'NTS79', '11D', 'Algerian', 'North Sea', 'UW', 'NoGas', 'RuGas', 'BioGas', 'NL-H', 'NL-L','NASA-1','NASA-2']
+    'NTS79', '11D', 'Algerian', 'North Sea', 'UW', 'NoGas', 'RuGas', 'BioGas', 'NL-H', 'NL-L','NASA-1','NASA-2', 'ALGr']
     
 """reduce the lower limit for Wobbe Index from 47.2 MJ/m³  to 46.50 MJ/m³ was approved by HSE. 
 This shall enter into force from 6 April 2025
