@@ -9,8 +9,11 @@ We have a paper just accepted for publication (29/02/2024) in J.Intl Hydrogen En
 If you would like a preprint of this paper, please just look at the file https://github.com/PhilipSargent/h2-in-pipes/blob/main/_SUBMIT3-BOTH-Hydrogen_pipe_friction.pdf in this repo.
 
 The oxygen-firing effect on the dew point and thus the efficiency of condensing boilers is describe in an online article: https://philipsargent.wordpress.com/2024/03/01/oxygen-boilers-making-condensing-boilers-more-efficient/
+![p2_h2_ratio](https://github.com/PhilipSargent/h2-in-pipes/assets/5623885/be00b721-4024-4d8e-ade0-a5a0f9c79bb7)
 
-)![p2_h2_ratio](https://github.com/PhilipSargent/h2-in-pipes/assets/5623885/f8d56427-4b60-459e-a01f-bdbe93a717fe)
+
+![w2_h2_ratio_pt](https://github.com/PhilipSargent/h2-in-pipes/assets/5623885/35bf4e3c-8b86-4151-b591-4c3c261ae42b)
+
 ![moody_afzal](https://github.com/PhilipSargent/h2-in-pipes/assets/5623885/06769e5b-2bf3-4444-86ae-99622bd48139)
 
 ![peng_z](https://github.com/PhilipSargent/h2-in-pipes/assets/5623885/8c38150c-cf02-49b9-98d4-5269e28eb2ca)
@@ -18,6 +21,7 @@ The oxygen-firing effect on the dew point and thus the efficiency of condensing 
 ![peng_bf](https://github.com/PhilipSargent/h2-in-pipes/assets/5623885/92a911eb-c0ea-41dc-91c2-0f80a38c8f22)
 ![visc-temp](https://github.com/PhilipSargent/h2-in-pipes/assets/5623885/9883a784-3bf2-4557-86d8-043a891bf011)
 
+To deliver the same calorific value as hydrogen instead of natural gas, the hydrogen needs to be moving at least as 3x faster than the natural gas (int he same pipe), but the difference in flow regime, friction factor and compressibility factor Z all make a difference too:
 ![peng_v_ratio](https://github.com/PhilipSargent/h2-in-pipes/assets/5623885/6f19f581-b467-4fca-bb46-7fbbf56277f0)
 
 ![peng_ηη_H2](https://github.com/PhilipSargent/h2-in-pipes/assets/5623885/b835f9a9-5124-4ce6-a068-1f7d8aecf7d3)
