@@ -442,7 +442,7 @@ def plot_pt_diagram(title, filename, plot="loglog", fff=colebrook, gradient=Fals
                 plt.ylabel('Darcy-Weisbach friction factor ratio ')
         else:
             #plt.ylim(-80,500)
-            plt.ylabel('Compressor power ratio ')
+            plt.ylabel('Friction loss power ratio ')
         plt.title(title)
         plt.grid(True, which='both', ls='--')
         plt.legend()
@@ -520,7 +520,7 @@ def plot_diagram(title, filename, plot="loglog", fff=colebrook, gradient=False, 
             plt.ylabel('Darcy-Weisbach friction factor ratio ')
     if w2:
         #plt.ylim(-80,500)
-        plt.ylabel('Compressor power ratio ')
+        plt.ylabel('Friction loss (power loss) ratio ')
     plt.title(title)
     plt.grid(True, which='both', ls='--')
     plt.legend()
@@ -570,7 +570,7 @@ plot_diagram('$f$  ratio between H2 and NG', 'h2_ratio.png', plot="linlog", fff=
 
 plot_diagram('Pressure gradient ratio between H2 and NG', 'p2_h2_ratio.png', plot="linlog", fff=p2_h2_ratio, h2=True)
 
-plot_diagram('Ratio of compressor work between H2 and NG', 'w2_h2_ratio.png', plot="linlog", fff=w2_h2_ratio, w2=True)
+plot_diagram('Ratio of friction loss between H2 and NG', 'w2_h2_ratio.png', plot="linlog", fff=w2_h2_ratio, w2=True)
 
 plot_diagram('Moody Diagram (Swarmee)', 'moody_swarmee.png', plot="loglog", fff=swarmee)
 # plot_diagram('Moody Diagram (Virtual Nikuradze)', 'moody_vm.png', plot="loglog", fff=[virtual_nikuradse,gioia_chakraborty_friction_factor])
@@ -582,7 +582,7 @@ relative_roughness_values = [1e-5] # not used
 
 # This re-sets global variables P, T
 plot_pt_diagram('Pressure gradient ratio between H2 and NG', 'p2_h2_ratio_pt.png', plot="linlog", fff=p2_h2_ratio)
-plot_pt_diagram('Ratio of compressor work between H2 and NG', 'w2_h2_ratio_pt.png', plot="linlog", fff=w2_h2_ratio, w2=True)
+plot_pt_diagram('Ratio of friction loss (power) between H2 and NG', 'w2_h2_ratio_pt.png', plot="linlog", fff=w2_h2_ratio, w2=True)
 # so reset them afterwards
 T = T250
 P = 30
