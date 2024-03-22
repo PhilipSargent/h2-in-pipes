@@ -305,20 +305,28 @@ def do_mm_rules(mix):
     return mm_mix
     
 @memoize       
-def get_omega(mix):
-    """Calculate the linear sum of the omegas for the gas mixture
+def get_linear(mix, property):
+    """Calculate the linear sum of the property for the gas mixture
     weighted by molecular fraction"""
     
     if mix in gas_data:
         # if a pure gas
-        return gas_data[mix]['omega']
+        return gas_data[mix][property]
         
     o_mix = 0
     composition = gas_mixtures[mix]
     for gas, x in composition.items():
         # Linear mixing rule for volume factor
-        o_mix += x * gas_data[gas]['omega']
+        o_mix += x * gas_data[gas][property]
     
+    return o_mix
+    
+@memoize       
+def get_omega(mix):
+    """Calculate the linear sum of the omegas for the gas mixture
+    weighted by molecular fraction"""
+           
+    o_mix = get_linear(mix, 'omega')
     return o_mix
 
 @memoize       
@@ -670,6 +678,13 @@ def peng_robinson_invert(a,b): # Peng-Robinson Equation of State
     Pc = (a / 27*b**2)
     return Tc, Pc
 
+@memoize
+def  guess_critical(gas):
+    """Starting point for interating to find the Tc and Pc for a gas mixture"""
+    Tc = get_linear(gas, 'Tc')
+    Pc = get_linear(gas, 'Pc')
+
+    return Tc, Pc
 
 def critical_properties_PR(gas, a, b, T):
     """
@@ -708,8 +723,7 @@ def critical_properties_PR(gas, a, b, T):
     # and iterate again
     
     # Initial guesses 
-    Tc = 191  # Kelvin  methane
-    Pc = 46.5  # bar methane
+    Tc, Pc = guess_critical(gas)
 
    # Solve the system of non-linear equations using fsolve
     # try:
@@ -727,15 +741,14 @@ def critical_properties_PR(gas, a, b, T):
     max_iterations = 100
     Tc_ = Tc
     Pc_ = Pc
-    Pc_prev = Pc_
+    
     a_, b_ = estimate_a_and_b(gas, Tc_, Pc_, T)
-    a__prev = a_
+ 
     for _ in range(max_iterations):
-        # as we iterate, we should re-adjust the temp we use for the a and b
-        # values so that we are are at the correct T and Tr
-        for _ in range(3):
+        # We iterate Tc and b in an inner loop. This converges rapidly.
+        # The outer loop with a and Pc is more difficult.
+        for _ in range(5):
             a_, b_ = estimate_a_and_b(gas, Tc_, Pc_, T)
-            a__, b__ = estimate_a_and_b(gas, Tc_, Pc_, T)
  
             Tc_ *= 1.0* ( 1 + (b - b_)/b)
             if Tc_ <0:
@@ -743,27 +756,27 @@ def critical_properties_PR(gas, a, b, T):
                 Tc = 0
 
             if abs(b - b_) < tolerance:
+                #print("Tc converged")
                 break
-            #Tc_ = (b - b_/2) * Pc_ / (0.07780 * R)
-     
-        Pc_ += 1.01* (a - a_)/a
+            
+        Pc1 = 1.001*Pc
+        a1, _ = estimate_a_and_b(gas, Tc_, Pc1, T)
+        da_by_dPc = (a1 -a_)/(Pc1-Pc_)
+        k = da_by_dPc 
+        factor = (a - a_) / da_by_dPc
+        if factor > 1e-3:
+            mult = 0.5
+        else:
+            mult = 0.1
+        Pc_ = Pc_ - mult*factor
         if Pc_ <0:
             print('### Pc',gas, a, b)
             Pc = 0
-        if a__ < 2 * a :
-             #print(a__, 2*a_, 0.3* (a - a__)/a)
-             Pc_ += 2.5* (a - a__)/a
-        if abs(a - a__)< 0.4 :
-            if abs(a__ - a__prev) > abs(a__ - a):
-                Pc_ = 0.6 * (Pc_ + Pc_prev)
-            else:
-                Pc_ += 2.5* (a - a__)/a
-          
-        Pc_prev = Pc_
-        a__prev = a__
-        if abs(a - a__) < tolerance:
+        
+        if abs(a - a_) < tolerance:
+            #print("--- Pc converged")
             break
-        # print(f"{a:9.5f} {a-a_:9.5f} {a__:9.5f} {b:9.5f} {b-b_:8.4f}  {b__:9.5f} {Tc:.1f}  {Tc_:.1f} {Pc:5.1f} {Pc_:9.4f}")
+        #print(f"{a:9.5f} {a-a_:8.1e}  {k:9.2e} {factor:9.2e}  {b:9.5f} {b-b_:8.1e}  {b_:9.5f} {Tc:.1f}  {Tc_:.1f} {Pc:5.1f} {Pc_:9.4f}")
     if Tc_ < 0:
         Tc_ = float('NaN')
     return Tc_, Pc_
@@ -1503,6 +1516,7 @@ def main():
     print(f"{'gas':13}{'Mw(g/mol)':6}   {'ϱ(kg/m³)':5}   {'μ(Pa.s)':5}   {'Z (-)':5}      {'ϱ/μ(Mkg/sm)':5}  Pc (bar)      Tc (K)  T={T-T273:.1f}°C P=1 atm")
     ϱ={}
     for g in ng_gases:
+    #for g in ['NG','CH4']:
         ϱ[g] =  get_density(g, Atm, T)
      # Sort by value
     ϱ = dict(sorted(ϱ.items(), key=lambda item: item[1]))
@@ -1531,7 +1545,8 @@ def main():
     for g in ["H2", "CH4"]:
         plot_gases.append(g)
     
-    print_some_gas_data( ["H2",  "Ar", "O2", "CH4", "C2H6", "CO2", "He","N2"], 20) # 20 bar
+    # This next line was for when I was testing the reverse calculation for Tc and Pc from a,b
+    # print_some_gas_data( ["H2",  "Ar", "O2", "CH4", "C2H6", "CO2", "He","N2"], 20) # 20 bar
     if False:
         print_some_gas_data(plot_gases, 0, 50) # 50 mbar
         print_some_gas_data(plot_gases, 20) # 20 bar
