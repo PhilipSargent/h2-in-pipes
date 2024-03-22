@@ -1,6 +1,7 @@
 import functools 
 import numpy as np
 import matplotlib.pyplot as plt
+
 import pathlib as pl
 import sys
 import warnings
@@ -10,6 +11,8 @@ import sonntag as st
 # from scipy.optimize import newton_raphson
 
 from cycler import cycler
+from scipy.optimize import fsolve
+
 from gas_data import gas_data, gas_mixtures, gas_mixture_properties, ng_gases, enrich, air_list, k_ij
 from peng_utils import memoize
 
@@ -300,6 +303,23 @@ def do_mm_rules(mix):
         mm_mix += x * gas_data[gas]['Mw']
     
     return mm_mix
+    
+@memoize       
+def get_omega(mix):
+    """Calculate the linear sum of the omegas for the gas mixture
+    weighted by molecular fraction"""
+    
+    if mix in gas_data:
+        # if a pure gas
+        return gas_data[mix]['omega']
+        
+    o_mix = 0
+    composition = gas_mixtures[mix]
+    for gas, x in composition.items():
+        # Linear mixing rule for volume factor
+        o_mix += x * gas_data[gas]['omega']
+    
+    return o_mix
 
 @memoize       
 def do_flue_rules(mix, X_):
@@ -471,7 +491,8 @@ def z_mixture_rules(mix, T):
     
     Zc is the compressibility factor at the critical point    
     """
-    
+    if mix in gas_data:
+        return a_and_b(mix, T)
     # Initialize variables for mixture properties
     a_mix = 0
     b_mix = 0
@@ -508,12 +529,7 @@ def z_mixture_rules(mix, T):
             a_mix += x1 * x2 * (1 - k) * (a1 * a2)**0.5  
             
        # Return the mixture's parameters for the P-R law
-    return { mix: 
-        {
-            'a_mix': a_mix,
-            'b_mix': b_mix,
-         }
-    }
+    return a_mix,  b_mix
 
 
 def get_LMN(omega):
@@ -533,6 +549,43 @@ def get_LMN(omega):
     return L, M, N
 
 @memoize
+def get_kappa(omega):
+    # updated wrt many compoudns, Pina-Martinez 2019:
+    kappa = 0.3919 + 1.4996 * omega - 0.2721 * omega**2 + 0.1063 * omega**3
+    
+    # https://www.sciencedirect.com/science/article/abs/pii/S0378381218305041
+    # 1978 Robinson and Peng
+    if omega < 0.491: # omega for nC10, https://www.sciencedirect.com/science/article/abs/pii/S0378381205003493
+        kappa = 0.37464 + 1.54226 * omega - 0.26992 * omega**2
+    else:
+        kappa = 0.379642 + 1.48503 * omega - 0.164423 * omega**2 + 0.16666 * omega**3
+        
+    return kappa
+
+@memoize
+def estimate_a_and_b(gas, Tc, Pc, T):
+    """Give a guess at Tc and Pc, return what this would mean that the a and be are
+    at Tr = 0.7 Tc"""
+ 
+    omega = get_omega(gas) 
+    kappa = get_kappa(omega)
+
+    if Tc < 0:
+        #print('#########',gas, Tc, Pc, T)
+        Tc = 1e-6
+        
+    Tr = T/Tc
+        
+    # Alpha function
+    alpha = (1 + kappa * (1 - np.sqrt(Tr)))**2
+
+    # Coefficients for the cubic equation of state
+    a = 0.45724 * (R * Tc)**2 / Pc * alpha
+    b = 0.07780 * R * Tc / Pc
+
+    return a, b
+    
+@memoize
 def a_and_b(gas, T):
     """Calculate the a and b intermediate parameters in the Peng-Robinson forumula 
     a : attraction parameter
@@ -543,12 +596,22 @@ def a_and_b(gas, T):
     """This function uses simple mixing rules to calculate the mixture’s critical properties. The kij parameter, which accounts for the interaction between different gases, is assumed to be 0 for simplicity. In practice, kij may need to be adjusted based on experimental data or literature values for more accurate results.
  """
     # Reduced temperature and pressure
-    Tc = gas_data[gas]['Tc']
-    Pc = gas_data[gas]['Pc']
+    Tc = gas_data[gas]['Tc'] # Kelvn
+    Pc = gas_data[gas]['Pc'] # bar 
 
     Tr = T / Tc
     omega = gas_data[gas]['omega']
-    
+    kappa = get_kappa(omega)
+     
+    # Alpha function
+    alpha = (1 + kappa * (1 - np.sqrt(Tr)))**2
+
+    # Coefficients for the cubic equation of state
+    # R is in l.bar/(mol.K) - see top of file
+    a = 0.45724 * (R * Tc)**2 / Pc * alpha
+    b = 0.07780 * R * Tc / Pc
+
+    return a, b
     
     # We do not use the L,M,N formulation as we have omega for
     # all our gases, and H2 just doesn't work with L,M,N at the pressures we use.
@@ -559,31 +622,11 @@ def a_and_b(gas, T):
             N = gas_data[gas]['N']
         else:
             L, M, N = get_LMN(gas_data[gas]['omega'])            
-        
         alpha1 = Tr ** (N*(M-1)) * np.exp(L*(1 - Tr**(M*N)))
-    
-    # updated wrt many compoudns, Pina-Martinez 2019:
-    kappa = 0.3919 + 1.4996 * omega - 0.2721 * omega**2 + 0.1063 * omega**3
-    
-    
-    # https://www.sciencedirect.com/science/article/abs/pii/S0378381218305041
-    # 1978 Robinson and Peng
-    if omega < 0.491: # omega for nC10, https://www.sciencedirect.com/science/article/abs/pii/S0378381205003493
-        kappa = 0.37464 + 1.54226 * omega - 0.26992 * omega**2
-    else:
-        kappa = 0.379642 + 1.48503 * omega - 0.164423 * omega**2 + 0.16666 * omega**3
-        
-    # Alpha function
-    alpha = (1 + kappa * (1 - np.sqrt(Tr)))**2
-
-    # Coefficients for the cubic equation of state
-    a = 0.45724 * (R * Tc)**2 / Pc * alpha
-    b = 0.07780 * R * Tc / Pc
-
-    return a, b
 
 @memoize
 def solve_for_Z(T, p, a, b):
+    # R is in l.bar/(mol.K) - see top of file
    
     # Solve cubic equation for Z the compressibility
     A = a * p / (R * T)**2 # should have alpha in here? No..
@@ -608,9 +651,7 @@ def peng_robinson(T, P, gas): # Peng-Robinson Equation of State
     if gas not in gas_mixtures:    
         a, b = a_and_b(gas, T)
     else:
-        constants = z_mixture_rules(gas, T)
-        a = constants[gas]['a_mix']
-        b = constants[gas]['b_mix'] 
+        a, b = z_mixture_rules(gas, T)
         
     Z = solve_for_Z(T, P, a, b)
     return Z
@@ -622,18 +663,110 @@ def pz(T, P, gas): # return the Pressure divided by Z
 
 
 @memoize
-def peng_robinson_invert(gas): # Peng-Robinson Equation of State
-    if gas not in gas_mixtures:    
-        Tc = gas_data[gas]['Tc']
-        Pc = gas_data[gas]['Pc']
-    else:
-        constants = z_mixture_rules(gas, 300)
-        a = constants[gas]['a_mix']
-        b = constants[gas]['b_mix'] 
-        Tc = (8*a / 27*b*R)
-        Pc = (a / 27*b^2)*R
-        
+def peng_robinson_invert(a,b): # Peng-Robinson Equation of State
+    # This does not seem to work at all, Units problem?
+    # UNUSED
+    Tc = (8*a / 27*b*R)
+    Pc = (a / 27*b**2)
     return Tc, Pc
+
+
+def critical_properties_PR(gas, a, b, T):
+    """
+    Calculates critical temperature (Tc) and critical pressure (Pc) of a gas MIXTURE
+    from the Peng-Robinson equation of state (EOS) parameters a and b
+    
+    HOWEVER, a and b for a pure gas have to be calulated using omega, and 
+    *at a specific temperature* . The coefficient a depends on temperature.
+    This is fine when calcualting a and b  from Tc, Pc, omega (pure gas) and the 
+    temperature T at which you want to use the P-R - usually to calculate Z.
+    
+    HOWEVER inverting P-R to back-calculate Tc and Pc is a bit different.
+    1. The averaing rule for omega is also needed, and 
+    2. you need to know what temperature was used when the a and b were generated.
+    3. But actually it is both Tc and T which are used when calculating a (via alpha)
+       so there is another implicit loop there.
+
+    Args:
+      a_mix (float): Peng-Robinson coefficient a for the mixture.
+      b_mix (float): Peng-Robinson coefficient b for the mixture.
+
+    Returns:
+      tuple[float, float]: A tuple containing critical temperature (Tc) and
+                           critical pressure (Pc) in Kelvin and Pascal, respectively.
+    """
+    if gas in gas_data:
+        gTc = gas_data[gas]['Tc']
+        gPc = gas_data[gas]['Pc']
+
+    # R = 8.314472  # J/mol*K but we use l.bar/mol.K
+    omega = get_omega(gas) # estimate for this gas mixture
+    kappa = get_kappa(omega)
+    alpha = 1 + kappa * 0.027 # at Tr = 0.7, but this is a guess - and wrong.
+    
+    # Once we calculate Tc, Pc we should  recalculate kappa and alpha at that temp
+    # and iterate again
+    
+    # Initial guesses 
+    Tc = 191  # Kelvin  methane
+    Pc = 46.5  # bar methane
+
+   # Solve the system of non-linear equations using fsolve
+    # try:
+        # Tc, Pc = fsolve(critical_property_equation, (Tc_guess, Pc_guess))
+    # except Exception as e:
+        # raise ValueError(f"Critical property calculation failed: {e}")
+    # return Tc, Pc
+    
+    # This is what estimate_a_and_b does:
+    # a = 0.45724 * (R * Tc)**2 / Pc * alpha
+    # b = 0.07780 * R * Tc / Pc
+    # alpha = 1 + kappa * 0.027
+
+    tolerance = 1e-6
+    max_iterations = 100
+    Tc_ = Tc
+    Pc_ = Pc
+    Pc_prev = Pc_
+    a_, b_ = estimate_a_and_b(gas, Tc_, Pc_, T)
+    a__prev = a_
+    for _ in range(max_iterations):
+        # as we iterate, we should re-adjust the temp we use for the a and b
+        # values so that we are are at the correct T and Tr
+        for _ in range(3):
+            a_, b_ = estimate_a_and_b(gas, Tc_, Pc_, T)
+            a__, b__ = estimate_a_and_b(gas, Tc_, Pc_, T)
+ 
+            Tc_ *= 1.0* ( 1 + (b - b_)/b)
+            if Tc_ <0:
+                # print('### Tc',gas, a, b)
+                Tc = 0
+
+            if abs(b - b_) < tolerance:
+                break
+            #Tc_ = (b - b_/2) * Pc_ / (0.07780 * R)
+     
+        Pc_ += 1.01* (a - a_)/a
+        if Pc_ <0:
+            print('### Pc',gas, a, b)
+            Pc = 0
+        if a__ < 2 * a :
+             #print(a__, 2*a_, 0.3* (a - a__)/a)
+             Pc_ += 2.5* (a - a__)/a
+        if abs(a - a__)< 0.4 :
+            if abs(a__ - a__prev) > abs(a__ - a):
+                Pc_ = 0.6 * (Pc_ + Pc_prev)
+            else:
+                Pc_ += 2.5* (a - a__)/a
+          
+        Pc_prev = Pc_
+        a__prev = a__
+        if abs(a - a__) < tolerance:
+            break
+        # print(f"{a:9.5f} {a-a_:9.5f} {a__:9.5f} {b:9.5f} {b-b_:8.4f}  {b__:9.5f} {Tc:.1f}  {Tc_:.1f} {Pc:5.1f} {Pc_:9.4f}")
+    if Tc_ < 0:
+        Tc_ = float('NaN')
+    return Tc_, Pc_
 
 def viscosity_LGE(Mw, T_k, ϱ):
     """The  Lee, Gonzalez, and Eakin method, originally expressed in 'oilfield units'
@@ -685,9 +818,7 @@ def get_z(g, p, T):
     if g in gas_data:
         return peng_robinson(T, p, g)
         
-    constants = z_mixture_rules(g, T)
-    a = constants[g]['a_mix']
-    b = constants[g]['b_mix']
+    a, b = z_mixture_rules(g, T)
     Z_mix = solve_for_Z(T, p, a, b)
     return Z_mix
     
@@ -698,9 +829,7 @@ def get_density(mix, p, T):
         ϱ_pg = p * gas_data[g]['Mw'] / (peng_robinson(T, p, g) * R * T)
         return ϱ_pg
         
-    constants = z_mixture_rules(mix, T)
-    a = constants[mix]['a_mix']
-    b = constants[mix]['b_mix']
+    a, b = z_mixture_rules(mix, T)
     Z_mix = solve_for_Z(T, p, a, b)
     mm = do_mm_rules(mix) # mean molar mass
     # For density, the averaging across the mixture (Mw) is done before the calc. of ϱ
@@ -865,7 +994,16 @@ def print_density(g, p, T, visc_f):
     mm = do_mm_rules(g) # mean molar mass
     μ =  get_viscosity(g, p, T, visc_f)
     z =  get_z(g, p, T)
-    print(f"{g:15} {mm:6.3f}  {ϱ:9.5f}   {μ:8.5f} {z:9.6f} {ϱ/μ:9.5f}")
+    
+    a, b = z_mixture_rules(g, T)
+    Tc, Pc = critical_properties_PR(g, a, b, T) 
+    
+    if g in gas_data:
+        s = f"({gas_data[g]['Pc']:0.1f} bar {gas_data[g]['Tc']:6.1f} K)" 
+    else:
+        s = "(approx.)"
+        
+    print(f"{g:15} {mm:6.3f}  {ϱ:9.5f}   {μ:8.5f} {z:9.6f} {ϱ/μ:9.5f} {Pc:9.1f} bar {Tc:9.1f} K {s}")
 
 def print_viscosity(g, p, T, visc_f):
  
@@ -1292,9 +1430,9 @@ def print_some_gas_data(plot_gases, P, dp=None):
         
     print(f"\nDensity of gas (kg/m³) at {pstr}")
     for T in [T8C, T15C]:
-        print(f"{'gas':13}{'Mw(g/mol)':6}  {'ϱ(kg/m³)':5}  {'μ(Pa.s)':5}    {'z (-)':5}      {'ϱ/μ(Mkg/sm)':5} T={T-T273:.1f}°C ")
+        print(f"{'gas':13}{'Mw(g/mol)':6}  {'ϱ(kg/m³)':5}  {'μ(Pa.s)':5}    {'Z (-)':5}      {'ϱ/μ(Mkg/sm)':5}  T={T-T273:.1f}°C ")
         for g in plot_gases:
-            print_density(g, P, T)
+            print_density(g, P, T, visc_f)
         
 def style(mix):
     if mix in gas_data:
@@ -1362,7 +1500,7 @@ def main():
 
     # Natural gases - print in order of density
     T=T8C
-    print(f"{'gas':13}{'Mw(g/mol)':6}   {'ϱ(kg/m³)':5}   {'μ(Pa.s)':5}   {'z (-)':5}      {'ϱ/μ(Mkg/sm)':5} T={T-T273:.1f}°C P=1 atm")
+    print(f"{'gas':13}{'Mw(g/mol)':6}   {'ϱ(kg/m³)':5}   {'μ(Pa.s)':5}   {'Z (-)':5}      {'ϱ/μ(Mkg/sm)':5}  Pc (bar)      Tc (K)  T={T-T273:.1f}°C P=1 atm")
     ϱ={}
     for g in ng_gases:
         ϱ[g] =  get_density(g, Atm, T)
@@ -1393,6 +1531,7 @@ def main():
     for g in ["H2", "CH4"]:
         plot_gases.append(g)
     
+    print_some_gas_data( ["H2",  "Ar", "O2", "CH4", "C2H6", "CO2", "He","N2"], 20) # 20 bar
     if False:
         print_some_gas_data(plot_gases, 0, 50) # 50 mbar
         print_some_gas_data(plot_gases, 20) # 20 bar
@@ -1545,9 +1684,7 @@ def main():
         Z_ng = []
         for T in temperatures:
             # for Z, the averaging across the mixture (a, b) is done before the calc. of Z
-            constants = z_mixture_rules(mix, T)
-            a = constants[mix]['a_mix']
-            b = constants[mix]['b_mix']
+            a, b = z_mixture_rules(mix, T)
             Z_mix = solve_for_Z(T, pressure, a, b)
             Z_ng.append(Z_mix)
             

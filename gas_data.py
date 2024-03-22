@@ -109,6 +109,7 @@ gas_mixtures = {
 
 # There are 19 more natural gas compositions from Texas  in RC Johnson(1971) 
 # R. C. Johnson, “Real gas effects in the flow of methane and natural gas through critical flow nozzles.” Available: https://ntrs.nasa.gov/citations/19710011855.
+# but 17 are missing from the accessible copies of the paper
 
 ng_gases = ['NG', 'Groening', 'AHBJ', 'Tokyo', 'Biomethane', '10C2-10N', '7C2-2N', 'mix6',
     'NTS79', '11D', 'Algerian', 'North Sea', 'UW', 'NoGas', 'RuGas', 'BioGas', 'NL-H', 'NL-L','NASA-1','NASA-2', 'ALGr']
