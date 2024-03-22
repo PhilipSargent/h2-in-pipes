@@ -408,7 +408,7 @@ def plot_pt_diagram(title, filename, plot="loglog", fff=colebrook, gradient=Fals
     for f in fff: # several different friction factor functions
         friction_factors = {}
         
-        for pt in [(1,50), (30,8), (150,-40)]:
+        for pt in [(1,50), (30,8), (74,8), (150,-40)]:
             P = pt[0]
             t = pt[1]
             T = T273+t
