@@ -1662,7 +1662,7 @@ def main():
     plt.ylabel('Boiler efficiency gradient d(η)/d(T) (%/K)')
     plt.legend()
  
-    plt.savefig(fn["dη"])
+    plt.savefig("condse_dη.png")
     plt.close()
     
     find_intersection('H2', 'NG', 'Air') # where do the efficiences cross?
