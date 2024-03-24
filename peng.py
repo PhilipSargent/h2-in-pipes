@@ -1596,10 +1596,10 @@ def main():
     plt.legend()
     plt.grid(True)
 
-    plt.savefig(fn["η"])
+    plt.savefig("condse_η.png")
     plt.plot(t_condense-273.15, c_20H, label='NG+20%H2', **plot_kwargs('NG+20%H2'))
     plt.legend()
-    plt.savefig(fn["η20"])
+    plt.savefig("condse_η20.png")
   
     
     plt.close()
@@ -1625,7 +1625,7 @@ def main():
         plt.legend()
         plt.grid(True)
 
-        plt.savefig(f"peng_ηη_{g}.png")
+        plt.savefig(f"condse_ηη_{g}.png")
         plt.close()
         
         plt.figure(figsize=(10, 6))
@@ -1645,7 +1645,7 @@ def main():
         plt.legend()
         plt.grid(True)
 
-        plt.savefig(f"peng_ηηη_{g}.png")
+        plt.savefig(f"condse_ηηη_{g}.png")
         plt.close()
       
     # Plot the Differential of the condensing curve  - - - - - - - - - - -
@@ -1940,7 +1940,7 @@ def main():
     plt.legend()
     plt.grid(True)
 
-    plt.savefig("peng_z_pp.png")
+    plt.savefig("peng_dzdp.png")
     plt.close()
     
     # Plot velocity ratio for pure hydrogen and natural gas
@@ -2090,6 +2090,9 @@ def main():
 
     plt.savefig("peng_ϱ_p.png")
     plt.close()
+    
+    # PRESSURE - DISTANCE PLOTS
+  
     
 if __name__ == '__main__':
     sys.exit(main())  
