@@ -2091,7 +2091,6 @@ def main():
     plt.savefig("peng_ϱ_p.png")
     plt.close()
     
-    # PRESSURE - DISTANCE PLOTS
   
     
 if __name__ == '__main__':

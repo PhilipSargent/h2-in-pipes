@@ -447,6 +447,57 @@ def plot_pt_diagram(title, filename, plot="loglog", fff=colebrook, gradient=Fals
         plt.grid(True, which='both', ls='--')
         plt.legend()
         plt.savefig(filename)
+        
+def pint(x, g, P0, f, rr):
+    L = 500e3
+  
+    p = P0 * np.sqrt(L - x)/np.sqrt(L)
+    return p
+        
+def plot_pipeline(title, output, plot="linear", fff=afzal):
+    # Derived from plot_pt_diagram(), all need refactoring
+    global P, T
+    rr = 1e-7
+    x_range = np.linspace(1,500e3, 1000) # 500 km
+    P0 = 220 # bar
+
+    if not type(fff) is list:
+        fff = [fff]
+    plt.figure(figsize=(10, 6))
+    
+    for f in fff: # several different friction factor functions
+        fn = f" {f.__name__}"
+        title = title + f" (ε/D = {rr} {fn})"
+        filename = output + fn + ".png"
+        
+        for t in [50, 8, -40]:
+            T = T273+t
+            lab =  f" ({T-T273:.0f}°C)"
+            # Calculate the curves 
+
+            p_x = {}
+            for g in ['NG', 'H2']:
+                label = f"{g} " + lab
+                print(label)
+                p_x[T] = [pint(x, g, P0, f, rr) for x in x_range]
+                
+                # Plot the calculated curves on the Moody diagram
+                if plot == "loglog":
+                    for rr, p in p_x.items():
+                        plt.loglog(x_range/1000, ff, label=label)
+                if plot == "linear":
+                    for rr, ff in p_x.items():
+                        plt.plot(x_range/1000, ff, label=label)
+                if plot == "linlog":
+                    for rr, ff in p_x.items():
+                        plt.semilogx(x_range/1000, ff, label=label)
+
+        plt.xlabel('Distance (km)')
+        plt.ylabel('Pressure (bar)')
+        plt.title(title)
+        plt.grid(True, which='both', ls='--')
+        plt.legend()
+        plt.savefig(filename)
 
     
 
@@ -586,6 +637,10 @@ plot_pt_diagram('Ratio of friction loss (power) between H2 and NG', 'w2_h2_ratio
 # so reset them afterwards
 T = T250
 P = 30
+
+
+# --- PLOT PRESSURE _ DISTANCE along PIPELINE
+plot_pipeline("Pressure drop along pipeline", "pipe", plot="linear", fff=afzal)
 
 # Plot enlarged diagrams
 
