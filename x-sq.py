@@ -1,9 +1,10 @@
 import matplotlib.pyplot as plt
+import math
 
-P = 1e5
+P = 201
 # Define the function
 def func(x):
-  return P - x**2
+  return math.sqrt(P - x)
 
 # Define the x-axis values
 x = range(0, 200)  # Adjust the range if needed
@@ -12,7 +13,7 @@ x = range(0, 200)  # Adjust the range if needed
 y = [func(i) for i in x]
 
 # Create the plot
-plt.plot(x, y, label=f"y = {P} - x^2")
+plt.plot(x, y, label=f"y = sqrt(201-x)")
 
 # Add labels and title
 plt.xlabel("x")
