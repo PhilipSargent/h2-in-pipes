@@ -669,6 +669,11 @@ def pz(T, P, gas): # return the Pressure divided by Z
     Z = peng_robinson(T, P, gas)
     return P/Z
 
+@memoize
+def dzdp(T, P, gas): # return the Pressure divided by Z        
+    Z1 = peng_robinson(T, P*0.999, gas)
+    Z2 = peng_robinson(T, P*1.001, gas)
+    return (Z2 - Z1)/ (P*1.001 - P*0.999)
 
 @memoize
 def peng_robinson_invert(a,b): # Peng-Robinson Equation of State
@@ -1923,6 +1928,21 @@ def main():
     plt.savefig("peng_z_pp.png")
     plt.close()
 
+   # Plot dZ/dP v P  for pure hydrogen and natural gases
+
+    for g, txt in [('H2','Pure hydrogen'), ('NG','Natural gas')]:
+        dzdp_ = [dzdp(T, p, g) for p in pressures]
+        plt.plot(pressures, dzdp_, label=txt, **plot_kwargs(g))
+        
+    plt.title(f'dZ/dP  vs Pressure at {T-T273:4.1f}°C')
+    plt.xlabel('Pressure (bar)')
+    plt.ylabel('dZ/dP')
+    plt.legend()
+    plt.grid(True)
+
+    plt.savefig("peng_z_pp.png")
+    plt.close()
+    
     # Plot velocity ratio for pure hydrogen and natural gas
     T8C = T273 + 8
     v_ratio = get_v_ratio('H2',94,T8C) 
