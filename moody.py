@@ -9,6 +9,8 @@ import pyfrac_yj as pf
 import warnings
 
 from scipy.interpolate import interp1d
+from scipy.integrate import quad
+
 from peng_utils import memoize
 from peng import get_v_ratio, get_Δp_ratio_br, get_ϱ_ratio, get_μ_ratio, get_viscosity, Atm, T273, set_mix_rule
 
@@ -465,6 +467,20 @@ def d_pint(x, g, P0, f, rr):
 def int_d_pint(L, g, P0, f, rr):
     """Given that we have only a pressure gradient, calculate the pressure drop
     as an integral of that"""
+    original = pint(L, g, P0, f, rr)
+
+
+    # I_quad, est_err_quad =  quad(d_pint, 0, np.pi)
+    # print(I_quad)
+    # err_quad = 2 - I_quad
+    # print(est_err_quad, err_quad)
+    
+    p, est_err_quad = quad(d_pint, 2, L, args=(g, P0, f, rr))
+    p = p + P0
+    
+    print(f"{int(L/1000):5} km {p:8.3f} bar  {original:8.3f} bar     {p-original:9.3f}")
+    return p
+    
     p = P0
     x_step = L/1000
     l_range =np.arange(2, L, x_step)
