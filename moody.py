@@ -448,17 +448,42 @@ def plot_pt_diagram(title, filename, plot="loglog", fff=colebrook, gradient=Fals
         plt.legend()
         plt.savefig(filename)
         
+@memoize
 def pint(x, g, P0, f, rr):
-    L = 500e3
+    L = 500e3 + 1
   
     p = P0 * np.sqrt(L - x)/np.sqrt(L)
     return p
+    
+@memoize
+def d_pint(x, g, P0, f, rr):
+    delta_x = 0.1
+    p1 = pint(x-delta_x, g, P0, f, rr)
+    p2 = pint(x+delta_x, g, P0, f, rr)
+    return (p2 - p1)/(2 * delta_x)
+    
+def int_d_pint(L, g, P0, f, rr):
+    """Given that we have only a pressure gradient, calculate the pressure drop
+    as an integral of that"""
+    p = P0
+    x_step = L/1000
+    l_range =np.arange(2, L, x_step)
+
+    for x in l_range:
+        #d = (d_pint(x-x_step, g, p, f, rr) + d_pint(x+x_step, g, p, f, rr))/2
+        d =  d_pint(x+x_step, g, p, f, rr)
+        p += d * x_step
+        # print(f"{int(L/1000)} km  {x:9.1f} m  {p:.3f} bar {d:.3f} bar")
+    original = pint(L, g, P0, f, rr)
+    print(f"{int(L/1000):5} km {p:8.3f} bar  {original:8.3f} bar     {p-original:9.3}")
+    return p
         
-def plot_pipeline(title, output, plot="linear", fff=afzal):
+        
+def plot_pipeline(title_in, output, plot="linear", fff=afzal):
     # Derived from plot_pt_diagram(), all need refactoring
     global P, T
-    rr = 1e-7
-    x_range = np.linspace(1,500e3, 1000) # 500 km
+    rr0 = 1e-7
+    x_range = np.linspace(1,500e3-1000, 100) # 500 km
     P0 = 220 # bar
 
     if not type(fff) is list:
@@ -466,9 +491,11 @@ def plot_pipeline(title, output, plot="linear", fff=afzal):
     plt.figure(figsize=(10, 6))
     
     for f in fff: # several different friction factor functions
-        fn = f" {f.__name__}"
-        title = title + f" (ε/D = {rr} {fn})"
-        filename = output + fn + ".png"
+        plt.figure(figsize=(10, 6))
+
+        fn = f"{f.__name__}"
+        title = title_in + f" (ε/D = {rr0} {fn})"
+        filename = output + "_" + fn + ".png"
         
         for t in [50, 8, -40]:
             T = T273+t
@@ -479,7 +506,7 @@ def plot_pipeline(title, output, plot="linear", fff=afzal):
             for g in ['NG', 'H2']:
                 label = f"{g} " + lab
                 print(label)
-                p_x[T] = [pint(x, g, P0, f, rr) for x in x_range]
+                p_x[T] = [pint(x, g, P0, f, rr0) for x in x_range]
                 
                 # Plot the calculated curves on the Moody diagram
                 if plot == "loglog":
@@ -498,9 +525,79 @@ def plot_pipeline(title, output, plot="linear", fff=afzal):
         plt.grid(True, which='both', ls='--')
         plt.legend()
         plt.savefig(filename)
+        
+        # Now the differential
+        
+        plt.figure(figsize=(10, 6))
+        fn = f"{f.__name__}"
+        title = title_in + f" (ε/D = {rr0} {fn})"
+        filename = output + "_D_" + fn + ".png"
+        
+        for t in [50, 8, -40]:
+            T = T273+t
+            lab =  f" ({T-T273:.0f}°C)"
+            # Calculate the curves 
 
-    
+            p_x = {}
+            for g in ['NG', 'H2']:
+                label = f"{g} " + lab
+                print(label)
+                p_x[T] = [d_pint(x, g, P0, f, rr0)*1e3 for x in x_range]
+                
+                # Plot the calculated curves on the Moody diagram
+                if plot == "loglog":
+                    for rr, p in p_x.items():
+                        plt.loglog(x_range/1000, ff, label=label)
+                if plot == "linear":
+                    for rr, ff in p_x.items():
+                        plt.plot(x_range/1000, ff, label=label)
+                if plot == "linlog":
+                    for rr, ff in p_x.items():
+                        plt.semilogx(x_range/1000, ff, label=label)
 
+        plt.xlabel('Distance (km)')
+        plt.ylabel('Pressure gradient (bar/km)')
+        plt.title("Gradient of " + title )
+        plt.grid(True, which='both', ls='--')
+        plt.legend()
+        plt.savefig(filename)
+
+        # Now the integral of the differential - to check
+        
+        plt.figure(figsize=(10, 6))
+        fn = f"{f.__name__}"
+        title = title_in + f" (ε/D = {rr0} {fn})"
+        filename = output + "_I_" + fn + ".png"
+        
+        for t in [50, 8, -40]:
+            T = T273+t
+            lab =  f" ({T-T273:.0f}°C)"
+            # Calculate the curves 
+
+            p_x = {}
+            for g in ['NG', 'H2']:
+                label = f"{g} " + lab
+                print(label)
+                p_x[T] = [int_d_pint(x, g, P0, f, rr0) for x in x_range]
+                
+                # Plot the calculated curves on the Moody diagram
+                if plot == "loglog":
+                    for rr, p in p_x.items():
+                        plt.loglog(x_range/1000, ff, label=label)
+                if plot == "linear":
+                    for rr, ff in p_x.items():
+                        plt.plot(x_range/1000, ff, label=label)
+                if plot == "linlog":
+                    for rr, ff in p_x.items():
+                        plt.semilogx(x_range/1000, ff, label=label)
+
+        plt.xlabel('Distance (km)')
+        plt.ylabel('Pressure (bar)')
+        plt.title(title)
+        plt.grid(True, which='both', ls='--')
+        plt.legend()
+        plt.savefig(filename)
+        
 def plot_diagram(title, filename, plot="loglog", fff=colebrook, gradient=False, h2=False, w2=False):
     """Calculate the friction factor for each relative roughness,
     OK this does stuff several times and should be disentangled and refactored

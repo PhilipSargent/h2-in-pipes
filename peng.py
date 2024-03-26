@@ -1447,11 +1447,21 @@ def print_some_gas_data(plot_gases, P, dp=None):
         pstr = f"P={P:.0f} bar" 
         
     print(f"\nDensity of gas (kg/m³) at {pstr}")
-    for T in [T8C, T15C]:
+    for T in [T273, T8C, T15C, T50C]:
         print(f"{'gas':13}{'Mw(g/mol)':6}  {'ϱ(kg/m³)':5}  {'μ(Pa.s)':5}    {'Z (-)':5}      {'ϱ/μ(Mkg/sm)':5}  T={T-T273:.1f}°C ")
         for g in plot_gases:
             print_density(g, P, T, visc_f)
-        
+
+    print(f"\nVelocity ratio of v(H2)/v(NG) at P={P:0.3f} bar")
+    for T in [T273, T8C, T15C, T50C]:
+        z_NG =  get_z('NG', P, T)
+        z_H2 =  get_z('H2', P, T)
+        _, _, hc_NG = get_Hc('NG', T) 
+        _, _, hc_H2 = get_Hc('H2', T) 
+        v =  (hc_NG / hc_H2) * (z_H2 / z_NG)
+
+        print(f"v(H2)/v(NG) = {v:0.4f} ({pstr} T={T-T273:.1f}°C )")
+      
 def style(mix):
     if mix in gas_data:
         return 'dashed'
@@ -1552,13 +1562,15 @@ def main():
     
     # This next line was for when I was testing the reverse calculation for Tc and Pc from a,b
     # print_some_gas_data( ["H2",  "Ar", "O2", "CH4", "C2H6", "CO2", "He","N2"], 20) # 20 bar
+    if True:
+        print_some_gas_data(plot_gases, 1) # STP is 1 bar, 273.15K
+        #print_some_gas_data(plot_gases, 0, 50) # 50 mbar
+        #print_some_gas_data(plot_gases, 20) # 20 bar
+        #print_some_gas_data(plot_gases, 220)
+
+
     if False:
-        print_some_gas_data(plot_gases, 0, 50) # 50 mbar
-        print_some_gas_data(plot_gases, 20) # 20 bar
-        print_some_gas_data(plot_gases, 220)
-
         print_wobbe(plot_gases,g, T15C)
-
         print(f"\n[H2O][CO2] of fuel gas")
         print(f"{'gas':13}{'Mw(g/mol)':6} {'Dew Pt':6}  {'C_':5}   {'H_':5}{'Hc(kJ/mol)':5}  fuel")
         for g in ['H2', 'CH4', 'C2H6']:
