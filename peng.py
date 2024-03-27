@@ -1016,12 +1016,14 @@ def print_density(g, p, T, visc_f):
     a, b = z_mixture_rules(g, T)
     Tc, Pc = critical_properties_PR(g, a, b, T) 
     
+    m_, _, hc = get_Hc(g, T)
+    
     if g in gas_data:
         s = f"({gas_data[g]['Pc']:0.1f} bar {gas_data[g]['Tc']:6.1f} K)" 
     else:
         s = "(approx.)"
         
-    print(f"{g:15} {mm:6.3f}  {ϱ:9.5f}   {μ:8.5f} {z:9.6f} {ϱ/μ:9.5f} {Pc:9.1f} bar {Tc:9.1f} K {s}")
+    print(f"{g:15} {mm:6.3f}  {ϱ:9.5f}   {μ:8.5f} {z:9.6f} {hc:9.5f} {Pc:9.1f} bar {Tc:9.1f} K {s}")
 
 def print_viscosity(g, p, T, visc_f):
  
@@ -1436,9 +1438,10 @@ def print_fuel(g, s, oxidiser):
             print(f"{f:5}\t{nts[f]*100:8.5f} %{gas_data[f]['C_']:3}{gas_data[f]['H_']:3} {hc*1000:6.1f} kJ/mol ")
     print_gas(g, oxidiser) 
 
-def print_some_gas_data(plot_gases, P, dp=None):
+def print_some_gas_data(plot_gases, visc_f, P, dp=None):
     # ignore P if dp (mbar) supplied
     global T50C, T25C, T15C, T8C, T3C, T250, T230, T273
+    T_yamal = T273 + 42.5
 
     if dp:
         P = Atm + dp/1000
@@ -1447,20 +1450,30 @@ def print_some_gas_data(plot_gases, P, dp=None):
         pstr = f"P={P:.0f} bar" 
         
     print(f"\nDensity of gas (kg/m³) at {pstr}")
-    for T in [T273, T8C, T15C, T50C]:
-        print(f"{'gas':13}{'Mw(g/mol)':6}  {'ϱ(kg/m³)':5}  {'μ(Pa.s)':5}    {'Z (-)':5}      {'ϱ/μ(Mkg/sm)':5}  T={T-T273:.1f}°C ")
+    for T in [T273, T15C, T_yamal]:
+        print(f"{'gas':13}{'Mw(g/mol)':6}  {'ϱ(kg/m³)':5}  {'μ(Pa.s)':5}    {'Z (-)':5}      {'Hc(MJ/mol)':5}  T={T-T273:.1f}°C ")
         for g in plot_gases:
             print_density(g, P, T, visc_f)
 
     print(f"\nVelocity ratio of v(H2)/v(NG) at P={P:0.3f} bar")
-    for T in [T273, T8C, T15C, T50C]:
-        z_NG =  get_z('NG', P, T)
-        z_H2 =  get_z('H2', P, T)
-        _, _, hc_NG = get_Hc('NG', T) 
-        _, _, hc_H2 = get_Hc('H2', T) 
-        v =  (hc_NG / hc_H2) * (z_H2 / z_NG)
-
-        print(f"v(H2)/v(NG) = {v:0.4f} ({pstr} T={T-T273:.1f}°C )")
+    for g in ['NG', 'Yamal']:
+        for T in [T273, T15C, T_yamal]:
+            z_ng =  get_z(g, P, T)
+            z_H2 =  get_z('H2', P, T)
+            _, _, hc_ng = get_Hc(g, T) 
+            _, _, hc_H2 = get_Hc('H2', T) 
+            v =  (hc_ng / hc_H2) * (z_H2 / z_ng)
+            
+            μ_ng = get_viscosity(g, P, T, visc_f)
+            μ_H2 = get_viscosity('H2', P, T, visc_f)
+            ϱ_ng = get_density(g, P, T)
+            ϱ_H2 = get_density('H2', P, T)
+            #re = D ϱ v / mu
+            re = v * (ϱ_H2/ϱ_ng) / (μ_H2/μ_ng)
+            gp = f"(H2)/({g})"
+            print(f"v{gp: <15}= {v:0.4f}  Re{gp: <15} = {re:0.4f} ({pstr} T={T-T273:.1f}°C )")
+        
+        
       
 def style(mix):
     if mix in gas_data:
@@ -1528,7 +1541,7 @@ def main():
 
     # Natural gases - print in order of density
     T=T8C
-    print(f"{'gas':13}{'Mw(g/mol)':6}   {'ϱ(kg/m³)':5}   {'μ(Pa.s)':5}   {'Z (-)':5}      {'ϱ/μ(Mkg/sm)':5}  Pc (bar)      Tc (K)  T={T-T273:.1f}°C P=1 atm")
+    print(f"{'gas':13}{'Mw(g/mol)':6}   {'ϱ(kg/m³)':5}   {'μ(Pa.s)':5}   {'Z (-)':5}      {'Hc(MJ/mol)':5}  Pc (bar)      Tc (K)  T={T-T273:.1f}°C P=1 atm")
     ϱ={}
     for g in ng_gases:
     #for g in ['NG','CH4']:
@@ -1536,7 +1549,7 @@ def main():
      # Sort by value
     ϱ = dict(sorted(ϱ.items(), key=lambda item: item[1]))
     for g in ϱ:
-        print_density(g, Atm, T8C, wilke_mix_rule)
+        print_density(g, Atm, T15C, wilke_mix_rule)
         
     # Viscosity averaging function global - - - - - - - - - - -
 
@@ -1557,16 +1570,17 @@ def main():
     plot_gases = []
     for g in display_gases:
         plot_gases.append(g)
-    for g in ["H2", "CH4"]:
+    for g in ["H2", "CH4", "Yamal"]:
         plot_gases.append(g)
     
     # This next line was for when I was testing the reverse calculation for Tc and Pc from a,b
-    # print_some_gas_data( ["H2",  "Ar", "O2", "CH4", "C2H6", "CO2", "He","N2"], 20) # 20 bar
+    # print_some_gas_data( ["H2",  "Ar", "O2", "CH4", "C2H6", "CO2", "He","N2"], visc_f, 20) # 20 bar
     if True:
-        print_some_gas_data(plot_gases, 1) # STP is 1 bar, 273.15K
-        #print_some_gas_data(plot_gases, 0, 50) # 50 mbar
-        #print_some_gas_data(plot_gases, 20) # 20 bar
-        #print_some_gas_data(plot_gases, 220)
+        print_some_gas_data(plot_gases, visc_f, 1) # STP is 1 bar, 273.15K
+        print_some_gas_data(plot_gases, visc_f, 84) # STP is 1 bar, 273.15K
+        #print_some_gas_data(plot_gases, visc_f, 0, 50) # 50 mbar
+        #print_some_gas_data(plot_gases, visc_f, 20) # 20 bar
+        #print_some_gas_data(plot_gases, visc_f, 220)
 
 
     if False:

@@ -59,6 +59,13 @@ gas_mixtures = {
     # https://oge.net/en/we/purpose/oge-in-europe
     'NoGas': {'CH4': 0.906, 'C2H6': 0.0578, 'C3H8': 0.0068, 'nC4': 0.0009, 'iC4': 0.001,'nC5': 0.0002, 'iC5': 0.0002, 'C6': 0.0002, 'CO2': 0.018, 'N2': 0.0088, 'O2': 0, 'neoC5': 0.0001}, 
     'RuGas': {'CH4': 0.9624, 'C2H6': 0.0271, 'C3H8': 0.002, 'nC4': 0.0003, 'iC4': 0.0005,'nC5': 0.0, 'iC5': 0.0001, 'C6': 0.0001, 'CO2': 0.0034, 'N2': 0.0041, 'O2': 0, 'neoC5': 0.0}, 
+    
+    
+    'Yamal': {'CH4': 0.983455, 'C2H6': 0.006104, 'C3H8': 0.001572, 'nC4': 0.000253, 'iC4': 0.000299,'nC5': 0.00004, 'iC5': 0.000055, 'C6': 0.0, 'CO2': 0.007918, 'N2': 0.000303, 'O2': 0, 'neoC5': 0.0}, 
+    
+    
+    
+    
     'BioGas': {'CH4': 0.9615, 'CO2': 0.029, 'N2': 0.0075, 'O2': 0.002, }, 
     'NL-H': {'CH4': 0.88853, 'C2H6': 0.05078, 'C3H8': 0.01133, 'nC4': 0.00221, 'iC4': 0.00154,'nC5': 0.00037, 'iC5': 0.00046, 'C6': 0.0005, 'CO2': 0.01208, 'N2': 0.0322, 'O2': 0, 'neoC5': 0.0}, 
     'NL-L': {'CH4': 0.84343, 'C2H6': 0.03874, 'C3H8': 0.00512, 'nC4': 0.00089, 'iC4': 0.00085,'nC5': 0.00021, 'iC5': 0.00026, 'C6': 0.00052, 'CO2': 0.01504, 'N2': 0.09494, 'O2': 0, 'neoC5': 0.0}, 
@@ -112,7 +119,7 @@ gas_mixtures = {
 # but 17 are missing from the accessible copies of the paper
 
 ng_gases = ['NG', 'Groening', 'AHBJ', 'Tokyo', 'Biomethane', '10C2-10N', '7C2-2N', 'mix6',
-    'NTS79', '11D', 'Algerian', 'North Sea', 'UW', 'NoGas', 'RuGas', 'BioGas', 'NL-H', 'NL-L','NASA-1','NASA-2', 'ALGr']
+    'NTS79', '11D', 'Algerian', 'North Sea', 'UW', 'NoGas', 'RuGas', 'BioGas', 'NL-H', 'NL-L','NASA-1','NASA-2', 'ALGr', 'Yamal']
     
 """reduce the lower limit for Wobbe Index from 47.2 MJ/m³  to 46.50 MJ/m³ was approved by HSE. 
 This shall enter into force from 6 April 2025
