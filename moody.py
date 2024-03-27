@@ -514,7 +514,7 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
 
             p_x = {}
             for g in ['Yamal', 'H2']:
-                label = f"{g:5} " + lab
+                label = f"{g:6} " + lab
                 print(label)
                 p_x[T] = [pint(x, g, P0) for x in x_range]
                 
@@ -550,7 +550,7 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
 
             p_x = {}
             for g in ['Yamal', 'H2']:
-                label = f"{g:5} " + lab
+                label = f"{g:6} " + lab
                 print(label)
                 p_x[T] = [d_pint(x, g, P0, f, rr0, D)*1e3 for x in x_range]
                 
@@ -586,7 +586,7 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
 
             p_x = {}
             for g in ['Yamal', 'H2']:
-                label = f"{g:5} " + lab
+                label = f"{g:6} " + lab
                 print(label)
                 p_x[T] = [int_d_pint(x, g, P0, f, rr0, D) for x in x_range]
                 
