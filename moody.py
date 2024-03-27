@@ -451,54 +451,48 @@ def plot_pt_diagram(title, filename, plot="loglog", fff=colebrook, gradient=Fals
         plt.savefig(filename)
         
 @memoize
-def pint(x, g, P0, f, rr):
+def d_pipe(x, g, P0, f, rr):
+    r""" Equation 36
+    \begin{equation}
+    \label{eqn:force9a}
+    \frac{\delta P}{\delta x} =     \frac{Z f}{2 D \left[  \frac{Z}{P} - \frac{P}{B} -  \left( \frac{\partial Z}{\partial P} \right)_T   \right]}
+    \end{equation}
+    
+    Yamal data
+    """
+
+    
+@memoize
+def pint(x, g, P0):
     L = 500e3 + 1
   
     p = P0 * np.sqrt(L - x)/np.sqrt(L)
     return p
     
 @memoize
-def d_pint(x, g, P0, f, rr):
+def d_pint(x, g, P0, f, rr, D):
     delta_x = 0.1
-    p1 = pint(x-delta_x, g, P0, f, rr)
-    p2 = pint(x+delta_x, g, P0, f, rr)
+    p1 = pint(x-delta_x, g, P0)
+    p2 = pint(x+delta_x, g, P0)
     return (p2 - p1)/(2 * delta_x)
     
-def int_d_pint(L, g, P0, f, rr):
+def int_d_pint(L, g, P0, f, rr, D):
     """Given that we have only a pressure gradient, calculate the pressure drop
     as an integral of that"""
-    original = pint(L, g, P0, f, rr)
-
-
-    # I_quad, est_err_quad =  quad(d_pint, 0, np.pi)
-    # print(I_quad)
-    # err_quad = 2 - I_quad
-    # print(est_err_quad, err_quad)
-    
-    p, est_err_quad = quad(d_pint, 2, L, args=(g, P0, f, rr))
+    original = pint(L, g, P0)
+   
+    p, est_err_quad = quad(d_pint, 2, L, args=(g, P0, f, rr, D))
     p = p + P0
     
-    print(f"{int(L/1000):5} km {p:8.3f} bar  {original:8.3f} bar     {p-original:9.3f}")
+    # print(f"{int(L/1000):5} km {p:8.3f} bar  {original:8.3f} bar     {p-original:9.3f}")
     return p
     
-    p = P0
-    x_step = L/1000
-    l_range =np.arange(2, L, x_step)
-
-    for x in l_range:
-        #d = (d_pint(x-x_step, g, p, f, rr) + d_pint(x+x_step, g, p, f, rr))/2
-        d =  d_pint(x+x_step, g, p, f, rr)
-        p += d * x_step
-        # print(f"{int(L/1000)} km  {x:9.1f} m  {p:.3f} bar {d:.3f} bar")
-    original = pint(L, g, P0, f, rr)
-    print(f"{int(L/1000):5} km {p:8.3f} bar  {original:8.3f} bar     {p-original:9.3}")
-    return p
-        
         
 def plot_pipeline(title_in, output, plot="linear", fff=afzal):
     # Derived from plot_pt_diagram(), all need refactoring
     global P, T
-    rr0 = 1e-7
+    D = 1.3863 # m
+    rr0 = 2.2e-5 # Yamal
     x_range = np.linspace(1,500e3-1000, 100) # 500 km
     P0 = 220 # bar
 
@@ -510,7 +504,7 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
         plt.figure(figsize=(10, 6))
 
         fn = f"{f.__name__}"
-        title = title_in + f" (ε/D = {rr0} {fn})"
+        title = title_in + f" (ε/D = {rr0} [{fn}])"
         filename = output + "_" + fn + ".png"
         
         for t in [50, 8, -40]:
@@ -519,10 +513,10 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
             # Calculate the curves 
 
             p_x = {}
-            for g in ['NG', 'H2']:
-                label = f"{g} " + lab
+            for g in ['Yamal', 'H2']:
+                label = f"{g:5} " + lab
                 print(label)
-                p_x[T] = [pint(x, g, P0, f, rr0) for x in x_range]
+                p_x[T] = [pint(x, g, P0) for x in x_range]
                 
                 # Plot the calculated curves on the Moody diagram
                 if plot == "loglog":
@@ -546,7 +540,7 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
         
         plt.figure(figsize=(10, 6))
         fn = f"{f.__name__}"
-        title = title_in + f" (ε/D = {rr0} {fn})"
+        title = title_in + f" (ε/D = {rr0} [{fn}])"
         filename = output + "_D_" + fn + ".png"
         
         for t in [50, 8, -40]:
@@ -555,10 +549,10 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
             # Calculate the curves 
 
             p_x = {}
-            for g in ['NG', 'H2']:
-                label = f"{g} " + lab
+            for g in ['Yamal', 'H2']:
+                label = f"{g:5} " + lab
                 print(label)
-                p_x[T] = [d_pint(x, g, P0, f, rr0)*1e3 for x in x_range]
+                p_x[T] = [d_pint(x, g, P0, f, rr0, D)*1e3 for x in x_range]
                 
                 # Plot the calculated curves on the Moody diagram
                 if plot == "loglog":
@@ -582,7 +576,7 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
         
         plt.figure(figsize=(10, 6))
         fn = f"{f.__name__}"
-        title = title_in + f" (ε/D = {rr0} {fn})"
+        title = title_in + f" (ε/D = {rr0} [{fn}])"
         filename = output + "_I_" + fn + ".png"
         
         for t in [50, 8, -40]:
@@ -591,10 +585,10 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
             # Calculate the curves 
 
             p_x = {}
-            for g in ['NG', 'H2']:
-                label = f"{g} " + lab
+            for g in ['Yamal', 'H2']:
+                label = f"{g:5} " + lab
                 print(label)
-                p_x[T] = [int_d_pint(x, g, P0, f, rr0) for x in x_range]
+                p_x[T] = [int_d_pint(x, g, P0, f, rr0, D) for x in x_range]
                 
                 # Plot the calculated curves on the Moody diagram
                 if plot == "loglog":

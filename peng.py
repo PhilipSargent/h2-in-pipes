@@ -1451,7 +1451,7 @@ def print_some_gas_data(plot_gases, visc_f, P, dp=None):
         
     print(f"\nDensity of gas (kg/m³) at {pstr}")
     for T in [T273, T15C, T_yamal]:
-        print(f"{'gas':13}{'Mw(g/mol)':6}  {'ϱ(kg/m³)':5}  {'μ(Pa.s)':5}    {'Z (-)':5}      {'Hc(MJ/mol)':5}  T={T-T273:.1f}°C ")
+        print(f"{'gas':13}{'Mw(g/mol)':6}  {'ϱ(kg/m³)':5}  {'μ(Pa.s)':5}    {'Z (-)':5}      {'Hc(MJ/mol)':5}   Pc (bar)     Tc (K) T={T-T273:.1f}°C ")
         for g in plot_gases:
             print_density(g, P, T, visc_f)
 
@@ -1471,7 +1471,7 @@ def print_some_gas_data(plot_gases, visc_f, P, dp=None):
             #re = D ϱ v / mu
             re = v * (ϱ_H2/ϱ_ng) / (μ_H2/μ_ng)
             gp = f"(H2)/({g})"
-            print(f"v{gp: <15}= {v:0.4f}  Re{gp: <15} = {re:0.4f} ({pstr} T={T-T273:.1f}°C )")
+            print(f"v{gp: <13}= {v:0.4f}  Re{gp: <13} = {re:0.4f} ({pstr} T={T-T273:.1f}°C )")
         
         
       
