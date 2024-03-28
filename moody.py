@@ -12,7 +12,7 @@ from scipy.interpolate import interp1d
 from scipy.integrate import quad
 
 from peng_utils import memoize
-from peng import get_v_ratio, get_Δp_ratio_br, get_ϱ_ratio, get_μ_ratio, get_viscosity, Atm, T273, set_mix_rule
+from peng import  R, get_v_ratio, get_Δp_ratio_br, get_ϱ_ratio, get_μ_ratio, Atm, T273, set_mix_rule, do_mm_rules, dzdp, get_viscosity, get_Hc, get_z, get_density
 
 # We memoize some functions so that they do not get repeadtedly called with
 # the same arguments. Yet still be retain a more obvius way of writing the program.
@@ -218,7 +218,6 @@ def afzal_mod(reynolds, relative_roughness):
 
 @memoize
 def get_re_ratio(g, p, T):
-    '''Used by moody.py but not in this file'''
     #Re = density . v . D / viscosity
     # All the ratio funcitons are for the value for g divided by the value for NG
     v_ratio = get_v_ratio(g, P, T)
@@ -449,17 +448,141 @@ def plot_pt_diagram(title, filename, plot="loglog", fff=colebrook, gradient=Fals
         plt.grid(True, which='both', ls='--')
         plt.legend()
         plt.savefig(filename)
-        
+
 @memoize
-def d_pipe(x, g, P0, f, rr):
-    r""" Equation 36
+def kg_from_GW(g, Qh):
+    """Input Qh is GW  (GJ/s) of combustion energy in HHV per second."""
+    T25C = T273 + 25
+    _, _, hc = get_Hc(g, T25C) # MJ/mol HHV always at 25 C
+    Qm = Qh *1e3 / hc #  (MJ/s) / (MJ/mol) => mol/s
+    
+    m = do_mm_rules(g)
+    Qg = Qm * m * 1e-3 # (mol/s) * (g/mol) * 1e-3 => kg/s
+    print(f"-- {g:7} {Qh=:9.2f} GW {Qm=:9.5f} mol/s  {Qg=:9.5f} kg/s")
+
+    return Qg
+
+@memoize
+def GW_from_kg(g, Qg):
+    # Qg is in kg/s
+    T25C = T273 + 25
+    
+    # calc mol/s from kg/s
+    m = do_mm_rules(g) # in g/m3, convert to kg/m3:
+    Qm = Qg / (m * 1e-3) # mol/s
+
+    _, _, hc = get_Hc(g, T25C) # MJ/mol HHV always at 25 C
+    
+    Q = Qm * hc #  (mol/s) *  (MJ/mol) => MJ/s i.e. MW
+    Qh = Q * 1e-3 # MW * 1e-3 => GW
+    return Qh
+
+
+@memoize
+def get_v_from_Q(g, T, P, Qg, D):
+    # Qg is in kg / s - what whatever gas g is.
+    ϱ = get_density(g, P, T) 
+    Qv = Qg / ϱ # in m^3/s
+    A = get_A(D)
+    
+    v = Qv / A # m/s
+    print(f"-- {g:7}  {P=:9.1f} bar {v=:9.5f} m/s  {ϱ=:9.5f} kg/m^3 {Qg=:9.5f} kg/s {Qv=:9.5f} m^3/s")
+    return v
+    
+    
+@memoize
+def get_A(D):
+    return np.pi * D**2 / 4
+
+@memoize
+def funct_B_sub(g, Qg, D):
+    """When doing calculations with B we need to use the gas constant in terms of P
+    and cubic metres, not in terms of bar and litres, because we are mixing up kg and km.m/s^2 to make the units work.
+    
+    Qg (kg/s)
+    D  (m)
+    
+    Must return value in Pa^2 / K.m
+    """
+    Rg = 8.31446261815324 # J/K.mol # R = 0.083144626  # l.bar/(mol.K) 
+    A = get_A(D) # m^2
+    m = do_mm_rules(g) # g/mol
+    m_kg = m * 1e-3 # kg/mol
+    Bs = np.power(Qg/A,2) * Rg  / m_kg
+    print(f"-- {g:7} B/T: {Bs:9.4f} {m=:8.4f} g/mol {A=:9.5} m^2  {D=} m  {Qg=:9.5f} kg/s")
+    return Bs
+    
+@memoize
+def funct_B(g, Qg, T, D):
+    # B = Q^2 R T / A^2 m # Pa^2 / m
+    
+    return T * funct_B_sub(g, Qg, D)
+
+@memoize
+def d_p(g, T, P, f_function, rr, D, Qh):
+    """This is the near-ideal version of the equations, where the inertial term and 
+    the dZ/dP terms are omitted
+    
+    In all this we need to be careful with units: all in SI m^3 and N and Pa,
+    not litres or bars or g/mol.
+    """
+    
+    # P2^2 - P1^2 = B f Z L/D
+    Qg = kg_from_GW(g, Qh) # kg/s
+    B = funct_B(g, Qg, T, D) # Pa^2 / m
+    Z = get_z(g, P, T) # dimensionless
+
+    v = get_v_from_Q(g, T, P, Qg, D)
+    μ = get_viscosity(g, P, T, visc_f) #in μPa.s 
+    μ = μ * 1e-6 # in Pa.s
+    
+    ϱ = get_density(g, P, T) # kg/m^3
+
+    Re = ϱ * v * D / μ # dimensionless as Pa ≡ N/m^2 and kg.m/s^2 ≡ N
+    ff = f_function(Re, rr) # afzal(reynolds, relative_roughness), dimensionless
+
+    gradient  = (1/2*P) * B * ff * Z # (P1 - P2)/L # Pa /m
+    return gradient
+    
+@memoize
+def d_pipe(g, T, P, f_function, rr, D, Qh):
+    r""" Equation 36 {Sargent2024b}
     \begin{equation}
     \label{eqn:force9a}
     \frac{\delta P}{\delta x} =     \frac{Z f}{2 D \left[  \frac{Z}{P} - \frac{P}{B} -  \left( \frac{\partial Z}{\partial P} \right)_T   \right]}
     \end{equation}
     
     Yamal data
+    
+    input variable Qh is in GW of Yamal gas, 
+    so we need to convert this to Q (kg/s) of whatever gas we are plotting
+    and calculate the gas velocity from that too.
+    
+    In all this we need to be careful with units: all in SI m^3 and N and Pa,
+    not litres or bars or g/mol.
+    
     """
+    Qg = kg_from_GW(g, Qh) # kg/s
+    B = funct_B(g, Qg, T, D) # Pa^2
+    dZdP = dzdp(T, P, g)     # but this is in terms of (1/bar)
+    dZdP = dZdP * 1e5 # now in (1/Pa)
+    Z = get_z(g, P, T) # dimensionless
+
+    v = get_v_from_Q(g, T, P, Qg, D) # m/s
+    μ = get_viscosity(g, P, T, visc_f) # in microPa.s 
+    μ = μ * 1e-6 # in Pa.s
+    
+    ϱ = get_density(g, P, T) # kg/m^3
+
+    Re = ϱ * v * D / μ # dimensionless as pa=N/m and kg.m/s^2=N
+    ff = f_function(Re, rr) # afzal(reynolds, relative_roughness)
+    print (f"--{g:7}  {ff=:.3e} {Re=:0.3e}  {ϱ=:8.4f}  {v=:0.3f} m/s {μ=:8.2e} Pa.s")
+    nom = Z * ff / (2 * D)
+    P = P * 1e5 # convert bar to Pa
+    denom = (Z/P) - (P/B) - dZdP 
+    gradient = nom /denom # Pa/m
+    print (f"--{g:7} dP/dx={gradient:8.4f}Pa/m {nom=:0.5f} {denom=:0.5f}  {(Z/P)=:0.5e}  {-(P/B)=:0.5e} {-dZdP=:0.5e}  ")
+    return gradient * 1e-5 # now in bar/m
 
     
 @memoize
@@ -491,10 +614,21 @@ def int_d_pint(L, g, P0, f, rr, D):
 def plot_pipeline(title_in, output, plot="linear", fff=afzal):
     # Derived from plot_pt_diagram(), all need refactoring
     global P, T
-    D = 1.3863 # m
+    t_range = [42.5, 8, -40]
+    D = 1.3836 # m
     rr0 = 2.2e-5 # Yamal
+    P0 = 84 # bar Yamal
+    Qstp = 2019950 / 3600 # m^3(STP) /hour => m^3(STP)/s
+    ϱstp = get_density('Yamal', Atm, T273+15)
+    ϱ = get_density('Yamal', P0, T273+42.5)
+    Qv = Qstp * ϱstp / ϱ # volume actually at 84 bar
+    Qg = Qv * ϱ # kg/s
+    # Q = 390.63 # kg /s Yamal gas
+    Qh = GW_from_kg('Yamal', Qg)
+    print(f"{Qv=:9.4f} m^3/s at {P0} bar and 42.5 C  {Qg=:9.4f} kg/s {Qh=:9.4f} GW")
+    # Qh = 21.1851 # GW = 10^3 MJ/s - use this as baseline and convert to Q for each gas
     x_range = np.linspace(1,500e3-1000, 100) # 500 km
-    P0 = 220 # bar
+
 
     if not type(fff) is list:
         fff = [fff]
@@ -507,14 +641,14 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
         title = title_in + f" (ε/D = {rr0} [{fn}])"
         filename = output + "_" + fn + ".png"
         
-        for t in [50, 8, -40]:
+        for t in t_range:
             T = T273+t
-            lab =  f" ({T-T273:.0f}°C)"
+            lab =  f" ({T-T273:.1f}°C)"
             # Calculate the curves 
 
             p_x = {}
             for g in ['Yamal', 'H2']:
-                label = f"{g:6} " + lab
+                label = f"{g:7}" + lab
                 print(label)
                 p_x[T] = [pint(x, g, P0) for x in x_range]
                 
@@ -536,21 +670,21 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
         plt.legend()
         plt.savefig(filename)
         
-        # Now the differential
+        # Now the differential (a) of the sqrt function, (b) the real one
         
         plt.figure(figsize=(10, 6))
         fn = f"{f.__name__}"
         title = title_in + f" (ε/D = {rr0} [{fn}])"
         filename = output + "_D_" + fn + ".png"
         
-        for t in [50, 8, -40]:
+        for t in t_range:
             T = T273+t
-            lab =  f" ({T-T273:.0f}°C)"
+            lab =  f" ({T-T273:.1f}°C)"
             # Calculate the curves 
 
             p_x = {}
             for g in ['Yamal', 'H2']:
-                label = f"{g:6} " + lab
+                label = f"{g:7}" + lab
                 print(label)
                 p_x[T] = [d_pint(x, g, P0, f, rr0, D)*1e3 for x in x_range]
                 
@@ -571,6 +705,42 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
         plt.grid(True, which='both', ls='--')
         plt.legend()
         plt.savefig(filename)
+        
+        # (b) This is eqn(36) direct calculated differential curve
+        plt.figure(figsize=(10, 6))
+        fn = f"{f.__name__}"
+        title = title_in + f" (ε/D = {rr0} [{fn}])"
+        filename = output + "_d_" + fn + ".png"
+        
+        for t in t_range:
+            T = T273+t
+            lab =  f" ({T-T273:.1f}°C)"
+            # Calculate the curves 
+
+            p_x = {}
+            for g in ['Yamal', 'H2']:
+                label = f"{g:7}" + lab
+                print(label)
+                p_x[T] = [d_pipe(g, T, P0, f, rr0, D, Qh)*1e3 for x in x_range]
+                #p_x[T] = [d_p(g, T, P0, f, rr0, D, Qh)*1e3 for x in x_range]
+                
+                # Plot the calculated curves on the Moody diagram
+                if plot == "loglog":
+                    for rr, p in p_x.items():
+                        plt.loglog(x_range/1000, ff, label=label)
+                if plot == "linear":
+                    for rr, ff in p_x.items():
+                        plt.plot(x_range/1000, ff, label=label)
+                if plot == "linlog":
+                    for rr, ff in p_x.items():
+                        plt.semilogx(x_range/1000, ff, label=label)
+
+        plt.xlabel('Distance (km)')
+        plt.ylabel('Pressure gradient (bar/km)')
+        plt.title("eqn(36) Gradient of " + title )
+        plt.grid(True, which='both', ls='--')
+        plt.legend()
+        plt.savefig(filename)        
 
         # Now the integral of the differential - to check
         
@@ -579,14 +749,14 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
         title = title_in + f" (ε/D = {rr0} [{fn}])"
         filename = output + "_I_" + fn + ".png"
         
-        for t in [50, 8, -40]:
+        for t in t_range:
             T = T273+t
-            lab =  f" ({T-T273:.0f}°C)"
+            lab =  f" ({T-T273:.1f}°C)"
             # Calculate the curves 
 
             p_x = {}
             for g in ['Yamal', 'H2']:
-                label = f"{g:6} " + lab
+                label = f"{g:7}" + lab
                 print(label)
                 p_x[T] = [int_d_pint(x, g, P0, f, rr0, D) for x in x_range]
                 

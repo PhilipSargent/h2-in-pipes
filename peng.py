@@ -261,7 +261,7 @@ def viscosity_ng(μ, T, P):
     
 @memoize   
 def viscosity_actual(gas, T, P, force=False):
-    """Calculate viscosity for a pure gas at temperature T and pressure = P
+    """Calculate viscosity in microPa.s for a pure gas at temperature T and pressure = P
     """
     if not force and gas == 'H2':
         return viscosity_H2(T, P)
@@ -294,15 +294,15 @@ def do_mm_rules(mix):
     
     if mix in gas_data:
         # if a pure gas
-        return gas_data[mix]['Mw']
+        return gas_data[mix]['Mw'] # g/mol
         
     mm_mix = 0
     composition = gas_mixtures[mix]
     for gas, x in composition.items():
         # Linear mixing rule for volume factor
-        mm_mix += x * gas_data[gas]['Mw']
+        mm_mix += x * gas_data[gas]['Mw'] # g/mol
     
-    return mm_mix
+    return mm_mix # g/mol
     
 @memoize       
 def get_linear(mix, property):
@@ -539,7 +539,6 @@ def z_mixture_rules(mix, T):
        # Return the mixture's parameters for the P-R law
     return a_mix,  b_mix
 
-
 def get_LMN(omega):
     """Twu (1991) suggested a replacement for the alpha function, which instead of depending
         only on T & omega, depends on T, L, M, N (new material constants)
@@ -670,7 +669,7 @@ def pz(T, P, gas): # return the Pressure divided by Z
     return P/Z
 
 @memoize
-def dzdp(T, P, gas): # return the Pressure divided by Z        
+def dzdp(T, P, gas): # return gradient dZ/dP    in (1/bar)  
     Z1 = peng_robinson(T, P*0.999, gas)
     Z2 = peng_robinson(T, P*1.001, gas)
     return (Z2 - Z1)/ (P*1.001 - P*0.999)
@@ -842,10 +841,12 @@ def get_z(g, p, T):
     
 @memoize
 def get_density(mix, p, T):
+    """ R is in litre.bar/(mol.K)
+    So this is calculatingt eh density in g/litre i.e. kg/m3"""
     if mix in gas_data:
         g = mix
         ϱ_pg = p * gas_data[g]['Mw'] / (peng_robinson(T, p, g) * R * T)
-        return ϱ_pg
+        return ϱ_pg # this is in g/l ie kg/m3
         
     a, b = z_mixture_rules(mix, T)
     Z_mix = solve_for_Z(T, p, a, b)
@@ -887,7 +888,7 @@ def get_Δp_ratio_br(g, p, T, g2='NG'):
 
 @memoize
 def get_blasius_factor(g, p, T):
-    ϱ = get_density(g, p, T)
+    ϱ = get_density(g, p, T) # g/m3
     μ =  get_viscosity(g, p, T, visc_f)
 
     b_factor = pow(μ, 0.25) * pow(ϱ, 0.75)
@@ -909,7 +910,7 @@ def get_Hc(g, T):
             hc += x * gas_data[pure_gas]['Hc']
     # hc is in MJ/mol, so we need to divide by the molar volume at  (25 degrees C, 1 atm) in m³
     Mw = do_mm_rules(g)/1000 # Mw now in kg/mol not g/mol
-    ϱ_0 = get_density(g, Atm, T) # in kg/m³
+    ϱ_0 = get_density(g, Atm, T) # in g/m³
     molar_volume = Mw / ϱ_0  # in m³/mol
     
     if hc:
@@ -1944,7 +1945,7 @@ def main():
     for g, txt in [('H2','Pure hydrogen'), ('NG','Natural gas'), ('CH4','Pure methane')]:
         p_z = [pz(T, p, g) for p in pressures]
         plt.plot(pressures, p_z, label=txt, **plot_kwargs(g))
-        
+    
     plt.title(f'P / Z  vs Pressure at {T-T273:4.1f}°C')
     plt.xlabel('Pressure (bar)')
     plt.ylabel('Pressure / Z')
@@ -1957,12 +1958,13 @@ def main():
    # Plot dZ/dP v P  for pure hydrogen and natural gases
 
     for g, txt in [('H2','Pure hydrogen'), ('NG','Natural gas')]:
-        dzdp_ = [dzdp(T, p, g) for p in pressures]
+        T2 = T273 + 42.5
+        dzdp_ = [dzdp(T2, p, g)*1e5 for p in pressures]
         plt.plot(pressures, dzdp_, label=txt, **plot_kwargs(g))
         
-    plt.title(f'dZ/dP  vs Pressure at {T-T273:4.1f}°C')
+    plt.title(f'dZ/dP  vs Pressure at {T2-T273:4.1f}°C')
     plt.xlabel('Pressure (bar)')
-    plt.ylabel('dZ/dP')
+    plt.ylabel('dZ/dP (1/Pa) ≡ (1e5/bar)')
     plt.legend()
     plt.grid(True)
 
