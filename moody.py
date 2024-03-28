@@ -518,36 +518,6 @@ def funct_B(g, Qg, T, D):
     return T * funct_B_sub(g, Qg, D)
 
 @memoize
-def d_p37(x, g, T, P, f_function, rr, D, Qh):
-    """This is the near-ideal version of the equations, where the inertial term and 
-    the dZ/dP terms are omitted
-    
-    In all this we need to be careful with units: all in SI m^3 and N and Pa,
-    not litres or bars or g/mol.
-    """
-    
-    # eqn(38)
-    # dP/dx = - B f Z / (2 D P)
-    Qg = kg_from_GW(g, Qh) # kg/s
-    B = funct_B(g, Qg, T, D) # Pa^2 / m
-    Z = get_z(g, P, T) # dimensionless
-
-    v = get_v_from_Q(g, T, P, Qg, D)
-    μ = get_viscosity(g, P, T, visc_f) #in μPa.s 
-    μ = μ * 1e-6 # in Pa.s
-    
-    ϱ = get_density(g, P, T) # kg/m^3
-
-    Re = ϱ * v * D / μ # dimensionless as Pa ≡ N/m^2 and kg.m/s^2 ≡ N
-    ff = f_function(Re, rr) # afzal(reynolds, relative_roughness), dimensionless
-    # print (f"--{g:7}  {ff=:.3e} {Re=:0.3e}  {ϱ=:8.4f}  {Z=:0.5f}  {v=:0.3f} m/s {μ=:8.2e} Pa.s")
-    P = P *1e5 # convert bar to Pa
-    gradient  =  - B * ff * Z  / (2 * D * P) # (P1 - P2)/L # Pa /m
-    gradient = gradient * 1e-5 # bar/m
-    #print (f"--{g:7} P={P/1e5:0.5f} bar  {B=:0.5e} Pa^2 gradient={gradient*1000:0.5e} bar/km")
-    return gradient
-    
-@memoize
 def d_pipe(L, g, T, P, f_function, rr, D, Qh):
     r""" Equation 36 {Sargent2024b}
     \begin{equation}
@@ -612,19 +582,48 @@ def int_d_pint(L, g, P0, f, rr, D):
     #print(f"{int(L/1000):5} km {p:8.3f} bar  {original:8.3f} bar     {p-original:9.3f}")
     return p
     
-def int_d_p(L, g, T, P0, f_function, rr, D, Qh):
+def int_dp37(L, g, T, P0, f_function, rr, D, Qh):
     """Given that we have only a pressure gradient, calculate the pressure drop
     as an integral of that"""
     
     # def d_p(g, T, P, f_function, rr, D, Qh):
 
    
-    grad, est_err_quad = quad(d_pipe, 2, L, args=(g, T, P0, f_function, rr, D, Qh))
+    grad, est_err_quad = quad(dp37, 2, L, args=(g, T, P0, f_function, rr, D, Qh))
     p = grad + P0
     
     print(f"{int(L/1000):5} km {p:8.3f} bar {grad=:8.3e} bar ")
     return p
- 
+
+@memoize
+def dp37(x, g, T, P, f_function, rr, D, Qh):
+    """This is the near-ideal version of the equations, where the inertial term and 
+    the dZ/dP terms are omitted
+    
+    In all this we need to be careful with units: all in SI m^3 and N and Pa,
+    not litres or bars or g/mol.
+    """
+    
+    # eqn(38)
+    # dP/dx = - B f Z / (2 D P)
+    Qg = kg_from_GW(g, Qh) # kg/s
+    B = funct_B(g, Qg, T, D) # Pa^2 / m
+    Z = get_z(g, P, T) # dimensionless
+
+    v = get_v_from_Q(g, T, P, Qg, D)
+    μ = get_viscosity(g, P, T, visc_f) #in μPa.s 
+    μ = μ * 1e-6 # in Pa.s
+    
+    ϱ = get_density(g, P, T) # kg/m^3
+
+    Re = ϱ * v * D / μ # dimensionless as Pa ≡ N/m^2 and kg.m/s^2 ≡ N
+    ff = f_function(Re, rr) # afzal(reynolds, relative_roughness), dimensionless
+    # print (f"--{g:7}  {ff=:.3e} {Re=:0.3e}  {ϱ=:8.4f}  {Z=:0.5f}  {v=:0.3f} m/s {μ=:8.2e} Pa.s")
+    P = P *1e5 # convert bar to Pa
+    gradient  =  - B * ff * Z  / (2 * D * P) # (P1 - P2)/L # Pa /m
+    gradient = gradient * 1e-5 # bar/m
+    #print (f"--{g:7} P={P/1e5:0.5f} bar  {B=:0.5e} Pa^2 gradient={gradient*1000:0.5e} bar/km")
+    return gradient
         
 def plot_pipeline(title_in, output, plot="linear", fff=afzal):
     # Derived from plot_pt_diagram(), all need refactoring
@@ -654,14 +653,14 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
     rr0 = 2.2e-5 # Yamal
     P0 = 84 # bar Yamal
     Qstp = 2019950 / 3600 # m^3(STP) /hour => m^3(STP)/s
-    ϱstp = get_density('Yamal', Atm, T273+15)
+    ϱstp = get_density('Yamal', Atm, T273+15) # STP
     ϱ = get_density('Yamal', P0, T273+42.5)
     Qv = Qstp * ϱstp / ϱ # volume actually at 84 bar
     Qg = Qv * ϱ # kg/s
-    # Q = 390.63 # kg /s Yamal gas
+    # Qg = 390.63 # kg /s Yamal gas
     Qh = GW_from_kg('Yamal', Qg)
-    print(f"{Qv=:9.4f} m^3/s at {P0} bar and 42.5 C  {Qg=:9.4f} kg/s {Qh=:9.4f} GW")
     # Qh = 21.1851 # GW = 10^3 MJ/s - use this as baseline and convert to Q for each gas
+    print(f"YAMAL PIPELINE {Qv=:9.4f} m^3/s at {P0} bar and 42.5 C  {Qg=:9.4f} kg/s {Qh=:9.4f} GW")
     L_pipe = 500e3
     x_range = np.linspace(1, L_pipe-1000, 50) # 500 km
 
@@ -672,9 +671,6 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
     
     for f in fff: # several different friction factor functions
         plt.figure(figsize=(10, 6))
-
-       # (b) This is eqn(37) direct calculated differential curve
-        
         
         # (b) This is eqn(37) direct calculated differential curve
         plt.figure(figsize=(10, 6))
@@ -685,14 +681,13 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
         for t in t_range:
             T = T273+t
             lab =  f" ({T-T273:.1f}°C)"
-            # Calculate the curves 
 
             p_x = {}
             for g in ['Yamal', 'H2']:
                 label = f"{g:7}" + lab
                 print(label)
                 # eqn 36 p_x[T] = [d_pipe(g, T, P0, f, rr0, D, Qh)*1e3 for x in x_range]
-                p_x[T] = [d_p37(x, g, T, P0, f, rr0, D, Qh)*1e3 for x in x_range] # eqn 38
+                p_x[T] = [dp37(x, g, T, P0, f, rr0, D, Qh)*1e3 for x in x_range] 
                 plotit(g, p_x, plot, f, label)
 
         plt.ylabel('Pressure gradient (bar/km)')
@@ -716,14 +711,14 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
                 print(label)
                 # def d_p37(g, T, P, f_function, rr, D, Qh):
 
-                p_x[T] = [int_d_p(x, g, T, P0, f, rr0, D, Qh) for x in x_range]
+                p_x[T] = [int_dp37(x, g, T, P0, f, rr0, D, Qh) for x in x_range]
                 plotit(g, p_x, plot, f, label)
 
         plt.ylabel('Pressure (bar)')
         saveit(title,filename)
 
         #
-        # Now the SQRT fudge to see what sort of function it looks like
+        # Now the SQRT fudge to see what sort of function it looks like - - -- - - - -- - --- -- -- --
         #
         fn = f"{f.__name__}"
         title = title_in + f" (ε/D = {rr0} [{fn}])"
