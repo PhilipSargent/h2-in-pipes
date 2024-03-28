@@ -519,7 +519,7 @@ def funct_B(g, Qg, T, D):
     return T * funct_B_sub(g, Qg, D)
 
 @memoize
-def d_p(g, T, P, f_function, rr, D, Qh):
+def d_p(x, g, T, P, f_function, rr, D, Qh):
     """This is the near-ideal version of the equations, where the inertial term and 
     the dZ/dP terms are omitted
     
@@ -527,7 +527,8 @@ def d_p(g, T, P, f_function, rr, D, Qh):
     not litres or bars or g/mol.
     """
     
-    # P2^2 - P1^2 = B f Z L/D
+    # eqn(38)
+    # dP/dx = - B f Z / (2 D P)
     Qg = kg_from_GW(g, Qh) # kg/s
     B = funct_B(g, Qg, T, D) # Pa^2 / m
     Z = get_z(g, P, T) # dimensionless
@@ -540,8 +541,11 @@ def d_p(g, T, P, f_function, rr, D, Qh):
 
     Re = ϱ * v * D / μ # dimensionless as Pa ≡ N/m^2 and kg.m/s^2 ≡ N
     ff = f_function(Re, rr) # afzal(reynolds, relative_roughness), dimensionless
-
-    gradient  = (1/2*P) * B * ff * Z # (P1 - P2)/L # Pa /m
+    print (f"--{g:7}  {ff=:.3e} {Re=:0.3e}  {ϱ=:8.4f}  {v=:0.3f} m/s {μ=:8.2e} Pa.s")
+    P = P *1e5 # convert bar to Pa
+    gradient  =  - B * ff * Z  / (2 * D * P) # (P1 - P2)/L # Pa /m
+    gradient = gradient * 1e-5 # bar/m
+    print (f"--{g:7} {P=:0.5f} Pa  {Z=:0.5f}  {B=:0.5e} Pa^2 {gradient=:0.5e} bar/m")
     return gradient
     
 @memoize
@@ -610,10 +614,36 @@ def int_d_pint(L, g, P0, f, rr, D):
     # print(f"{int(L/1000):5} km {p:8.3f} bar  {original:8.3f} bar     {p-original:9.3f}")
     return p
     
+def int_d_p(L, g, T, P0, f_function, rr, D, Qh):
+    """Given that we have only a pressure gradient, calculate the pressure drop
+    as an integral of that"""
+    
+    # def d_p(g, T, P, f_function, rr, D, Qh):
+
+   
+    p, est_err_quad = quad(d_p, 2, L, args=(g, T, P0, f_function, rr, D, Qh))
+    p = p + P0
+    
+    # print(f"{int(L/1000):5} km {p:8.3f} bar  {original:8.3f} bar     {p-original:9.3f}")
+    return p
+ 
         
 def plot_pipeline(title_in, output, plot="linear", fff=afzal):
     # Derived from plot_pt_diagram(), all need refactoring
     global P, T
+    
+    def plotit(p_x, plot, ff, label):
+        # Plot the calculated curves 
+        if plot == "loglog":
+            for rr, p in p_x.items():
+                plt.loglog(x_range/1000, ff, label=label)
+        if plot == "linear":
+            for rr, ff in p_x.items():
+                plt.plot(x_range/1000, ff, label=label)
+        if plot == "linlog":
+            for rr, ff in p_x.items():
+                plt.semilogx(x_range/1000, ff, label=label)
+        
     t_range = [42.5, 8, -40]
     D = 1.3836 # m
     rr0 = 2.2e-5 # Yamal
@@ -627,7 +657,8 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
     Qh = GW_from_kg('Yamal', Qg)
     print(f"{Qv=:9.4f} m^3/s at {P0} bar and 42.5 C  {Qg=:9.4f} kg/s {Qh=:9.4f} GW")
     # Qh = 21.1851 # GW = 10^3 MJ/s - use this as baseline and convert to Q for each gas
-    x_range = np.linspace(1,500e3-1000, 100) # 500 km
+    L_pipe = 500e3
+    x_range = np.linspace(1, L_pipe-1000, 100) # 500 km
 
 
     if not type(fff) is list:
@@ -651,17 +682,8 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
                 label = f"{g:7}" + lab
                 print(label)
                 p_x[T] = [pint(x, g, P0) for x in x_range]
+                plotit(p_x, plot, f, label)
                 
-                # Plot the calculated curves on the Moody diagram
-                if plot == "loglog":
-                    for rr, p in p_x.items():
-                        plt.loglog(x_range/1000, ff, label=label)
-                if plot == "linear":
-                    for rr, ff in p_x.items():
-                        plt.plot(x_range/1000, ff, label=label)
-                if plot == "linlog":
-                    for rr, ff in p_x.items():
-                        plt.semilogx(x_range/1000, ff, label=label)
 
         plt.xlabel('Distance (km)')
         plt.ylabel('Pressure (bar)')
@@ -687,17 +709,7 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
                 label = f"{g:7}" + lab
                 print(label)
                 p_x[T] = [d_pint(x, g, P0, f, rr0, D)*1e3 for x in x_range]
-                
-                # Plot the calculated curves on the Moody diagram
-                if plot == "loglog":
-                    for rr, p in p_x.items():
-                        plt.loglog(x_range/1000, ff, label=label)
-                if plot == "linear":
-                    for rr, ff in p_x.items():
-                        plt.plot(x_range/1000, ff, label=label)
-                if plot == "linlog":
-                    for rr, ff in p_x.items():
-                        plt.semilogx(x_range/1000, ff, label=label)
+                plotit(p_x, plot, f, label)
 
         plt.xlabel('Distance (km)')
         plt.ylabel('Pressure gradient (bar/km)')
@@ -721,26 +733,44 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
             for g in ['Yamal', 'H2']:
                 label = f"{g:7}" + lab
                 print(label)
-                p_x[T] = [d_pipe(g, T, P0, f, rr0, D, Qh)*1e3 for x in x_range]
-                #p_x[T] = [d_p(g, T, P0, f, rr0, D, Qh)*1e3 for x in x_range]
-                
-                # Plot the calculated curves on the Moody diagram
-                if plot == "loglog":
-                    for rr, p in p_x.items():
-                        plt.loglog(x_range/1000, ff, label=label)
-                if plot == "linear":
-                    for rr, ff in p_x.items():
-                        plt.plot(x_range/1000, ff, label=label)
-                if plot == "linlog":
-                    for rr, ff in p_x.items():
-                        plt.semilogx(x_range/1000, ff, label=label)
+                # eqn 36 p_x[T] = [d_pipe(g, T, P0, f, rr0, D, Qh)*1e3 for x in x_range]
+                p_x[T] = [d_p(x, g, T, P0, f, rr0, D, Qh)*1e3 for x in x_range] # eqn 38
+                plotit(p_x, plot, f, label)
 
         plt.xlabel('Distance (km)')
         plt.ylabel('Pressure gradient (bar/km)')
-        plt.title("eqn(36) Gradient of " + title )
+        plt.title("Gradient of " + title )
         plt.grid(True, which='both', ls='--')
         plt.legend()
-        plt.savefig(filename)        
+        plt.savefig(filename)       
+
+        # Now the integral of dP/dx
+        
+        plt.figure(figsize=(10, 6))
+        fn = f"{f.__name__}"
+        title = "Integral " + title_in + f" (ε/D = {rr0} [{fn}])"
+        filename = output + "_i_" + fn + ".png"
+        
+        for t in t_range:
+            T = T273+t
+            lab =  f" ({T-T273:.1f}°C)"
+            # Calculate the curves 
+
+            p_x = {}
+            for g in ['Yamal', 'H2']:
+                label = f"{g:7}" + lab
+                print(label)
+                # def d_p(g, T, P, f_function, rr, D, Qh):
+
+                p_x[T] = [int_d_p(x, g, T, P0, f, rr0, D, Qh) for x in x_range]
+                plotit(p_x, plot, f, label)
+
+        plt.xlabel('Distance (km)')
+        plt.ylabel('Pressure (bar)')
+        plt.title(title)
+        plt.grid(True, which='both', ls='--')
+        plt.legend()
+        plt.savefig(filename)
 
         # Now the integral of the differential - to check
         
@@ -759,17 +789,7 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
                 label = f"{g:7}" + lab
                 print(label)
                 p_x[T] = [int_d_pint(x, g, P0, f, rr0, D) for x in x_range]
-                
-                # Plot the calculated curves on the Moody diagram
-                if plot == "loglog":
-                    for rr, p in p_x.items():
-                        plt.loglog(x_range/1000, ff, label=label)
-                if plot == "linear":
-                    for rr, ff in p_x.items():
-                        plt.plot(x_range/1000, ff, label=label)
-                if plot == "linlog":
-                    for rr, ff in p_x.items():
-                        plt.semilogx(x_range/1000, ff, label=label)
+                plotit(p_x, plot, f, label)
 
         plt.xlabel('Distance (km)')
         plt.ylabel('Pressure (bar)')
