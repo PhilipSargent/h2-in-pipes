@@ -9,13 +9,13 @@ import pyfrac_yj as pf
 import warnings
 
 from scipy.interpolate import interp1d
-from scipy.integrate import quad
+from scipy.integrate import quad,solve_ivp
 
 from peng_utils import memoize
 from peng import  R, get_v_ratio, get_Δp_ratio_br, get_ϱ_ratio, get_μ_ratio, Atm, T273, set_mix_rule, do_mm_rules, dzdp, get_viscosity, get_Hc, get_z, get_density, style, colour
 
 # We memoize some functions so that they do not get repeadtedly called with
-# the same arguments. Yet still be retain a more obvius way of writing the program.
+# the same arguments. Yet still retain a more obvious way of writing the program.
 
 global P, T
 lowest_f = 0.000001
@@ -26,6 +26,9 @@ ib_factor = 0.316 *   3e3**(b_exponent- 0.25)
 T8C = T273 + 3 # 3 degrees C
 T = T8C # default temp
 P = Atm + 40/1000 # 40 mbar default pressure
+
+# roughness range for piggot line
+rr_piggot = np.logspace(-1.3, -9.1, 100) # roughness values between 0.01 and 0.00001
 
 # Set the default mixture rule for viscosities in a mixed gas
 visc_f = set_mix_rule()
@@ -224,7 +227,7 @@ def get_re_ratio(g, p, T):
     μ_ratio = get_μ_ratio(g, P, T, visc_f)
     ϱ_ratio = get_ϱ_ratio(g, P, T)
     re_ratio = ϱ_ratio * v_ratio / μ_ratio
-    print(f"{T=:.0f} {P=:8.4f} {v_ratio=:.4f} {μ_ratio=:.4f} {ϱ_ratio=:.4f}  {re_ratio=:.4f}  {visc_f.__name__}")
+    print(f"{T=:.0f}K ({T-T273:.1f}°C) {P=:8.4f} {v_ratio=:.4f} {μ_ratio=:.4f} {ϱ_ratio=:.4f}  {re_ratio=:.4f}  {visc_f.__name__}")
     return re_ratio
     
 #@memoize 
@@ -313,8 +316,6 @@ def afzal(reynolds, relative_roughness):
         f_solution = f_new
     return f_solution
 
-# roughness range for piggot line
-rr_piggot = np.logspace(-1.3, -9.1, 100) # roughness values between 0.01 and 0.00001
 
 def piggot_point(rr):
     """The Piggot line is where the Colebrook curve flattens out as a function of Re
@@ -479,9 +480,9 @@ def GW_from_kg(g, Qg):
 
 
 @memoize
-def get_v_from_Q(g, T, P, Qg, D):
+def get_v_from_Q(g, Tt, Pp, Qg, D):
     # Qg is in kg / s - what whatever gas g is.
-    ϱ = get_density(g, P, T) 
+    ϱ = get_density(g, Pp, Tt) 
     Qv = Qg / ϱ # in m^3/s
     A = get_A(D)
     
@@ -586,40 +587,56 @@ def int_d_pint(L, g, P0, f, rr, D):
         exit(-1)    
     return p
     
-def int_dp37(L, g, T, P0, f_function, rr, D, Qh):
-    """Given that we have only a pressure gradient, calculate the pressure drop
-    as an integral of that"""
-    p = P0
-    grad = 0
-    grad, est_err_quad = quad(dp37, 2, L, args=(g, T, p, f_function, rr, D, Qh))
-    p = grad + P0
-    
-
-    print(f"{int(L/1000):5} km {p:8.3f} bar {grad=:8.3f} bar/m ")
-    if p < 0:
-        print(f"negative P. Abort.")
-        exit(-1)
-    return p
 
 @memoize
-def running_dp37(L, g, T, P0, f_function, rr, D, Qh):
-    # This understands x i.e. L
-    # This steps in 1km steps from zero to L, and adds up the pressure gradients.
-    p = P0
+def running_dp38(L, g, T, P0, f_function, rr, D, Qh):
+    """Does the integral from x: 0 to L of all the dP/dx to get P = P(L)
+    This understands x i.e. L
+    This steps in 1km steps from zero to L, and adds up the pressure gradients.
+    L (m)
+    T (K)
+    P0 (bar)
+    D (m)
+    Qh (GW)
+    
+    https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.quad.html
+    scipy.integrate.quad(func, a, b, args=())
+    Integrate func from x=[a to b]   QUADPACK.
+    func(x,..)
+    """
+    def dpdx(x,p):
+        # Have to do this because I can't find the args=() documentaiton for scipy
+        if type(p) is not float:
+            p = p[0] # scipy likes to set this to a numpty.ndarray of a numpy.float64 value instead of a simple float
+        gradient = dp38(x, p, g, T, f_function, rr, D, Qh)
+        return gradient
+        
+    p = P0 # 84 bar
     gradient = 0
-    x0 = 1
-    x_range = range(x0, int(L/1000), 1000) # x: in 1km steps but measure in metres
-    for x in x_range:
-        grad, est_err_quad = quad(dp37, 2, L, args=(g, T, p, f_function, rr, D, Qh))
-        p = P0 + grad*(x-x0)
-        x0 = x
+    # Integrate x: 0..L to get the pressure drop at L, but does NOT change p on each iteration
+    # ie this is WRONG
+    drop, est_err_quad = quad(dp38, 0, L, args=(p, g, T, f_function, rr, D, Qh)) # bar/m
+    p = P0 + drop
+    print(f"{int(L/1000):5} km  (p:{p:5.1f} bar) {drop=:8.3f} bar ")
 
+     # Initial condition
+    p0 = [P0]
+    # x span
+    x_span = (0, L)
+    # Solve the ODE
+    solution = solve_ivp(dpdx, x_span, p0)
+
+    print(solution.t)
+    print(solution.y)
+    p = solution.y[0][-1]
+    print(p)
     return p
    
     
 @memoize
-def dp37(x, g, T, P, f_function, rr, D, Qh):
-    """This is the near-ideal version of the equations, where the inertial term and 
+def dp38(x, P, g, T, f_function, rr, D, Qh):
+    """This is the 'near-ideal gas' version of the equation (38)
+    where the inertial term and 
     the dZ/dP terms are omitted.
     
     This calculates the dP/dx for given P, T, Qh. It does not understand 'x'.
@@ -627,12 +644,16 @@ def dp37(x, g, T, P, f_function, rr, D, Qh):
     
     In all this we need to be careful with units: all in SI m^3 and N and Pa,
     not litres or bars or g/mol.
-    """
     
-    # eqn(38)
-    # dP/dx = - B f Z / (2 D P)
+    T (K)
+    P (bar)
+    D (m)
+    Qh (GW)
+    
+    dP/dx = - B f Z / (2 D P) """
     Qg = kg_from_GW(g, Qh) # kg/s
     B = funct_B(g, Qg, T, D) # Pa^2 / m
+
     Z = get_z(g, P, T) # dimensionless
 
     v = get_v_from_Q(g, T, P, Qg, D)
@@ -645,10 +666,10 @@ def dp37(x, g, T, P, f_function, rr, D, Qh):
     ff = f_function(Re, rr) # afzal(reynolds, relative_roughness), dimensionless
     # print (f"--{g:7}  {ff=:.3e} {Re=:0.3e}  {ϱ=:8.4f}  {Z=:0.5f}  {v=:0.3f} m/s {μ=:8.2e} Pa.s")
     P = P *1e5 # convert bar to Pa
-    gradient  =  -B * ff * Z  / (2 * D * P) # (P1 - P2)/L # Pa /m
+    gradient  =  -B * ff * Z  / (2 * D * P) #  Pa /m
     gradient = gradient * 1e-5 # bar/m
     #print (f"--{g:7} P={P/1e5:0.5f} bar  {B=:0.5e} Pa^2 gradient={gradient*1000:0.5e} bar/km")
-    return gradient
+    return gradient # bar/m
         
 def plot_pipeline(title_in, output, plot="linear", fff=afzal):
     # Derived from plot_pt_diagram(), all need refactoring
@@ -675,6 +696,7 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
         print(f"*** {filename} ***")
         
     t_range = [42.5, 8, -40]
+    t_range = [42.5, 0]
     D = 1.3836 # m
     rr0 = 2.2e-5 # Yamal
     P0 = 84 # bar Yamal
@@ -713,35 +735,12 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
                 label = f"{g:7}" + lab
                 print(label)
                 # eqn 36 p_x[T] = [d_pipe(g, T, P0, f, rr0, D, Qh)*1e3 for x in x_range]
-                p_x[T] = [running_dp37(x, g, T, P0, f, rr0, D, Qh)*1e3 for x in x_range] 
-                plotit(g, p_x, plot, f, label)
-
-        plt.ylabel('Pressure gradient (bar/km)')
-        saveit("Gradient of " + title,filename)
-
-        # Now the integral of dP/dx
-        
-        plt.figure(figsize=(10, 6))
-        fn = f"{f.__name__}"
-        title =  title_in + f" (ε/D = {rr0} [{fn}])"
-        filename = output + "_i_" + fn + ".png"
-        
-        for t in t_range:
-            T = T273+t
-            lab =  f" ({T-T273:.1f}°C)"
-            # Calculate the curves 
-
-            p_x = {}
-            for g in ['Yamal', 'H2']:
-                label = f"{g:7}" + lab
-                print(label)
-                # def d_p37(g, T, P, f_function, rr, D, Qh):
-
-                p_x[T] = [int_dp37(x, g, T, P0, f, rr0, D, Qh) for x in x_range]
+                p_x[T] = [running_dp38(x, g, T, P0, f, rr0, D, Qh) for x in x_range] # bar
                 plotit(g, p_x, plot, f, label)
 
         plt.ylabel('Pressure (bar)')
-        saveit(title,filename)
+        saveit( title,filename)
+
 
         #
         # Now the SQRT fudge to see what sort of function it looks like - - -- - - - -- - --- -- -- --
