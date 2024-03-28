@@ -514,8 +514,11 @@ def funct_B_sub(g, Qg, D):
 @memoize
 def funct_B(g, Qg, T, D):
     # B = Q^2 R T / A^2 m # Pa^2 / m
+    B = T * funct_B_sub(g, Qg, D)
+    sqrtB = np.sqrt(B)/1e5
+    print(f"-- {g:7} {T=:9.3f} K  B: {B:9.4f} sqrt(B):{sqrtB:9.4f} bar^2")
     
-    return T * funct_B_sub(g, Qg, D)
+    return B
 
 @memoize
 def d_pipe(L, g, T, P, f_function, rr, D, Qh):
@@ -578,27 +581,49 @@ def int_d_pint(L, g, P0, f, rr, D):
    
     p, est_err_quad = quad(d_pint, 2, L, args=(g, P0, f, rr, D))
     p = p + P0
-    
-    #print(f"{int(L/1000):5} km {p:8.3f} bar  {original:8.3f} bar     {p-original:9.3f}")
+    if p < 0:
+        print(f"negative P. Abort.")
+        exit(-1)    
     return p
     
 def int_dp37(L, g, T, P0, f_function, rr, D, Qh):
     """Given that we have only a pressure gradient, calculate the pressure drop
     as an integral of that"""
-    
-    # def d_p(g, T, P, f_function, rr, D, Qh):
-
-   
-    grad, est_err_quad = quad(dp37, 2, L, args=(g, T, P0, f_function, rr, D, Qh))
+    p = P0
+    grad = 0
+    grad, est_err_quad = quad(dp37, 2, L, args=(g, T, p, f_function, rr, D, Qh))
     p = grad + P0
     
-    print(f"{int(L/1000):5} km {p:8.3f} bar {grad=:8.3e} bar ")
+
+    print(f"{int(L/1000):5} km {p:8.3f} bar {grad=:8.3f} bar/m ")
+    if p < 0:
+        print(f"negative P. Abort.")
+        exit(-1)
     return p
 
 @memoize
+def running_dp37(L, g, T, P0, f_function, rr, D, Qh):
+    # This understands x i.e. L
+    # This steps in 1km steps from zero to L, and adds up the pressure gradients.
+    p = P0
+    gradient = 0
+    x0 = 1
+    x_range = range(x0, int(L/1000), 1000) # x: in 1km steps but measure in metres
+    for x in x_range:
+        grad, est_err_quad = quad(dp37, 2, L, args=(g, T, p, f_function, rr, D, Qh))
+        p = P0 + grad*(x-x0)
+        x0 = x
+
+    return p
+   
+    
+@memoize
 def dp37(x, g, T, P, f_function, rr, D, Qh):
     """This is the near-ideal version of the equations, where the inertial term and 
-    the dZ/dP terms are omitted
+    the dZ/dP terms are omitted.
+    
+    This calculates the dP/dx for given P, T, Qh. It does not understand 'x'.
+    But it seems to have to have it so that the quad() integration works
     
     In all this we need to be careful with units: all in SI m^3 and N and Pa,
     not litres or bars or g/mol.
@@ -620,7 +645,7 @@ def dp37(x, g, T, P, f_function, rr, D, Qh):
     ff = f_function(Re, rr) # afzal(reynolds, relative_roughness), dimensionless
     # print (f"--{g:7}  {ff=:.3e} {Re=:0.3e}  {ϱ=:8.4f}  {Z=:0.5f}  {v=:0.3f} m/s {μ=:8.2e} Pa.s")
     P = P *1e5 # convert bar to Pa
-    gradient  =  - B * ff * Z  / (2 * D * P) # (P1 - P2)/L # Pa /m
+    gradient  =  -B * ff * Z  / (2 * D * P) # (P1 - P2)/L # Pa /m
     gradient = gradient * 1e-5 # bar/m
     #print (f"--{g:7} P={P/1e5:0.5f} bar  {B=:0.5e} Pa^2 gradient={gradient*1000:0.5e} bar/km")
     return gradient
@@ -647,6 +672,7 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
         plt.grid(True, which='both', ls='--')
         plt.legend()
         plt.savefig(filename)
+        print(f"*** {filename} ***")
         
     t_range = [42.5, 8, -40]
     D = 1.3836 # m
@@ -687,7 +713,7 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
                 label = f"{g:7}" + lab
                 print(label)
                 # eqn 36 p_x[T] = [d_pipe(g, T, P0, f, rr0, D, Qh)*1e3 for x in x_range]
-                p_x[T] = [dp37(x, g, T, P0, f, rr0, D, Qh)*1e3 for x in x_range] 
+                p_x[T] = [running_dp37(x, g, T, P0, f, rr0, D, Qh)*1e3 for x in x_range] 
                 plotit(g, p_x, plot, f, label)
 
         plt.ylabel('Pressure gradient (bar/km)')

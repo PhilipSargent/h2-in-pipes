@@ -195,8 +195,11 @@ def viscosity_H2(T, P):
             A = np.exp(5.73 + np.log(ϱ) + 65.0 * np.power(ϱ, 3/2) - 6e-6 * np.exp(135*ϱ))
         except RuntimeWarning:
             print('Runtime Warning')
-            print(f"H2   {P=:3.1f} {T=:3.0f} {ϱ=:0.4e}  {vs=:10.5f}  ")
+            print(f"H2   {P=:3.1f} {T=:3.0f} {ϱ=:0.4e}  ")
             A = 0
+            if P < 0:
+                print(f"negative P. Abort.")
+                exit(-1)
         # np.log() is natural log. np.log10() is log base 10.
         # We don't know what units Li et al. are using for density.
          
