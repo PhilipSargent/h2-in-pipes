@@ -12,7 +12,7 @@ from scipy.interpolate import interp1d
 from scipy.integrate import quad
 
 from peng_utils import memoize
-from peng import  R, get_v_ratio, get_Δp_ratio_br, get_ϱ_ratio, get_μ_ratio, Atm, T273, set_mix_rule, do_mm_rules, dzdp, get_viscosity, get_Hc, get_z, get_density
+from peng import  R, get_v_ratio, get_Δp_ratio_br, get_ϱ_ratio, get_μ_ratio, Atm, T273, set_mix_rule, do_mm_rules, dzdp, get_viscosity, get_Hc, get_z, get_density, style, colour
 
 # We memoize some functions so that they do not get repeadtedly called with
 # the same arguments. Yet still be retain a more obvius way of writing the program.
@@ -486,9 +486,8 @@ def get_v_from_Q(g, T, P, Qg, D):
     A = get_A(D)
     
     v = Qv / A # m/s
-    print(f"-- {g:7}  {P=:9.1f} bar {v=:9.5f} m/s  {ϱ=:9.5f} kg/m^3 {Qg=:9.5f} kg/s {Qv=:9.5f} m^3/s")
+    #print(f"-- {g:7}  {P=:9.1f} bar {v=:9.5f} m/s  {ϱ=:9.5f} kg/m^3 {Qg=:9.5f} kg/s {Qv=:9.5f} m^3/s")
     return v
-    
     
 @memoize
 def get_A(D):
@@ -519,7 +518,7 @@ def funct_B(g, Qg, T, D):
     return T * funct_B_sub(g, Qg, D)
 
 @memoize
-def d_p(x, g, T, P, f_function, rr, D, Qh):
+def d_p37(x, g, T, P, f_function, rr, D, Qh):
     """This is the near-ideal version of the equations, where the inertial term and 
     the dZ/dP terms are omitted
     
@@ -541,15 +540,15 @@ def d_p(x, g, T, P, f_function, rr, D, Qh):
 
     Re = ϱ * v * D / μ # dimensionless as Pa ≡ N/m^2 and kg.m/s^2 ≡ N
     ff = f_function(Re, rr) # afzal(reynolds, relative_roughness), dimensionless
-    print (f"--{g:7}  {ff=:.3e} {Re=:0.3e}  {ϱ=:8.4f}  {v=:0.3f} m/s {μ=:8.2e} Pa.s")
+    # print (f"--{g:7}  {ff=:.3e} {Re=:0.3e}  {ϱ=:8.4f}  {Z=:0.5f}  {v=:0.3f} m/s {μ=:8.2e} Pa.s")
     P = P *1e5 # convert bar to Pa
     gradient  =  - B * ff * Z  / (2 * D * P) # (P1 - P2)/L # Pa /m
     gradient = gradient * 1e-5 # bar/m
-    print (f"--{g:7} {P=:0.5f} Pa  {Z=:0.5f}  {B=:0.5e} Pa^2 {gradient=:0.5e} bar/m")
+    #print (f"--{g:7} P={P/1e5:0.5f} bar  {B=:0.5e} Pa^2 gradient={gradient*1000:0.5e} bar/km")
     return gradient
     
 @memoize
-def d_pipe(g, T, P, f_function, rr, D, Qh):
+def d_pipe(L, g, T, P, f_function, rr, D, Qh):
     r""" Equation 36 {Sargent2024b}
     \begin{equation}
     \label{eqn:force9a}
@@ -588,7 +587,6 @@ def d_pipe(g, T, P, f_function, rr, D, Qh):
     print (f"--{g:7} dP/dx={gradient:8.4f}Pa/m {nom=:0.5f} {denom=:0.5f}  {(Z/P)=:0.5e}  {-(P/B)=:0.5e} {-dZdP=:0.5e}  ")
     return gradient * 1e-5 # now in bar/m
 
-    
 @memoize
 def pint(x, g, P0):
     L = 500e3 + 1
@@ -611,7 +609,7 @@ def int_d_pint(L, g, P0, f, rr, D):
     p, est_err_quad = quad(d_pint, 2, L, args=(g, P0, f, rr, D))
     p = p + P0
     
-    # print(f"{int(L/1000):5} km {p:8.3f} bar  {original:8.3f} bar     {p-original:9.3f}")
+    #print(f"{int(L/1000):5} km {p:8.3f} bar  {original:8.3f} bar     {p-original:9.3f}")
     return p
     
 def int_d_p(L, g, T, P0, f_function, rr, D, Qh):
@@ -621,10 +619,10 @@ def int_d_p(L, g, T, P0, f_function, rr, D, Qh):
     # def d_p(g, T, P, f_function, rr, D, Qh):
 
    
-    p, est_err_quad = quad(d_p, 2, L, args=(g, T, P0, f_function, rr, D, Qh))
-    p = p + P0
+    grad, est_err_quad = quad(d_pipe, 2, L, args=(g, T, P0, f_function, rr, D, Qh))
+    p = grad + P0
     
-    # print(f"{int(L/1000):5} km {p:8.3f} bar  {original:8.3f} bar     {p-original:9.3f}")
+    print(f"{int(L/1000):5} km {p:8.3f} bar {grad=:8.3e} bar ")
     return p
  
         
@@ -632,17 +630,24 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
     # Derived from plot_pt_diagram(), all need refactoring
     global P, T
     
-    def plotit(p_x, plot, ff, label):
+    def plotit(g, p_x, plot, ff, label):
         # Plot the calculated curves 
         if plot == "loglog":
             for rr, p in p_x.items():
-                plt.loglog(x_range/1000, ff, label=label)
+                plt.loglog(x_range/1000, ff, label=label, **plot_kwargs(g))
         if plot == "linear":
             for rr, ff in p_x.items():
-                plt.plot(x_range/1000, ff, label=label)
+                plt.plot(x_range/1000, ff, label=label, **plot_kwargs(g))
         if plot == "linlog":
             for rr, ff in p_x.items():
-                plt.semilogx(x_range/1000, ff, label=label)
+                plt.semilogx(x_range/1000, ff, label=label, **plot_kwargs(g))
+
+    def saveit(title,filename):
+        plt.title(title)
+        plt.xlabel('Distance (km)')
+        plt.grid(True, which='both', ls='--')
+        plt.legend()
+        plt.savefig(filename)
         
     t_range = [42.5, 8, -40]
     D = 1.3836 # m
@@ -658,7 +663,7 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
     print(f"{Qv=:9.4f} m^3/s at {P0} bar and 42.5 C  {Qg=:9.4f} kg/s {Qh=:9.4f} GW")
     # Qh = 21.1851 # GW = 10^3 MJ/s - use this as baseline and convert to Q for each gas
     L_pipe = 500e3
-    x_range = np.linspace(1, L_pipe-1000, 100) # 500 km
+    x_range = np.linspace(1, L_pipe-1000, 50) # 500 km
 
 
     if not type(fff) is list:
@@ -668,57 +673,10 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
     for f in fff: # several different friction factor functions
         plt.figure(figsize=(10, 6))
 
-        fn = f"{f.__name__}"
-        title = title_in + f" (ε/D = {rr0} [{fn}])"
-        filename = output + "_" + fn + ".png"
+       # (b) This is eqn(37) direct calculated differential curve
         
-        for t in t_range:
-            T = T273+t
-            lab =  f" ({T-T273:.1f}°C)"
-            # Calculate the curves 
-
-            p_x = {}
-            for g in ['Yamal', 'H2']:
-                label = f"{g:7}" + lab
-                print(label)
-                p_x[T] = [pint(x, g, P0) for x in x_range]
-                plotit(p_x, plot, f, label)
-                
-
-        plt.xlabel('Distance (km)')
-        plt.ylabel('Pressure (bar)')
-        plt.title(title)
-        plt.grid(True, which='both', ls='--')
-        plt.legend()
-        plt.savefig(filename)
         
-        # Now the differential (a) of the sqrt function, (b) the real one
-        
-        plt.figure(figsize=(10, 6))
-        fn = f"{f.__name__}"
-        title = title_in + f" (ε/D = {rr0} [{fn}])"
-        filename = output + "_D_" + fn + ".png"
-        
-        for t in t_range:
-            T = T273+t
-            lab =  f" ({T-T273:.1f}°C)"
-            # Calculate the curves 
-
-            p_x = {}
-            for g in ['Yamal', 'H2']:
-                label = f"{g:7}" + lab
-                print(label)
-                p_x[T] = [d_pint(x, g, P0, f, rr0, D)*1e3 for x in x_range]
-                plotit(p_x, plot, f, label)
-
-        plt.xlabel('Distance (km)')
-        plt.ylabel('Pressure gradient (bar/km)')
-        plt.title("Gradient of " + title )
-        plt.grid(True, which='both', ls='--')
-        plt.legend()
-        plt.savefig(filename)
-        
-        # (b) This is eqn(36) direct calculated differential curve
+        # (b) This is eqn(37) direct calculated differential curve
         plt.figure(figsize=(10, 6))
         fn = f"{f.__name__}"
         title = title_in + f" (ε/D = {rr0} [{fn}])"
@@ -734,21 +692,17 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
                 label = f"{g:7}" + lab
                 print(label)
                 # eqn 36 p_x[T] = [d_pipe(g, T, P0, f, rr0, D, Qh)*1e3 for x in x_range]
-                p_x[T] = [d_p(x, g, T, P0, f, rr0, D, Qh)*1e3 for x in x_range] # eqn 38
-                plotit(p_x, plot, f, label)
+                p_x[T] = [d_p37(x, g, T, P0, f, rr0, D, Qh)*1e3 for x in x_range] # eqn 38
+                plotit(g, p_x, plot, f, label)
 
-        plt.xlabel('Distance (km)')
         plt.ylabel('Pressure gradient (bar/km)')
-        plt.title("Gradient of " + title )
-        plt.grid(True, which='both', ls='--')
-        plt.legend()
-        plt.savefig(filename)       
+        saveit("Gradient of " + title,filename)
 
         # Now the integral of dP/dx
         
         plt.figure(figsize=(10, 6))
         fn = f"{f.__name__}"
-        title = "Integral " + title_in + f" (ε/D = {rr0} [{fn}])"
+        title =  title_in + f" (ε/D = {rr0} [{fn}])"
         filename = output + "_i_" + fn + ".png"
         
         for t in t_range:
@@ -760,43 +714,76 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
             for g in ['Yamal', 'H2']:
                 label = f"{g:7}" + lab
                 print(label)
-                # def d_p(g, T, P, f_function, rr, D, Qh):
+                # def d_p37(g, T, P, f_function, rr, D, Qh):
 
                 p_x[T] = [int_d_p(x, g, T, P0, f, rr0, D, Qh) for x in x_range]
-                plotit(p_x, plot, f, label)
+                plotit(g, p_x, plot, f, label)
 
-        plt.xlabel('Distance (km)')
         plt.ylabel('Pressure (bar)')
-        plt.title(title)
-        plt.grid(True, which='both', ls='--')
-        plt.legend()
-        plt.savefig(filename)
+        saveit(title,filename)
 
-        # Now the integral of the differential - to check
-        
-        plt.figure(figsize=(10, 6))
+        #
+        # Now the SQRT fudge to see what sort of function it looks like
+        #
         fn = f"{f.__name__}"
         title = title_in + f" (ε/D = {rr0} [{fn}])"
-        filename = output + "_I_" + fn + ".png"
+        filename = "sqrt" + "_" + fn + ".png"
         
         for t in t_range:
             T = T273+t
             lab =  f" ({T-T273:.1f}°C)"
-            # Calculate the curves 
+
+            p_x = {}
+            for g in ['Yamal', 'H2']:
+                label = f"{g:7}" + lab
+                print(label)
+                p_x[T] = [pint(x, g, P0) for x in x_range]
+                plotit(g, p_x, plot, f, label)
+               
+        plt.ylabel('Pressure (bar)')
+        saveit(title,filename)
+
+        # Now the  sqrt diff 
+
+        plt.figure(figsize=(10, 6))
+        fn = f"{f.__name__}"
+        title = title_in + f" (ε/D = {rr0} [{fn}])"
+        filename = "sqrt" + "_D_" + fn + ".png"
+        
+        for t in t_range:
+            T = T273+t
+            lab =  f" ({T-T273:.1f}°C)"
+
+            p_x = {}
+            for g in ['Yamal', 'H2']:
+                label = f"{g:7}" + lab
+                print(label)
+                p_x[T] = [d_pint(x, g, P0, f, rr0, D)*1e3 for x in x_range]
+                plotit(g, p_x, plot, f, label)
+
+        plt.ylabel('Pressure gradient (bar/km)')
+        saveit("Gradient of " + title,filename)
+
+        # Now the integral of the sqrt diff - to check
+        
+        plt.figure(figsize=(10, 6))
+        fn = f"{f.__name__}"
+        title = title_in + f" (ε/D = {rr0} [{fn}])"
+        filename = "sqrt" + "_I_" + fn + ".png"
+        
+        for t in t_range:
+            T = T273+t
+            lab =  f" ({T-T273:.1f}°C)"
 
             p_x = {}
             for g in ['Yamal', 'H2']:
                 label = f"{g:7}" + lab
                 print(label)
                 p_x[T] = [int_d_pint(x, g, P0, f, rr0, D) for x in x_range]
-                plotit(p_x, plot, f, label)
+                plotit(g, p_x, plot, f, label)
 
-        plt.xlabel('Distance (km)')
         plt.ylabel('Pressure (bar)')
-        plt.title(title)
-        plt.grid(True, which='both', ls='--')
-        plt.legend()
-        plt.savefig(filename)
+        saveit(title,filename)
         
 def plot_diagram(title, filename, plot="loglog", fff=colebrook, gradient=False, h2=False, w2=False):
     """Calculate the friction factor for each relative roughness,
@@ -885,6 +872,11 @@ def export_f_table():
            f = afzal_mod(re, rr)
            ff.write(f"{f:8.3f}, {re:10.4f}\n") 
             
+def plot_kwargs(g):
+    linestyle=style(g)
+    # color=colour(g)            Want H2 lines different colours
+    #return  {'color': color, 'linestyle': linestyle}
+    return  {'linestyle': linestyle}
 # - - -- - - - -- - - - -- - - - -- - - - -- - - - -- - - - -- - - - -- - - - -- - 
 # Define the Reynolds number range and relative roughness values
 # only need 10 points for the straight line
