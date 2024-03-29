@@ -480,8 +480,9 @@ def GW_from_kg(g, Qg):
 
 
 @memoize
-def get_v_from_Q(g, Tt, Pp, Qg, D):
-    # Qg is in kg / s - what whatever gas g is.
+def get_v_from_Q(g, Tt, Pp, Qh, D):
+    # Qh is in GW - what whatever gas g is.
+    Qg = kg_from_GW(g, Qh)
     ϱ = get_density(g, Pp, Tt) 
     Qv = Qg / ϱ # in m^3/s
     A = get_A(D)
@@ -517,7 +518,7 @@ def funct_B(g, Qg, T, D):
     # B = Q^2 R T / A^2 m # Pa^2 / m
     B = T * funct_B_sub(g, Qg, D)
     sqrtB = np.sqrt(B)/1e5
-    print(f"-- {g:7} {T=:9.3f} K  B: {B:9.4f} sqrt(B):{sqrtB:9.4f} bar^2")
+    print(f"-- {g:7} {T=:7.2f} K  ({T-T273:5.1f}°C) B: {B:10.4e} sqrt(B):{sqrtB:9.4f} bar^2")
     
     return B
 
@@ -538,6 +539,8 @@ def d_pipe(L, g, T, P, f_function, rr, D, Qh):
     In all this we need to be careful with units: all in SI m^3 and N and Pa,
     not litres or bars or g/mol.
     
+    TO BE DEBUGGED !!
+    
     """
     Qg = kg_from_GW(g, Qh) # kg/s
     B = funct_B(g, Qg, T, D) # Pa^2
@@ -545,7 +548,7 @@ def d_pipe(L, g, T, P, f_function, rr, D, Qh):
     dZdP = dZdP * 1e5 # now in (1/Pa)
     Z = get_z(g, P, T) # dimensionless
 
-    v = get_v_from_Q(g, T, P, Qg, D) # m/s
+    v = get_v_from_Q(g, T, P, Qh, D) # m/s
     μ = get_viscosity(g, P, T, visc_f) # in microPa.s 
     μ = μ * 1e-6 # in Pa.s
     
@@ -558,7 +561,7 @@ def d_pipe(L, g, T, P, f_function, rr, D, Qh):
     P = P * 1e5 # convert bar to Pa
     denom = (Z/P) - (P/B) - dZdP 
     gradient = nom /denom # Pa/m
-    print (f"--{g:7} dP/dx={gradient:8.4f}Pa/m {nom=:0.5f} {denom=:0.5f}  {(Z/P)=:0.5e}  {-(P/B)=:0.5e} {-dZdP=:0.5e}  ")
+    print (f"-- {g:7} dP/dx={gradient:8.4f}Pa/m {nom=:0.5f} {denom=:0.5f}  {(Z/P)=:0.5e}  {-(P/B)=:0.5e} {-dZdP=:0.5e}  ")
     return gradient * 1e-5 # now in bar/m
 
 @memoize
@@ -612,24 +615,18 @@ def running_dp38(L, g, T, P0, f_function, rr, D, Qh):
         return gradient
         
     p = P0 # 84 bar
-    gradient = 0
-    # Integrate x: 0..L to get the pressure drop at L, but does NOT change p on each iteration
-    # ie this is WRONG
-    drop, est_err_quad = quad(dp38, 0, L, args=(p, g, T, f_function, rr, D, Qh)) # bar/m
-    p = P0 + drop
-    print(f"{int(L/1000):5} km  (p:{p:5.1f} bar) {drop=:8.3f} bar ")
-
-     # Initial condition
-    p0 = [P0]
-    # x span
+    
+    # Initial condition p = [P0]
     x_span = (0, L)
     # Solve the ODE
-    solution = solve_ivp(dpdx, x_span, p0)
+    solution = solve_ivp(dpdx, x_span, [P0]) # has to be a list for last vaiable
 
-    print(solution.t)
-    print(solution.y)
+    #print(solution.t)
+    #print(solution.y)
     p = solution.y[0][-1]
-    print(p)
+    grad = dpdx(L,[p])
+    #print(f"{int(L/1000):5} km  ({p:5.1f} bar) P0-p:{p-P0:8.3f} bar  gradient:{grad*1000:9.5f} bar/km")
+
     return p
    
     
@@ -656,7 +653,7 @@ def dp38(x, P, g, T, f_function, rr, D, Qh):
 
     Z = get_z(g, P, T) # dimensionless
 
-    v = get_v_from_Q(g, T, P, Qg, D)
+    v = get_v_from_Q(g, T, P, Qh, D)
     μ = get_viscosity(g, P, T, visc_f) #in μPa.s 
     μ = μ * 1e-6 # in Pa.s
     
@@ -670,7 +667,8 @@ def dp38(x, P, g, T, f_function, rr, D, Qh):
     gradient = gradient * 1e-5 # bar/m
     #print (f"--{g:7} P={P/1e5:0.5f} bar  {B=:0.5e} Pa^2 gradient={gradient*1000:0.5e} bar/km")
     return gradient # bar/m
-        
+
+
 def plot_pipeline(title_in, output, plot="linear", fff=afzal):
     # Derived from plot_pt_diagram(), all need refactoring
     global P, T
@@ -696,19 +694,21 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
         print(f"*** {filename} ***")
         
     t_range = [42.5, 8, -40]
-    t_range = [42.5, 0]
     D = 1.3836 # m
     rr0 = 2.2e-5 # Yamal
     P0 = 84 # bar Yamal
     Qstp = 2019950 / 3600 # m^3(STP) /hour => m^3(STP)/s
     ϱstp = get_density('Yamal', Atm, T273+15) # STP
+    
     ϱ = get_density('Yamal', P0, T273+42.5)
     Qv = Qstp * ϱstp / ϱ # volume actually at 84 bar
     Qg = Qv * ϱ # kg/s
     # Qg = 390.63 # kg /s Yamal gas
     Qh = GW_from_kg('Yamal', Qg)
     # Qh = 21.1851 # GW = 10^3 MJ/s - use this as baseline and convert to Q for each gas
-    print(f"YAMAL PIPELINE {Qv=:9.4f} m^3/s at {P0} bar and 42.5 C  {Qg=:9.4f} kg/s {Qh=:9.4f} GW")
+    v = get_v_from_Q('Yamal', T273+42.5, P0, Qh, D)
+    
+    print(f"YAMAL PIPELINE {Qv=:9.4f} m^3/s at {P0} bar and 42.5 C  {Qg=:9.4f} kg/s {Qh=:9.4f} GW {v=:9.4f} m/s")
     L_pipe = 500e3
     x_range = np.linspace(1, L_pipe-1000, 50) # 500 km
 
@@ -720,11 +720,11 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
     for f in fff: # several different friction factor functions
         plt.figure(figsize=(10, 6))
         
-        # (b) This is eqn(37) direct calculated differential curve
+        # This is eqn(38) direct calculated differential curve
         plt.figure(figsize=(10, 6))
         fn = f"{f.__name__}"
         title = title_in + f" (ε/D = {rr0} [{fn}])"
-        filename = output + "_d_" + fn + ".png"
+        filename = output + "_p_" + fn + ".png"
         
         for t in t_range:
             T = T273+t
@@ -733,14 +733,56 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
             p_x = {}
             for g in ['Yamal', 'H2']:
                 label = f"{g:7}" + lab
-                print(label)
-                # eqn 36 p_x[T] = [d_pipe(g, T, P0, f, rr0, D, Qh)*1e3 for x in x_range]
+                # print(label)
                 p_x[T] = [running_dp38(x, g, T, P0, f, rr0, D, Qh) for x in x_range] # bar
                 plotit(g, p_x, plot, f, label)
 
         plt.ylabel('Pressure (bar)')
         saveit( title,filename)
 
+        # Now take the results from the last run and re-calculate the gradient at each point
+        plt.figure(figsize=(10, 6))
+        fn = f"{f.__name__}"
+        title = title_in + f" (ε/D = {rr0} [{fn}])"
+        filename = output + "_g_" + fn + ".png"
+        
+        for t in t_range:
+            T = T273+t
+            lab =  f" ({T-T273:.1f}°C)"
+
+            g_x = {}
+            for g in ['Yamal', 'H2']:
+                label = f"{g:7}" + lab
+                # print(label)
+                g_x[T] = [dp38(x, running_dp38(x, g, T, P0, f, rr0, D, Qh), g, T, f, rr0, D, Qh)*1000  for x in x_range] # bar
+                plotit(g, g_x, plot, f, label)
+
+        plt.ylabel('Pressure gradient (bar/km)')
+        saveit("Gradient of " + title,filename)
+        
+        # Now take the results from the last run and calculate the velocity
+        plt.figure(figsize=(10, 6))
+        fn = f"{f.__name__}"
+        title = f"Velocity of gas along pipeline  (ε/D = {rr0} [{fn}])"
+        filename = output + "_v_" + fn + ".png"
+        
+        for t in t_range:
+            T = T273+t
+            lab =  f" ({T-T273:.1f}°C)"
+
+            v_x = {}
+            for g in ['Yamal', 'H2']:
+                label = f"{g:7}" + lab
+                # print(label)
+                v0 = get_v_from_Q(g, T, P0, Qh, D)
+                ϱ0 = get_density(g, P0, T) 
+                ϱv0 = ϱ0 * v0
+                print(f"{g:5}", ϱ0, v0, ϱv0)
+                v_x[T] = [get_v_from_Q(g, T, running_dp38(x, g, T, P0, f, rr0, D, Qh), Qh, D)  for x in x_range] # bar
+                plotit(g, v_x, plot, f, label)
+
+        plt.ylabel('Gas velocity (m/s)')
+        saveit("Gradient of " + title,filename)
 
         #
         # Now the SQRT fudge to see what sort of function it looks like - - -- - - - -- - --- -- -- --
@@ -756,7 +798,7 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
             p_x = {}
             for g in ['Yamal', 'H2']:
                 label = f"{g:7}" + lab
-                print(label)
+                # print(label)
                 p_x[T] = [pint(x, g, P0) for x in x_range]
                 plotit(g, p_x, plot, f, label)
                
@@ -777,7 +819,7 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
             p_x = {}
             for g in ['Yamal', 'H2']:
                 label = f"{g:7}" + lab
-                print(label)
+                # print(label)
                 p_x[T] = [d_pint(x, g, P0, f, rr0, D)*1e3 for x in x_range]
                 plotit(g, p_x, plot, f, label)
 
@@ -798,7 +840,7 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
             p_x = {}
             for g in ['Yamal', 'H2']:
                 label = f"{g:7}" + lab
-                print(label)
+                # print(label)
                 p_x[T] = [int_d_pint(x, g, P0, f, rr0, D) for x in x_range]
                 plotit(g, p_x, plot, f, label)
 
