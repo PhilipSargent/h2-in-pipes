@@ -174,6 +174,14 @@ def μ_ϱ_gradient():
     return μ_1, ϱ_1, gradient
 
 @memoize   
+def Cp_H2(T):
+    # data from https://www.engineeringtoolbox.com/hydrogen-d_976.html downloaded 29 March 2024
+    temperatures = [175, 200, 225, 250, 275, 300, 325, 350, 375, 400]  # in Kelvin
+    specific_heats = [13.12, 13.53, 13.83, 14.05, 14.20, 14.31, 14.38, 14.43, 14.46, 14.48]  # in kJ/(kg·K)
+
+    return np.interp(T, temperatures, specific_heats) # in kJ/(kg·K)
+    
+@memoize   
 def viscosity_H2(T, P):
     """Higher accuracy viscosity just for hydrogen because of its importance to this 
     project.
@@ -1092,13 +1100,13 @@ def print_wobbe(plot_gases, g, T15C):
     print("'nice' values range from -50% to +50% from the centre of the valid Wobbe range.")
 
 @memoize  
-def get_vapour_moles(g, t, oxidiser):
+def get_vapour_moles(g, t, p, oxidiser):
     """Calculate the amount of H2O(g) compared to H2O(l) at
     a particular temperature - in the flue gas
     """
     vp = st.sonntag_vapor_pressure(t) # in Pascals
-    # Convert to fraction of an atmosphere
-    vp_a = vp * 1e-5 / Atm # Atm = 1.0325 bar 
+    # Convert to fraction of an atmosphere, or current working pressure
+    vp_a = vp * 1e-5 / p # pressure in bar, 1 Atm = 1.0325 bar 
     
     
     # Work in whole moles, not  mole fractions
@@ -1121,7 +1129,7 @@ def get_vapour_moles(g, t, oxidiser):
     return vap_mol
 
 @memoize  
-def get_water_moles(g, t, oxidiser):
+def get_water_moles(g, t, p, oxidiser):
     """get number of moles of liquid water condensed for fuel g
     and at temperature t 
     for one mole of fuel gas"""
@@ -1131,19 +1139,19 @@ def get_water_moles(g, t, oxidiser):
     h2o_f = gas_mixtures[flue]['H2O'] # fractional value
     h2o_mol = n * h2o_f        # moles of h2o
     
-    vap_mol = get_vapour_moles(g, t, oxidiser)
+    vap_mol = get_vapour_moles(g, t, p, oxidiser)
     liq_mol = h2o_mol - vap_mol
 
     return liq_mol
     
    
 @memoize
-def latent_lost(g, t, oxidiser):
+def latent_lost(g, t, p, oxidiser):
     # we need the actual number of moles of water, not just the proportion
     # This is the extra heat LOST because it is emitted a vapour, not an extra
     # amount we gain because it condenses.
     # STP at 298K assumes it is all condensed to water
-    lost = get_vapour_moles(g, t, oxidiser)     
+    lost = get_vapour_moles(g, t, p, oxidiser)     
     LH = gas_data['H2O']['LH'] # kJ/mol    
     
     latent_heat =   lost * LH * 1000 # convert to J from kJ
@@ -1277,9 +1285,9 @@ def sensible_flue(g, t, oxidiser):
     return sensible_heat
 
 @memoize    
-def sensible_water(g, t, oxidiser):
+def sensible_water(g, t, p, oxidiser):
     """Sensible heat needed to'heat' liquid water from 298 to exit temp"""
-    water_moles = get_water_moles(g, t, oxidiser) # for one mole fuel
+    water_moles = get_water_moles(g, t, p, oxidiser) # for one mole fuel
     water_cp = gas_data['H2O']['CpL']
     sensible_heat = water_moles *water_cp * (t- 298) 
     return sensible_heat
@@ -1292,10 +1300,10 @@ def sensible_in(g, T, t_fuel, t_air, oxidiser):
     return fuel_in + air_in
     
 @memoize
-def sensible_out(g, T, oxidiser):
+def sensible_out(g, T, p, oxidiser):
     """Sensible heat needed to'heat' flue gas from 298 to exit temp"""
     flue_out = sensible_flue(g, T, oxidiser) # yes, for 1 mole fuel
-    water_out = sensible_water(g, T, oxidiser) # for one mole fuel
+    water_out = sensible_water(g, T, p, oxidiser) # for one mole fuel
     return flue_out + water_out
     
 def d_condense(T, pressure, g, oxidiser):
@@ -1307,7 +1315,7 @@ def d_condense(T, pressure, g, oxidiser):
     return (e1-e2)/2*δ
 
 @memoize
-def condense(T, pressure, g, oxidiser):
+def condense(T, p, g, oxidiser):
     """Return the efficiency (%) of the boiler assuming flue gas is all condensed
     at temperature T (K)
     """
@@ -1321,14 +1329,14 @@ def condense(T, pressure, g, oxidiser):
     _, _, hc_MJ = get_Hc(g, 298) 
     hc = hc_MJ * 1000 * 1000
 
-    heat_out = hc - latent_lost(g, T, oxidiser) - sensible_in(g, T, t_fuel, t_air, oxidiser) - sensible_out(g, T, oxidiser)
+    heat_out = hc - latent_lost(g, T, p, oxidiser) - sensible_in(g, T, t_fuel, t_air, oxidiser) - sensible_out(g, T,p, oxidiser)
     η = 100 * heat_out/hc
     return η
 
-def find_intersection(g1, g2, oxidiser):
+def find_intersection(g1, g2, p, oxidiser):
     """For a condensing boiler at 1 atm, at what temperature are
     the efficiences equal between these two fuels?"""
-    p = Atm
+    #p = Atm
     def objective(T):
         obj = condense(T, p, g1, oxidiser) - condense(T, p, g2, oxidiser)
         #print(f"{T-T273:5.3f} {condense(T, p, g1):8.4f} {condense(T, p, g2):8.4f}")
@@ -1352,7 +1360,7 @@ def find_intersection(g1, g2, oxidiser):
     eff = condense(T, p, g1, oxidiser)
     if obj > 2* eps:
         print("ABORT")
-    print(f"At {T-T273:5.2f} degrees C the fuels '{g1}' and '{g2}' have the same efficiency of {eff:8.5f} %  ({n}) with {oxidiser}")
+    print(f"At {T-T273:5.2f} degrees C the fuels '{g1}' and '{g2}' have the same efficiency of {eff:8.5f} %  ({n}) with {oxidiser} at {p} bar")
  
 def export_η_table(oxidiser):
     """Produce a text file with boiler efficiences"""
@@ -1511,6 +1519,11 @@ def plot_kwargs(g):
     color=colour(g)
 
     return  {'color': color, 'linestyle': linestyle}
+    
+def plot_kwargs_linestyle(g):
+    linestyle=style(g)
+
+    return  {'linestyle': linestyle}
 # ---------- ----------main program starts here---------- ------------- #
 def main():
     global visc_f
@@ -1610,23 +1623,26 @@ def main():
 
    # Plot the condensing curve  - - - - - - - - - - -
     p = Atm
-    t_condense = np.linspace(273.15+20, 273.15+100, 1000)  
     plt.figure(figsize=(10, 6))
-    c_H2 = [condense(T, p, 'H2', 'Air') for T in t_condense]
-    c_NG = [condense(T, p, 'NG', 'Air') for T in t_condense]
-    c_20H = [condense(T, p, 'NG+20%H2', 'Air') for T in t_condense]
-    
-    plt.plot(t_condense-273.15, c_H2, label='Pure hydrogen', **plot_kwargs('H2'))
-    plt.plot(t_condense-273.15, c_NG, label='Natural Gas', **plot_kwargs('NG'))
-   
-    #plt.title(f'Maximum boiler efficiency vs Condensing Temperature at {p} bar')
+    for i in [0, 0.5, 1]:
+        p = Atm + i # bar
+        t_condense = np.linspace(273.15+20, 273.15+100, 1000)  
+        c_H2 = [condense(T, p, 'H2', 'Air') for T in t_condense]
+        c_NG = [condense(T, p, 'NG', 'Air') for T in t_condense]
+        c_20H = [condense(T, p, 'NG+20%H2', 'Air') for T in t_condense]
+        
+        plt.plot(t_condense-273.15, c_NG, label=f'Natural Gas  {i+1} Atm', **plot_kwargs_linestyle('NG'))
+        plt.plot(t_condense-273.15, c_H2, label=f'Pure hydrogen {i+1} Atm', **plot_kwargs_linestyle('H2'))
+       
+        #plt.title(f'Maximum boiler efficiency vs Condensing Temperature at {p} bar')
     plt.xlabel('Flue gas temperature (°C)')
     #plt.ylim([80, 100])
     plt.ylabel('Maximum boiler efficiency (%)')
     plt.legend()
     plt.grid(True)
-
-    plt.savefig("condse_η.png")
+    plt.savefig(f"condse_η.png")
+    
+    p = Atm
     plt.plot(t_condense-273.15, c_20H, label='NG+20%H2', **plot_kwargs('NG+20%H2'))
     plt.legend()
     plt.savefig("condse_η20.png")
@@ -1695,8 +1711,10 @@ def main():
     plt.savefig("condse_dη.png")
     plt.close()
     
-    find_intersection('H2', 'NG', 'Air') # where do the efficiences cross?
-    find_intersection('H2', 'NG+20%H2', 'Air') # where do the efficiences cross?
+    for i in [0, 0.5, 1 ]:
+        p = Atm + i # bar
+        find_intersection('H2', 'NG', p, 'Air') # where do the efficiences cross?
+    find_intersection('H2', 'NG+20%H2', Atm, 'Air') # where do the efficiences cross?
 
    # Plot the compressibility  - - - - - - - - - - -
 
