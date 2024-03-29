@@ -709,7 +709,7 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
     v = get_v_from_Q('Yamal', T273+42.5, P0, Qh, D)
     
     print(f"YAMAL PIPELINE {Qv=:9.4f} m^3/s at {P0} bar and 42.5 C  {Qg=:9.4f} kg/s {Qh=:9.4f} GW {v=:9.4f} m/s")
-    L_pipe = 500e3
+    L_pipe = 900e3
     x_range = np.linspace(1, L_pipe-1000, 50) # 500 km
 
 
