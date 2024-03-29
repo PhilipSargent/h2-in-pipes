@@ -519,7 +519,6 @@ def funct_B(g, Qg, T, D):
     B = T * funct_B_sub(g, Qg, D)
     sqrtB = np.sqrt(B)/1e5
     print(f"-- {g:7} {T=:7.2f} K  ({T-T273:5.1f}°C) B: {B:10.4e} sqrt(B):{sqrtB:9.4f} bar^2")
-    
     return B
 
 @memoize
@@ -566,7 +565,7 @@ def d_pipe(L, g, T, P, f_function, rr, D, Qh):
 
 @memoize
 def pint(x, g, P0):
-    L = 500e3 + 1
+    L = 800e3 + 1
   
     p = P0 * np.sqrt(L - x)/np.sqrt(L)
     return p
@@ -629,6 +628,14 @@ def running_dp38(L, g, T, P0, f_function, rr, D, Qh):
 
     return p
    
+@memoize
+def get_Re(g, T, P, Qh, D):
+    ϱ = get_density(g, P, T) # kg/m^3
+    v = get_v_from_Q(g, T, P, Qh, D)
+    μ = get_viscosity(g, P, T, visc_f) #in μPa.s 
+    μ = μ * 1e-6 # in Pa.s
+    Re = ϱ * v * D / μ # dimensionless as Pa ≡ N/m^2 and kg.m/s^2 ≡ N
+    return Re
     
 @memoize
 def dp38(x, P, g, T, f_function, rr, D, Qh):
@@ -651,17 +658,12 @@ def dp38(x, P, g, T, f_function, rr, D, Qh):
     Qg = kg_from_GW(g, Qh) # kg/s
     B = funct_B(g, Qg, T, D) # Pa^2 / m
 
-    Z = get_z(g, P, T) # dimensionless
-
-    v = get_v_from_Q(g, T, P, Qh, D)
-    μ = get_viscosity(g, P, T, visc_f) #in μPa.s 
-    μ = μ * 1e-6 # in Pa.s
-    
-    ϱ = get_density(g, P, T) # kg/m^3
-
-    Re = ϱ * v * D / μ # dimensionless as Pa ≡ N/m^2 and kg.m/s^2 ≡ N
+    # dimensionless
+    Z = get_z(g, P, T)
+    Re =  get_Re(g, T, P, Qh, D)
     ff = f_function(Re, rr) # afzal(reynolds, relative_roughness), dimensionless
     # print (f"--{g:7}  {ff=:.3e} {Re=:0.3e}  {ϱ=:8.4f}  {Z=:0.5f}  {v=:0.3f} m/s {μ=:8.2e} Pa.s")
+    
     P = P *1e5 # convert bar to Pa
     gradient  =  -B * ff * Z  / (2 * D * P) #  Pa /m
     gradient = gradient * 1e-5 # bar/m
@@ -672,6 +674,14 @@ def dp38(x, P, g, T, f_function, rr, D, Qh):
 def plot_pipeline(title_in, output, plot="linear", fff=afzal):
     # Derived from plot_pt_diagram(), all need refactoring
     global P, T
+    def get_final_pressure(g, T):
+        # Pfinal = SQRT (P0^2 - B f Z L/D )
+        Qg = kg_from_GW(g, Qh)
+        B = funct_B(g, Qg, T, D)
+        Z = get_z(g, P, T)
+        Re =  get_Re(g, T, P, Qh, D)
+        ff = f(Re, rr0)
+        return 0
     
     def plotit(g, p_x, plot, ff, label):
         # Plot the calculated curves 
@@ -691,8 +701,15 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
         plt.grid(True, which='both', ls='--')
         plt.legend()
         plt.savefig(filename)
-        print(f"*** {filename} ***")
+        # print(f"*** {filename} ***")
         
+    def print_finals():
+        for g in ['Yamal', 'H2']:
+            for t in t_range:
+                T = T273+t
+                pf = get_final_pressure(g, T)
+                print(f"   {g:7} ({T-T273:5.1f}°C) P_final:{p_final[g][T]:5.1f} bar eqn39 final:{pf:5.1f} bar")
+
     t_range = [42.5, 8, -40]
     D = 1.3836 # m
     rr0 = 2.2e-5 # Yamal
@@ -709,13 +726,12 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
     v = get_v_from_Q('Yamal', T273+42.5, P0, Qh, D)
     
     print(f"YAMAL PIPELINE {Qv=:9.4f} m^3/s at {P0} bar and 42.5 C  {Qg=:9.4f} kg/s {Qh=:9.4f} GW {v=:9.4f} m/s")
-    L_pipe = 900e3
+    L_pipe = 800e3
     x_range = np.linspace(1, L_pipe-1000, 50) # 500 km
 
 
     if not type(fff) is list:
         fff = [fff]
-    plt.figure(figsize=(10, 6))
     
     for f in fff: # several different friction factor functions
         plt.figure(figsize=(10, 6))
@@ -726,17 +742,19 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
         title = title_in + f" (ε/D = {rr0} [{fn}])"
         filename = output + "_p_" + fn + ".png"
         
-        for t in t_range:
-            T = T273+t
-            lab =  f" ({T-T273:.1f}°C)"
+        p_final ={}
+        for g in ['Yamal', 'H2']:
+            p_final[g] = {}
+            for t in t_range:
+                T = T273+t
+                lab =  f" ({T-T273:.1f}°C)"
 
-            p_x = {}
-            for g in ['Yamal', 'H2']:
+                p_x = {}
                 label = f"{g:7}" + lab
                 # print(label)
                 p_x[T] = [running_dp38(x, g, T, P0, f, rr0, D, Qh) for x in x_range] # bar
                 plotit(g, p_x, plot, f, label)
-
+                p_final[g][T] =   p_x[T][-1] # printed at end of program
         plt.ylabel('Pressure (bar)')
         saveit( title,filename)
 
@@ -777,7 +795,7 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
                 v0 = get_v_from_Q(g, T, P0, Qh, D)
                 ϱ0 = get_density(g, P0, T) 
                 ϱv0 = ϱ0 * v0
-                print(f"{g:5}", ϱ0, v0, ϱv0)
+                print(f"++ {g:5} ({T-T273:5.1f}°C){ϱ0=:8.4f} kg/m^3  {v0=:8.4f} m/s  {ϱv0=:8.3f}")
                 v_x[T] = [get_v_from_Q(g, T, running_dp38(x, g, T, P0, f, rr0, D, Qh), Qh, D)  for x in x_range] # bar
                 plotit(g, v_x, plot, f, label)
 
@@ -846,6 +864,8 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
 
         plt.ylabel('Pressure (bar)')
         saveit(title,filename)
+        
+        print_finals()
         
 def plot_diagram(title, filename, plot="loglog", fff=colebrook, gradient=False, h2=False, w2=False):
     """Calculate the friction factor for each relative roughness,
