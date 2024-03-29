@@ -173,14 +173,7 @@ def μ_ϱ_gradient():
     # print(f"μ_ϱ_gradient {μ_1=:0.4f} {ϱ_1=:0.4f} {gradient}")
     return μ_1, ϱ_1, gradient
 
-@memoize   
-def Cp_H2(T):
-    # data from https://www.engineeringtoolbox.com/hydrogen-d_976.html downloaded 29 March 2024
-    temperatures = [175, 200, 225, 250, 275, 300, 325, 350, 375, 400]  # in Kelvin
-    specific_heats = [13.12, 13.53, 13.83, 14.05, 14.20, 14.31, 14.38, 14.43, 14.46, 14.48]  # in kJ/(kg·K)
 
-    return np.interp(T, temperatures, specific_heats) # in kJ/(kg·K)
-    
 @memoize   
 def viscosity_H2(T, P):
     """Higher accuracy viscosity just for hydrogen because of its importance to this 
