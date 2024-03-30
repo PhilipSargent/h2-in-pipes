@@ -484,11 +484,11 @@ def get_v_from_Q(g, Tt, Pp, Qh, D):
     # Qh is in GW - what whatever gas g is.
     Qg = kg_from_GW(g, Qh)
     ϱ = get_density(g, Pp, Tt) 
-    Qv = Qg / ϱ # in m^3/s
+    Qv = Qg / ϱ # in m³/s
     A = get_A(D)
     
     v = Qv / A # m/s
-    #print(f"-- {g:7}  {P=:9.1f} bar {v=:9.5f} m/s  {ϱ=:9.5f} kg/m^3 {Qg=:9.5f} kg/s {Qv=:9.5f} m^3/s")
+    #print(f"-- {g:7}  {P=:9.1f} bar {v=:9.5f} m/s  {ϱ=:9.5f} kg/m³ {Qg=:9.5f} kg/s {Qv=:9.5f} m³/s")
     return v
     
 @memoize
@@ -535,7 +535,7 @@ def d_pipe(L, g, T, P, f_function, rr, D, Qh):
     so we need to convert this to Q (kg/s) of whatever gas we are plotting
     and calculate the gas velocity from that too.
     
-    In all this we need to be careful with units: all in SI m^3 and N and Pa,
+    In all this we need to be careful with units: all in SI m³ and N and Pa,
     not litres or bars or g/mol.
     
     TO BE DEBUGGED !!
@@ -551,7 +551,7 @@ def d_pipe(L, g, T, P, f_function, rr, D, Qh):
     μ = get_viscosity(g, P, T, visc_f) # in microPa.s 
     μ = μ * 1e-6 # in Pa.s
     
-    ϱ = get_density(g, P, T) # kg/m^3
+    ϱ = get_density(g, P, T) # kg/m³
 
     Re = ϱ * v * D / μ # dimensionless as pa=N/m and kg.m/s^2=N
     ff = f_function(Re, rr) # afzal(reynolds, relative_roughness)
@@ -630,7 +630,7 @@ def running_dp38(L, g, T, P0, f_function, rr, D, Qh):
    
 @memoize
 def get_Re(g, T, P, Qh, D):
-    ϱ = get_density(g, P, T) # kg/m^3
+    ϱ = get_density(g, P, T) # kg/m³
     v = get_v_from_Q(g, T, P, Qh, D)
     μ = get_viscosity(g, P, T, visc_f) #in μPa.s 
     μ = μ * 1e-6 # in Pa.s
@@ -646,7 +646,7 @@ def dp38(x, P, g, T, f_function, rr, D, Qh):
     This calculates the dP/dx for given P, T, Qh. It does not understand 'x'.
     But it seems to have to have it so that the quad() integration works
     
-    In all this we need to be careful with units: all in SI m^3 and N and Pa,
+    In all this we need to be careful with units: all in SI m³ and N and Pa,
     not litres or bars or g/mol.
     
     T (K)
@@ -743,7 +743,7 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
     D = 1.3836 # m
     rr0 = 2.2e-5 # Yamal
     P0 = 84 # bar Yamal
-    Qstp = 2019950 / 3600 # m^3(STP) /hour => m^3(STP)/s
+    Qstp = 2019950 / 3600 # m³(STP) /hour => m³(STP)/s
     ϱstp = get_density('Yamal', Atm, T273+15) # STP
     
     ϱ = get_density('Yamal', P0, T273+42.5)
@@ -754,7 +754,7 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
     # Qh = 21.1851 # GW = 10^3 MJ/s - use this as baseline and convert to Q for each gas
     v = get_v_from_Q('Yamal', T273+42.5, P0, Qh, D)
     
-    print(f"YAMAL PIPELINE {Qv=:9.4f} m^3/s at {P0} bar and 42.5 C  {Qg=:9.4f} kg/s {Qh=:9.4f} GW {v=:9.4f} m/s")
+    print(f"YAMAL PIPELINE {Qv=:9.4f} m³/s at {P0} bar and 42.5 C  {Qg=:9.4f} kg/s {Qh=:9.4f} GW {v=:9.4f} m/s")
     L_pipe = 800e3
     x_range = np.linspace(1, L_pipe-1000, 50) # 500 km
 
@@ -829,7 +829,7 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
                 _, _, hc_g = get_Hc(g, T) # MJ/mol
                 hhvv = hc_g / Vm # MJ/m³
                 
-                print(f"++ {g:5} ({T-T273:5.1f}°C) {ϱ0=:8.4f} kg/m^3  {v0=:8.4f} m/s  {ϱv0=:8.3f} {hhvv=:8.3f} MJ/m³ {Vm=:8.3f} m³/mol")
+                print(f"++ {g:5} ({T-T273:5.1f}°C) {ϱ0=:8.4f} kg/m³  {v0=:8.4f} m/s  {ϱv0=:8.3f} {hhvv=:8.3f} MJ/m³ {Vm=:8.3f} m³/mol")
                 v_x[T] = [get_v_from_Q(g, T, running_dp38(x, g, T, P0, f, rr0, D, Qh), Qh, D)  for x in x_range] # bar
                 plotit(g, v_x, plot, f, label)
 

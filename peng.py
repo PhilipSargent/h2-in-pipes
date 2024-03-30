@@ -852,7 +852,7 @@ def get_Vm(g, P, T):
 @memoize
 def get_density(mix, p, T):
     """ R is in litre.bar/(mol.K)
-    So this is calculatingt eh density in g/litre i.e. kg/m3"""
+    So this is calculating the density in g/litre i.e. kg/m3"""
     if mix in gas_data:
         g = mix
         ϱ_pg = p * gas_data[g]['Mw'] / (peng_robinson(T, p, g) * R * T)
