@@ -842,7 +842,13 @@ def get_z(g, p, T):
     a, b = z_mixture_rules(g, T)
     Z_mix = solve_for_Z(T, p, a, b)
     return Z_mix
-    
+
+@memoize
+def get_Vm(g, P, T):
+    Mw = do_mm_rules(g) # in g/mol
+    ϱ = get_density(g, P, T) # in g/m³
+    return Mw / ϱ  # in m³/mol at P, T
+
 @memoize
 def get_density(mix, p, T):
     """ R is in litre.bar/(mol.K)
@@ -905,7 +911,7 @@ def get_Hc(g, T):
     if g in gas_mixture_properties and 'Hc' in gas_mixture_properties[g]:
         hc = gas_mixture_properties[g]['Hc']
     elif g in gas_data and 'Hc' in gas_data[g]:
-        hc = gas_data[g]['Hc']
+        hc = gas_data[g]['Hc'] # MJ/mol
     else:
         hc = 0
         composition = gas_mixtures[g]
@@ -915,12 +921,14 @@ def get_Hc(g, T):
     # hc is in MJ/mol, so we need to divide by the molar volume at  (25 degrees C, 1 atm) in m³
     Mw = do_mm_rules(g)/1000 # Mw now in kg/mol not g/mol
     ϱ_0 = get_density(g, Atm, T) # in g/m³
-    molar_volume = Mw / ϱ_0  # in m³/mol
+    molar_volume_0 = 1000* Mw / ϱ_0  # in m³/mol at 1 Atm.
+   
+    hhvv_0 = hc/molar_volume_0 # (MJ/mol) / (m³/mol) = MJ/m³  AT ONE ATMOSPHERE
     
     if hc:
-        return molar_volume, hc/molar_volume, hc
+        return molar_volume_0, hhvv_0, hc
     else:
-        return molar_volume, None, None
+        return molar_volume_0, None, None
 
 
 def get_Cp(g):
@@ -1430,14 +1438,14 @@ def print_fuel(g, s, oxidiser):
     #print(f"{g:3}")
     if g not in gas_mixtures:
         f = g
-        mv, hcmv, hc = get_Hc(f, 298)
+        _, _, hc = get_Hc(f, 298)
         if not hc:
             hc = 0
         print(f"{f:5}\t{100:8.4f} %{gas_data[f]['C_']:3}{gas_data[f]['H_']:3} {hc*1000:6.1f} kJ/mol ")
     else:
         nts = gas_mixtures[g]
         for f in nts:
-            mv, hcmv, hc = get_Hc(f, 298)
+            _, _, hc = get_Hc(f, 298)
             if not hc:
                 hc = 0
             print(f"{f:5}\t{nts[f]*100:8.5f} %{gas_data[f]['C_']:3}{gas_data[f]['H_']:3} {hc*1000:6.1f} kJ/mol ")

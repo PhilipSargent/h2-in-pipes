@@ -12,7 +12,7 @@ from scipy.interpolate import interp1d
 from scipy.integrate import quad,solve_ivp
 
 from peng_utils import memoize
-from peng import  R, get_v_ratio, get_Δp_ratio_br, get_ϱ_ratio, get_μ_ratio, Atm, T273, set_mix_rule, do_mm_rules, dzdp, get_viscosity, get_Hc, get_z, get_density, style, colour
+from peng import  R, get_v_ratio, get_Δp_ratio_br, get_ϱ_ratio, get_μ_ratio, Atm, T273, set_mix_rule, do_mm_rules, dzdp, get_viscosity, get_Hc, get_z, get_Vm, get_density, style, colour
 
 # We memoize some functions so that they do not get repeadtedly called with
 # the same arguments. Yet still retain a more obvious way of writing the program.
@@ -227,7 +227,7 @@ def get_re_ratio(g, p, T):
     μ_ratio = get_μ_ratio(g, P, T, visc_f)
     ϱ_ratio = get_ϱ_ratio(g, P, T)
     re_ratio = ϱ_ratio * v_ratio / μ_ratio
-    print(f"{T=:.0f}K ({T-T273:.1f}°C) {P=:8.4f} {v_ratio=:.4f} {μ_ratio=:.4f} {ϱ_ratio=:.4f}  {re_ratio=:.4f}  {visc_f.__name__}")
+    print(f"{T=:3.0f}K ({T-T273:5.1f}°C) {P=:8.4f} {v_ratio=:.4f} {μ_ratio=:.4f} {ϱ_ratio=:.4f}  {re_ratio=:.4f}  {visc_f.__name__}")
     return re_ratio
     
 #@memoize 
@@ -518,7 +518,7 @@ def funct_B(g, Qg, T, D):
     # B = Q^2 R T / A^2 m # Pa^2 / m
     B = T * funct_B_sub(g, Qg, D)
     sqrtB = np.sqrt(B)/1e5
-    print(f"-- {g:7} {T=:7.2f} K  ({T-T273:5.1f}°C) B: {B:10.4e} sqrt(B):{sqrtB:9.4f} bar^2")
+    #print(f"-- {g:7} {T=:7.2f} K  ({T-T273:5.1f}°C) B: {B:10.4e} sqrt(B):{sqrtB:9.4f} bar^2")
     return B
 
 @memoize
@@ -728,12 +728,15 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
             T = T273+t
             ratio = (84 - p_final['H2'][T])/(84 - p_final['Yamal'][T])
             print(f"   {"":7} ({T-T273:5.1f}°C) pressure drop ratio:{ratio:8.4f} H2/Yamal {100*(ratio-1):6.2f} % greater")
-        for t in [-40, -30, -10, 0, 10, 20, 30, 40, 50]:
-            T = T273+t
-            p_H2 = get_final_pressure('H2', T, P0, L_pipe)
-            p_NG = get_final_pressure('Yamal', T, P0, L_pipe)
-            ratio = (84 - p_H2)/(84 - p_NG)
-            print(f"   {"":7} ({T-T273:5.1f}°C) Est. pressure drop ratio:{ratio:8.4f} H2/Yamal {100*(ratio-1):6.2f} % greater")
+        if False:
+            for t in [-40, -30, -10, 0, 8, 20, 30, 42.5, 50]:
+                T = T273+t
+                for Lkm in [10, 20, 100, 200, 800 ]: # km
+                    Length = Lkm*1e3 # m
+                    p_H2 = get_final_pressure('H2', T, P0, Length)
+                    p_NG = get_final_pressure('Yamal', T, P0, Length)
+                    ratio = (84 - p_H2)/(84 - p_NG)
+                    print(f"   {Lkm:5.0f}km  ({T-T273:5.1f}°C) r:{ratio:8.4f} H2/Yamal +{100*(ratio-1):6.2f} % {p_H2:8.4f} {p_NG:8.4f}")
                
 
     t_range = [42.5, 8, -40]
@@ -821,7 +824,12 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
                 v0 = get_v_from_Q(g, T, P0, Qh, D)
                 ϱ0 = get_density(g, P0, T) 
                 ϱv0 = ϱ0 * v0
-                print(f"++ {g:5} ({T-T273:5.1f}°C){ϱ0=:8.4f} kg/m^3  {v0=:8.4f} m/s  {ϱv0=:8.3f}")
+                # HHV per cubic metre
+                Vm = get_Vm(g, P0, T) # m³/mol
+                _, _, hc_g = get_Hc(g, T) # MJ/mol
+                hhvv = hc_g / Vm # MJ/m³
+                
+                print(f"++ {g:5} ({T-T273:5.1f}°C) {ϱ0=:8.4f} kg/m^3  {v0=:8.4f} m/s  {ϱv0=:8.3f} {hhvv=:8.3f} MJ/m³ {Vm=:8.3f} m³/mol")
                 v_x[T] = [get_v_from_Q(g, T, running_dp38(x, g, T, P0, f, rr0, D, Qh), Qh, D)  for x in x_range] # bar
                 plotit(g, v_x, plot, f, label)
 
