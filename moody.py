@@ -673,15 +673,28 @@ def dp38(x, P, g, T, f_function, rr, D, Qh):
 
 def plot_pipeline(title_in, output, plot="linear", fff=afzal):
     # Derived from plot_pt_diagram(), all need refactoring
+    
+    # Be Careful. Many variables rely on Python scoping rules between functions and
+    # included functions. These rules are implicit.
     global P, T
-    def get_final_pressure(g, T):
+    def get_final_pressure(g, T, P_zero, L_pipe):
         # Pfinal = SQRT (P0^2 - B f Z L/D )
-        Qg = kg_from_GW(g, Qh)
-        B = funct_B(g, Qg, T, D)
-        Z = get_z(g, P, T)
-        Re =  get_Re(g, T, P, Qh, D)
-        ff = f(Re, rr0)
-        return 0
+        def estimate(g, T, P_zero, P_mean):
+            Qg = kg_from_GW(g, Qh)
+            B = funct_B(g, Qg, T, D)
+            Z = get_z(g, P_mean, T)
+            Re =  get_Re(g, T, P_mean, Qh, D)
+            ff = f(Re, rr0)
+            fp = np.sqrt((P_zero*1e5)**2 - B * ff * Z * L_pipe / D ) # Pa
+            return fp * 1e-5 # bar
+            
+        fp1 = estimate(g, T, P_zero, P_zero)
+        mean_P = (P_zero + fp1)/2
+        rms_P = np.sqrt((P_zero**2 + fp1**2)/2)
+        geo_P = np.sqrt(P_zero * fp1)
+        fp2 = estimate(g, T, P_zero, mean_P)
+        #print(P0, fp1, fp2, rms_P, mean_P, geo_P)
+        return fp2
     
     def plotit(g, p_x, plot, ff, label):
         # Plot the calculated curves 
@@ -707,8 +720,21 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
         for g in ['Yamal', 'H2']:
             for t in t_range:
                 T = T273+t
-                pf = get_final_pressure(g, T)
-                print(f"   {g:7} ({T-T273:5.1f}°C) P_final:{p_final[g][T]:5.1f} bar eqn39 final:{pf:5.1f} bar")
+                pf_i = p_final[g][T]
+                pf = get_final_pressure(g, T, P0, L_pipe)
+                error = 100*(pf_i - pf)/pf_i
+                print(f"   {g:7} ({T-T273:5.1f}°C) P_final:{pf_i:5.1f} bar eqn39 estimate:{pf:5.1f} bar {error=:5.2f} %")
+        for t in t_range:
+            T = T273+t
+            ratio = (84 - p_final['H2'][T])/(84 - p_final['Yamal'][T])
+            print(f"   {"":7} ({T-T273:5.1f}°C) pressure drop ratio:{ratio:8.4f} H2/Yamal {100*(ratio-1):6.2f} % greater")
+        for t in [-40, -30, -10, 0, 10, 20, 30, 40, 50]:
+            T = T273+t
+            p_H2 = get_final_pressure('H2', T, P0, L_pipe)
+            p_NG = get_final_pressure('Yamal', T, P0, L_pipe)
+            ratio = (84 - p_H2)/(84 - p_NG)
+            print(f"   {"":7} ({T-T273:5.1f}°C) Est. pressure drop ratio:{ratio:8.4f} H2/Yamal {100*(ratio-1):6.2f} % greater")
+               
 
     t_range = [42.5, 8, -40]
     D = 1.3836 # m
