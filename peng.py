@@ -846,8 +846,8 @@ def get_z(g, p, T):
 @memoize
 def get_Vm(g, P, T):
     Mw = do_mm_rules(g) # in g/mol
-    ϱ = get_density(g, P, T) # in g/m³
-    return Mw / ϱ  # in m³/mol at P, T
+    ϱ = get_density(g, P, T) # in kg/m³
+    return Mw * 1e-3/ ϱ  # in m³/mol at P, T
 
 @memoize
 def get_density(mix, p, T):
@@ -930,7 +930,7 @@ def get_Hc(g, T):
     else:
         return molar_volume_0, None, None
 
-
+@memoize
 def get_Cp(g):
     """If the data is there, return the specific heat in J/mol.K, 
     """

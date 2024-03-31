@@ -457,10 +457,14 @@ def kg_from_GW(g, Qh):
     _, _, hc = get_Hc(g, T25C) # MJ/mol HHV always at 25 C
     Qm = Qh *1e3 / hc #  (MJ/s) / (MJ/mol) => mol/s
     
-    m = do_mm_rules(g)
+    m = do_mm_rules(g) # (g/mol)
     Qg = Qm * m * 1e-3 # (mol/s) * (g/mol) * 1e-3 => kg/s
-    print(f"-- {g:7} {Qh=:9.2f} GW {Qm=:9.5f} mol/s  {Qg=:9.5f} kg/s")
-
+ 
+    # check
+    Qh_ck = GW_from_kg(g, Qg)
+    ck = Qh_ck - Qh
+    print(f"-- {g:7} {Qh=:9.2f} GW Qm={Qm*1e-3:7.3f} kmol/s  {Qg=:9.5f} kg/s [{ck=}]")
+    
     return Qg
 
 @memoize
@@ -498,27 +502,27 @@ def get_A(D):
 @memoize
 def funct_B_sub(g, Qg, D):
     """When doing calculations with B we need to use the gas constant in terms of P
-    and cubic metres, not in terms of bar and litres, because we are mixing up kg and km.m/s^2 to make the units work.
+    and cubic metres, not in terms of bar and litres, because we are mixing up kg and km.m/s² to make the units work.
     
     Qg (kg/s)
     D  (m)
     
-    Must return value in Pa^2 / K.m
+    Must return value in Pa² / K.m
     """
     Rg = 8.31446261815324 # J/K.mol # R = 0.083144626  # l.bar/(mol.K) 
-    A = get_A(D) # m^2
+    A = get_A(D) # m²
     m = do_mm_rules(g) # g/mol
     m_kg = m * 1e-3 # kg/mol
     Bs = np.power(Qg/A,2) * Rg  / m_kg
-    print(f"-- {g:7} B/T: {Bs:9.4f} {m=:8.4f} g/mol {A=:9.5} m^2  {D=} m  {Qg=:9.5f} kg/s")
+    print(f".. {g:7} B/T: {Bs:9.4f} {m=:8.4f} g/mol {A=:9.5} m²  {D=} m  {Qg=:9.5f} kg/s")
     return Bs
     
 @memoize
 def funct_B(g, Qg, T, D):
-    # B = Q^2 R T / A^2 m # Pa^2 / m
+    # B = Q² R T / A² m # Pa² / m
     B = T * funct_B_sub(g, Qg, D)
     sqrtB = np.sqrt(B)/1e5
-    #print(f"-- {g:7} {T=:7.2f} K  ({T-T273:5.1f}°C) B: {B:10.4e} sqrt(B):{sqrtB:9.4f} bar^2")
+    #print(f"-- {g:7} {T=:7.2f} K  ({T-T273:5.1f}°C) B: {B:10.4e} sqrt(B):{sqrtB:9.4f} bar²")
     return B
 
 @memoize
@@ -542,7 +546,7 @@ def d_pipe(L, g, T, P, f_function, rr, D, Qh):
     
     """
     Qg = kg_from_GW(g, Qh) # kg/s
-    B = funct_B(g, Qg, T, D) # Pa^2
+    B = funct_B(g, Qg, T, D) # Pa²
     dZdP = dzdp(T, P, g)     # but this is in terms of (1/bar)
     dZdP = dZdP * 1e5 # now in (1/Pa)
     Z = get_z(g, P, T) # dimensionless
@@ -553,7 +557,7 @@ def d_pipe(L, g, T, P, f_function, rr, D, Qh):
     
     ϱ = get_density(g, P, T) # kg/m³
 
-    Re = ϱ * v * D / μ # dimensionless as pa=N/m and kg.m/s^2=N
+    Re = ϱ * v * D / μ # dimensionless as pa=N/m and kg.m/s²=N
     ff = f_function(Re, rr) # afzal(reynolds, relative_roughness)
     print (f"--{g:7}  {ff=:.3e} {Re=:0.3e}  {ϱ=:8.4f}  {v=:0.3f} m/s {μ=:8.2e} Pa.s")
     nom = Z * ff / (2 * D)
@@ -634,7 +638,7 @@ def get_Re(g, T, P, Qh, D):
     v = get_v_from_Q(g, T, P, Qh, D)
     μ = get_viscosity(g, P, T, visc_f) #in μPa.s 
     μ = μ * 1e-6 # in Pa.s
-    Re = ϱ * v * D / μ # dimensionless as Pa ≡ N/m^2 and kg.m/s^2 ≡ N
+    Re = ϱ * v * D / μ # dimensionless as Pa ≡ N/m² and kg.m/s² ≡ N
     return Re
     
 @memoize
@@ -656,7 +660,7 @@ def dp38(x, P, g, T, f_function, rr, D, Qh):
     
     dP/dx = - B f Z / (2 D P) """
     Qg = kg_from_GW(g, Qh) # kg/s
-    B = funct_B(g, Qg, T, D) # Pa^2 / m
+    B = funct_B(g, Qg, T, D) # Pa² / m
 
     # dimensionless
     Z = get_z(g, P, T)
@@ -667,7 +671,7 @@ def dp38(x, P, g, T, f_function, rr, D, Qh):
     P = P *1e5 # convert bar to Pa
     gradient  =  -B * ff * Z  / (2 * D * P) #  Pa /m
     gradient = gradient * 1e-5 # bar/m
-    #print (f"--{g:7} P={P/1e5:0.5f} bar  {B=:0.5e} Pa^2 gradient={gradient*1000:0.5e} bar/km")
+    #print (f"--{g:7} P={P/1e5:0.5f} bar  {B=:0.5e} Pa² gradient={gradient*1000:0.5e} bar/km")
     return gradient # bar/m
 
 
@@ -678,7 +682,7 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
     # included functions. These rules are implicit.
     global P, T
     def get_final_pressure(g, T, P_zero, L_pipe):
-        # Pfinal = SQRT (P0^2 - B f Z L/D )
+        # Pfinal = SQRT (P0² - B f Z L/D )
         def estimate(g, T, P_zero, P_mean):
             Qg = kg_from_GW(g, Qh)
             B = funct_B(g, Qg, T, D)
@@ -743,18 +747,24 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
     D = 1.3836 # m
     rr0 = 2.2e-5 # Yamal
     P0 = 84 # bar Yamal
-    Qstp = 2019950 / 3600 # m³(STP) /hour => m³(STP)/s
-    ϱstp = get_density('Yamal', Atm, T273+15) # STP
-    
-    ϱ = get_density('Yamal', P0, T273+42.5)
-    Qv = Qstp * ϱstp / ϱ # volume actually at 84 bar
-    Qg = Qv * ϱ # kg/s
+    # 33 billion m³(STP) / year says Gazprom, but maybe not for this bit.
+    Qstp = 2019950 / 3600 # m³(STP) /hour => 561 m³(STP)/s 
+    print(f"\nYAMAL PIPELINE Qv={Qstp:9.4f} m³(STP) /s")
+    ϱstp = get_density('Yamal', Atm, T273+15) # STP about 0.7 kg/m³
+    ϱ = get_density('Yamal', P0, T273+42.5) # kg/m³, about 58 kg/m³
+    Qv = Qstp * ϱstp / ϱ  # m³/s  actually at 84 bar
+    Vmstp = get_Vm('Yamal',Atm, T273+15) # about 23 m³
+    Qmoles = Qstp / Vmstp
+    print(f"YAMAL PIPELINE Vm={Vmstp:9.4f} m³(STP) /mol   Qm={Qmoles*1e-3:9.4f} kmoles/s")
+  
+    Qg = Qv * ϱ # m³/s * kg/m³  => kg/s
     # Qg = 390.63 # kg /s Yamal gas
     Qh = GW_from_kg('Yamal', Qg)
     # Qh = 21.1851 # GW = 10^3 MJ/s - use this as baseline and convert to Q for each gas
     v = get_v_from_Q('Yamal', T273+42.5, P0, Qh, D)
     
-    print(f"YAMAL PIPELINE {Qv=:9.4f} m³/s at {P0} bar and 42.5 C  {Qg=:9.4f} kg/s {Qh=:9.4f} GW {v=:9.4f} m/s")
+    print(f"=> {Qv=:9.4f} m³/s  {ϱ=:9.4f} kg/m³ at {P0} bar and 42.5 C (ϱ(STP):{ϱstp:9.4f} kg/m³)")
+    print(f"=> {Qg=:9.4f} kg/s {Qh=:9.4f} GW {v=:9.4f} m/s of Yamal gas.")
     L_pipe = 800e3
     x_range = np.linspace(1, L_pipe-1000, 50) # 500 km
 
@@ -829,7 +839,7 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
                 _, _, hc_g = get_Hc(g, T) # MJ/mol
                 hhvv = hc_g / Vm # MJ/m³
                 
-                print(f"++ {g:5} ({T-T273:5.1f}°C) {ϱ0=:8.4f} kg/m³  {v0=:8.4f} m/s  {ϱv0=:8.3f} {hhvv=:8.3f} MJ/m³ {Vm=:8.3f} m³/mol")
+                #print(f"++ {g:5} ({T-T273:5.1f}°C) {ϱ0=:8.4f} kg/m³  {v0=:8.4f} m/s  {ϱv0=:8.3f} kg/s.m² {hhvv=:8.3f} MJ/m³ Vm{Vm*1000:8.3f} m³/kmol")
                 v_x[T] = [get_v_from_Q(g, T, running_dp38(x, g, T, P0, f, rr0, D, Qh), Qh, D)  for x in x_range] # bar
                 plotit(g, v_x, plot, f, label)
 
