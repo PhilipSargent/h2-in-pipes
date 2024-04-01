@@ -1492,7 +1492,6 @@ def print_some_gas_data(plot_gases, visc_f, P, dp=None):
             gp = f"(H2)/({g})"
             print(f"v{gp: <13}= {v:0.4f}  Re{gp: <13} = {re:0.4f} ({pstr} T={T-T273:.1f}°C )")
         
-        
       
 def style(mix):
     if mix in gas_data:
