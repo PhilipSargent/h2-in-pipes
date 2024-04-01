@@ -457,6 +457,7 @@ def plot_pt_diagram(title, filename, plot="loglog", fff=colebrook, gradient=Fals
         plt.grid(True, which='both', ls='--')
         plt.legend()
         plt.savefig(filename)
+        plt.close()
 
 @memoize
 def kg_from_GW(g, Q_GW):
@@ -473,7 +474,7 @@ def kg_from_GW(g, Q_GW):
     ck = Q_ck - Q_GW
     if abs(ck) > 1e-12:
          print(f"***{g:7} {Q_GW=:9.2f} [{ck=}]")
-    print(f"-- {g:7} {Q_GW=:9.2f} GW Q_moles={Q_moles*1e-3:7.3f} kmol/s  {Q_kg=:9.5f} kg/s  ")
+    #print(f"-- {g:7}{Q_GW=:10.4f} GW Q_moles={Q_moles*1e-3:8.4f} kmol/s  {Q_kg=:9.5f} kg/s  ")
     
     return Q_kg
 
@@ -500,10 +501,25 @@ def get_v_from_Q(g, Tt, Pp, Qh, D):
     ϱ = get_density(g, Pp, Tt) 
     Qv = Qg / ϱ # in m³/s
     A = get_A(D)
-    
     v = Qv / A # m/s
     #print(f"-- {g:7}  {P=:9.1f} bar {v=:9.5f} m/s  {ϱ=:9.5f} kg/m³ {Qg=:9.5f} kg/s {Qv=:9.5f} m³/s")
     return v
+
+@memoize
+def get_Q_from_v(g, Tt, Pp, v, D):
+    # v (m/s)
+    # Q (GW)
+    A = get_A(D)
+    ϱ = get_density(g, Pp, Tt) 
+    Qv = v * A
+    Qg = Qv *  ϱ
+    Qh = GW_from_kg(g, Qg)
+    
+    v_ck = get_v_from_Q(g, Tt, Pp, Qh, D)
+    ck = v_ck - v
+    if abs(ck) > 1e-12:
+         print(f"***{g:7} {v=:9.2f} m/s [{ck=}]")    
+    return Qh # GW
     
 @memoize
 def get_A(D):
@@ -690,7 +706,7 @@ def LPM(g, T, P, L_seg, D, Qh):
     But perhaps GW is the wrong thing to keep constant, maybe all for same gas velocity ? 
     At each pressure, maintaining the same MJ/s for Ng at 5 m/s ?
     """
-    A = np.pi*D**2/4 # cross-section area
+    A = get_A(D)
     v0 = get_v_from_Q(g, T, P, Qh, D)
     ϱ0 = get_density(g, P, T) 
     ϱv0 = ϱ0 * v0
@@ -698,66 +714,77 @@ def LPM(g, T, P, L_seg, D, Qh):
     Vm = get_Vm(g, P, T) # m³/mol
     _, _, hc_g = get_Hc(g, T) # MJ/mol
     hhvv = hc_g / Vm # MJ/m³
-    V_seg = L_seg * A
+    V_seg = L_seg * A # velocity
     E_seg = V_seg * hhvv *1e6 # J = Ws
     lpm = E_seg/(Qh*1e9) # Ws / W
     #print(f"++ {g:5} ({T-T273:5.1f}°C) {ϱ0=:8.4f} kg/m³  {v0=:8.4f} m/s  {ϱv0=:8.3f} kg/s.m² {hhvv=:8.3f} MJ/m³ Vm{Vm*1000:8.3f} m³/kmol")
+    lpm_km = lpm/(L_seg * 1e-3)
 
-    print(f"+++{g:5} ({T-T273:5.1f}°C) {P=:7.1f} bar V_seg={V_seg/1e3:7.1f} 1000.m³ lpm={lpm:8.1e} s  ={lpm/3600:7.3f} hours")
+    #print(f"+++{g:5} ({T-T273:5.1f}°C) {P=:7.1f} bar V_seg={V_seg/1e3:9.4f} 1000.m³ lpm={lpm:8.1e} s  ={lpm/3600:7.3f} hours  lpm/km={lpm_km:8.1f} s/km")
 
-    return lpm
+    return lpm # in seconds
 
 def plot_lpm():
-    # Plot LPM  for pure hydrogen and natural gases
-    pressures = np.linspace(1, 100, 5)  # bar
+    """Plot LPM  for pure hydrogen and natural gases
+    Standardise on 4 m/s for NG, and equivalent energy velocity for H2
+    """
+    def get_Q(g, p, T):
+        # Normalises to same Q (GW) as for NG v=4m/s at this T,P
+        v_ng = 4 # m/s
+        Q_NG = get_Q_from_v("NG", T, p, v_ng, D)
+        
+        return Q_NG
+         
+    pressures = np.linspace(8, 80, 5)  # bar
     plt.figure(figsize=(10, 5))
+    
     for g in ['NG', 'H2']:
-        L_seg = 1 # km
-        D = 0.11 # 110 mm
-        Q20 = 0.020 # 20 MW as this is in GW
-        for T in [ T8C]:
-        #for T in [T230, T8C, T25C, T50C]:
-            for p in pressures:
-                vg = get_v_from_Q(g, T, p, Q20, D)
-                print(f"|| {g:7} {vg=:9.1e} m/s")
+        L_seg = 10  # km
+        D = 0.2 # 200 mm
+        v = 4 # m/s
+        #for T in [ T8C]:
+        for T in [T230, T8C, T25C, T50C]:
+            # for p in pressures:
+                # v_gas = get_v_from_Q(g, T, p, get_Q(g,p), D)
+                # print(f"|| {g:7} {v_gas=:9.4f} m/s")
             label=f"{T-T273:4.0f}°C"
             txt = f"{g} {label}"
-            p_lpm = [LPM(g, T, p, L_seg, D, Q20) for p in pressures]
+            p_lpm = [LPM(g, T, p, L_seg*1e3, D, get_Q(g, p, T)) for p in pressures]
             
             #print(f"Velocity ratio min:{v_ratio[0]:.3f} max:{vr_max:.3f} at  {T-T273:4.1f}°C")
             plt.plot(pressures, p_lpm,  label=txt, **plot_kwargs(g))
 
-    plt.title(f'Linepack Metric vs Pressure')
+    plt.title(f'Linepack Metric - for NG v ={v:2.0f} m/s ({L_seg} km, {D*1000:.0f} mm dia.)')
     plt.xlabel('Pressure (bar)')
-    plt.ylabel('Linepack Metric (hours/km)')
+    plt.ylabel('Linepack Metric (seconds)')
     plt.legend()
     plt.grid(True)
 
-    plt.savefig("peng_lpm.png")
+    plt.savefig("pipe_lpm.png")
     plt.close()
 
     # Plot LPM  RATIO hydrogen : natural gases
-    if False:
+    if True:
         pressures = np.linspace(6, 80, 5)  # bar
         plt.figure(figsize=(10, 5))
         for g in ['NG']:
-            L_seg = 1 # km
-            D = 0.11 # 110 mm
-            Q20 = 0.020 # 20 MW as this is in GW
+            L_seg = 10 # km
+            Lm = L_seg * 1e3 # m
+            D = 0.2 # 200 mm
             #for T in [ T8C]:
             for T in [ T25C, T8C, T273]:
                 label=f"{T-T273:4.0f}°C"
                 txt = f"{g} {label}"
-                p_lpm = [LPM('H2', T, p, L_seg, D, Q20)/LPM(g, T, p, L_seg, D, Q20)  for p in pressures]
+                p_lpm = [LPM('H2', T, p, Lm, D, get_Q(g,p,T))/LPM(g, T, p, Lm, D, get_Q(g,p,T))  for p in pressures]
                 plt.plot(pressures, p_lpm,  label=label, **plot_kwargs(g))
 
-        plt.title(f'Linepack Metric Ratio H2/NG vs Pressure')
+        plt.title(f'Linepack Metric Ratio H2/NG - for NG v ={v:2.0f} m/s ({L_seg} km, {D*1000:.0f} mm dia.)')
         plt.xlabel('Pressure (bar)')
         plt.ylabel(f'Linepack Metric ratio H2/NG')
         plt.legend()
         plt.grid(True)
 
-        plt.savefig("peng_lpm_ratio.png")
+        plt.savefig("pipe_lpm_ratio.png")
         plt.close()
     
 def plot_pipeline(title_in, output, plot="linear", fff=afzal_mod):
@@ -803,6 +830,7 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal_mod):
         plt.grid(True, which='both', ls='--')
         plt.legend()
         plt.savefig(filename)
+        plt.close()
         # print(f"*** {filename} ***")
         
     def print_finals():
@@ -835,7 +863,7 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal_mod):
     P0 = 84 # bar Yamal
     # 33 billion m³(STP) / year says Gazprom, but maybe not for this bit.
     Qstp = 2019950 / 3600 # m³(STP) /hour => 561 m³(STP)/s 
-    print(f"\nYAMAL PIPELINE Qv={Qstp:9.4f} m³(STP) /s")
+    print(f"\nYAMAL PIPELINE Qv={Qstp:9.4f} m³(STP) /s {fff}")
     ϱstp = get_density('Yamal', Atm, T273+15) # STP about 0.7 kg/m³
     ϱ = get_density('Yamal', P0, T273+42.5) # kg/m³, about 58 kg/m³
     Qv = Qstp * ϱstp / ϱ  # m³/s  actually at 84 bar
@@ -924,8 +952,6 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal_mod):
         plt.ylabel('Gas velocity (m/s)')
         saveit("Gradient of " + title,filename)
 
-        # Now plot the Linepack metric LPM
-
         #
         # Now the SQRT fudge to see what sort of function it looks like - - -- - - - -- - --- -- -- --
         #
@@ -990,6 +1016,7 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal_mod):
         saveit(title,filename)
         
         print_finals()
+ 
         
 def plot_diagram(title, filename, plot="loglog", fff=colebrook, gradient=False, h2=False, w2=False):
     """Calculate the friction factor for each relative roughness,
@@ -1066,6 +1093,7 @@ def plot_diagram(title, filename, plot="loglog", fff=colebrook, gradient=False, 
     plt.grid(True, which='both', ls='--')
     plt.legend()
     plt.savefig(filename)
+    plt.close()
 
 def export_f_table():
     """Produce a text file with f= f(Re)"""
@@ -1136,9 +1164,8 @@ plot_pt_diagram('Ratio of friction loss (power) between H2 and NG', 'w2_h2_ratio
 T = T250
 P = 30
 
-
 # --- PLOT PRESSURE _ DISTANCE along PIPELINE
-plot_pipeline("Pressure drop along pipeline", "pipe", plot="linear", fff=[afzal_mod, colebrook])
+plot_pipeline("Pressure drop along pipeline", "pipe", plot="linear", fff=[afzal_mod])
 
 # Plot enlarged diagrams
 
