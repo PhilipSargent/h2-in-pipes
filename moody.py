@@ -197,7 +197,7 @@ def afzal_b(reynolds, relative_roughness):
     Re_upper = 4500
     Re_lower = 1000
 
-    a = afzal(reynolds, relative_roughness)
+    a = afzal_basic(reynolds, relative_roughness)
     if reynolds > Re_upper:
         return a
     b = blasius(reynolds)
@@ -294,7 +294,7 @@ def afzal_shift(reynolds, relative_roughness):
     return h2
 
 @memoize 
-def afzal(reynolds, relative_roughness):
+def afzal_basic(reynolds, relative_roughness):
     """Define the afzal variant fff equation as an implicit function and solve it
     10.1115/1.2375129
     https://www.researchgate.net/publication/238183949_Alternate_Scales_for_Turbulent_Flow_in_Transitional_Rough_Pipes_Universal_Log_Laws
@@ -686,7 +686,10 @@ def dp38(x, P, g, T, f_function, rr, D, Qh):
 
 @memoize
 def LPM(g, T, P, L_seg, D, Qh):
-    """LinePackMetric for a gas in a pipe of length L (m), diameter D (m), carrying Qh (GW) of gas"""
+    """LinePackMetric for a gas in a pipe of length L (m), diameter D (m), carrying Qh (GW) of gas
+    But perhaps GW is the wrong thing to keep constant, maybe all for same gas velocity ? 
+    At each pressure, maintaining the same MJ/s for Ng at 5 m/s ?
+    """
     A = np.pi*D**2/4 # cross-section area
     v0 = get_v_from_Q(g, T, P, Qh, D)
     ϱ0 = get_density(g, P, T) 
@@ -757,7 +760,7 @@ def plot_lpm():
         plt.savefig("peng_lpm_ratio.png")
         plt.close()
     
-def plot_pipeline(title_in, output, plot="linear", fff=afzal):
+def plot_pipeline(title_in, output, plot="linear", fff=afzal_mod):
     # Derived from plot_pt_diagram(), all need refactoring
     
     # Be Careful. Many variables rely on Python scoping rules between functions and
@@ -1117,6 +1120,8 @@ plot_diagram('Pressure gradient ratio between H2 and NG', 'p2_h2_ratio.png', plo
 plot_diagram('Ratio of friction loss between H2 and NG', 'w2_h2_ratio.png', plot="linlog", fff=w2_h2_ratio, w2=True)
 
 plot_diagram('Moody Diagram (Swarmee)', 'moody_swarmee.png', plot="loglog", fff=swarmee)
+plot_diagram('Moody Diagram (Colebrook)', 'moody_colebrook.png', plot="loglog", fff=swarmee)
+plot_diagram('Moody Diagram (Haarland)', 'moody_haarland.png', plot="loglog", fff=haarland) # BUGGY
 # plot_diagram('Moody Diagram (Virtual Nikuradze)', 'moody_vm.png', plot="loglog", fff=[virtual_nikuradse,gioia_chakraborty_friction_factor])
 
 # now do comparative plot, but for just one roughness valuesT250 = T273 -40
@@ -1133,7 +1138,7 @@ P = 30
 
 
 # --- PLOT PRESSURE _ DISTANCE along PIPELINE
-plot_pipeline("Pressure drop along pipeline", "pipe", plot="linear", fff=afzal)
+plot_pipeline("Pressure drop along pipeline", "pipe", plot="linear", fff=[afzal_mod, colebrook])
 
 # Plot enlarged diagrams
 
