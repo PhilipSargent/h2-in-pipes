@@ -674,6 +674,21 @@ def dp38(x, P, g, T, f_function, rr, D, Qh):
     #print (f"--{g:7} P={P/1e5:0.5f} bar  {B=:0.5e} Pa² gradient={gradient*1000:0.5e} bar/km")
     return gradient # bar/m
 
+@memoize
+def LPM(g, T, P, L_seg, D, Qh):
+    """LinePackMetric for a gas in a pipe of length L (m), diameter D (m), carrying Q (W) of gas"""
+    A = np.pi*D**2/4 # cross-section area
+    v0 = get_v_from_Q(g, T, P, Qh, D)
+    ϱ0 = get_density(g, P, T) 
+    ϱv0 = ϱ0 * v0
+    # HHV per cubic metre
+    Vm = get_Vm(g, P, T) # m³/mol
+    _, _, hc_g = get_Hc(g, T) # MJ/mol
+    hhvv = hc_g / Vm # MJ/m³
+    V_seg = L_seg * A
+    E_seg = V_seg * hhvv *1e6 # J = Ws
+    metric = E_seg/Qh # Ws / W
+    return metric
 
 def plot_pipeline(title_in, output, plot="linear", fff=afzal):
     # Derived from plot_pt_diagram(), all need refactoring
@@ -745,6 +760,7 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
 
     t_range = [42.5, 8, -40]
     D = 1.3836 # m
+    A = np.pi*D**2/4
     rr0 = 2.2e-5 # Yamal
     P0 = 84 # bar Yamal
     # 33 billion m³(STP) / year says Gazprom, but maybe not for this bit.
@@ -798,7 +814,7 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
         saveit( title,filename)
 
         # Now take the results from the last run and re-calculate the gradient at each point
-        plt.figure(figsize=(10, 6))
+        plt.figure(figsize=(10, 5))
         fn = f"{f.__name__}"
         title = title_in + f" (ε/D = {rr0} [{fn}])"
         filename = output + "_g_" + fn + ".png"
@@ -818,12 +834,13 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
         saveit("Gradient of " + title,filename)
         
         # Now take the results from the last run and calculate the velocity
-        plt.figure(figsize=(10, 6))
+        plt.figure(figsize=(10, 5))
         fn = f"{f.__name__}"
         title = f"Velocity of gas along pipeline  (ε/D = {rr0} [{fn}])"
         filename = output + "_v_" + fn + ".png"
         
-        for t in t_range:
+        #for t in t_range:
+        for t in [8]:
             T = T273+t
             lab =  f" ({T-T273:.1f}°C)"
 
@@ -838,8 +855,15 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
                 Vm = get_Vm(g, P0, T) # m³/mol
                 _, _, hc_g = get_Hc(g, T) # MJ/mol
                 hhvv = hc_g / Vm # MJ/m³
-                
+                L_seg = 139 * 1e3 # 139 km in m
+                V_seg = L_seg * A
+                E_seg = V_seg * hhvv *1e6 # J = Ws
+                E_seg = E_seg / 1e9 # GJ = GWs
                 #print(f"++ {g:5} ({T-T273:5.1f}°C) {ϱ0=:8.4f} kg/m³  {v0=:8.4f} m/s  {ϱv0=:8.3f} kg/s.m² {hhvv=:8.3f} MJ/m³ Vm{Vm*1000:8.3f} m³/kmol")
+                print(f"++ {g:5} ({T-T273:5.1f}°C) V_seg={V_seg/1e3:7.1f} 1000.m³ E_seg={E_seg/1000:8.3f} TJ LPM={E_seg/Qh:8.1f} s  ={(E_seg/Qh)/3600:7.3f} hours")
+                lpm = LPM(g, T, P0, 139*1e3, D, Qh*1e9)
+                print(f"+++{g:5} ({T-T273:5.1f}°C)  lpm={lpm:8.1e} s  ={lpm/3600:7.3f} hours")
+                
                 v_x[T] = [get_v_from_Q(g, T, running_dp38(x, g, T, P0, f, rr0, D, Qh), Qh, D)  for x in x_range] # bar
                 plotit(g, v_x, plot, f, label)
 
@@ -869,7 +893,7 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
 
         # Now the  sqrt diff 
 
-        plt.figure(figsize=(10, 6))
+        plt.figure(figsize=(10, 5))
         fn = f"{f.__name__}"
         title = title_in + f" (ε/D = {rr0} [{fn}])"
         filename = "sqrt" + "_D_" + fn + ".png"
@@ -890,7 +914,7 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal):
 
         # Now the integral of the sqrt diff - to check
         
-        plt.figure(figsize=(10, 6))
+        plt.figure(figsize=(10, 5))
         fn = f"{f.__name__}"
         title = title_in + f" (ε/D = {rr0} [{fn}])"
         filename = "sqrt" + "_I_" + fn + ".png"

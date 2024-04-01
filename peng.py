@@ -8,8 +8,6 @@ import warnings
 
 import sonntag as st
 
-# from scipy.optimize import newton_raphson
-
 from cycler import cycler
 from scipy.optimize import fsolve
 
@@ -35,9 +33,14 @@ https://www.nationalgas.com/data-and-operations/quality
 ≥46.5MJ/m3 after 6 April 2025 https://www.hse.gov.uk/gas/gas-safety-management-regulation-changes.htm
 
 UNITS: bar, K, litres NOTE: bar is not SI ! Need to convert to Pascal.
+
+gas_data now imported from a separate file. It is initialised on import.
+
+
+memoize() is imported from peng-utils.py
+We memoize some functions so that they do not get repeatedly called with
+the same arguments. Yet still be retain a more obvius way of writing the program.
 """
-# This algorithm does NOT deal with the temperature dependence of alpha properly. 
-# The code should be rearranged to calculate alpha for each point on the plot for each gas.
 
 # Peng-Robinson Equation of State constants for Hydrogen and Methane
 # Omega is the acentric factor is a measure of the non-sphericity of molecules; 
@@ -54,10 +57,6 @@ Atm = 1.01325 # bar
 # highest recorded pressure in UK 1053.6 mbar, Aberdeen 31.1.1902
 T273 = 273.15 # K
 
-# gas_data now imported from a separate file. It is initialised on import.
-
-# We memoize some functions so that they do not get repeatedly called with
-# the same arguments. Yet still be retain a more obvius way of writing the program.
 @memoize   
 def estimate_k_fixed(gas1, gas2, T=298):
     """Using the data table for k_ij"""
@@ -705,7 +704,7 @@ def critical_properties_PR(gas, a, b, T):
     temperature T at which you want to use the P-R - usually to calculate Z.
     
     HOWEVER inverting P-R to back-calculate Tc and Pc is a bit different.
-    1. The averaing rule for omega is also needed, and 
+    1. The averaging rule for omega is also needed, and 
     2. you need to know what temperature was used when the a and b were generated.
     3. But actually it is both Tc and T which are used when calculating a (via alpha)
        so there is another implicit loop there.
@@ -797,8 +796,15 @@ def viscosity_LGE(Mw, T_k, ϱ):
     https://petrowiki.spe.org/Natural_gas_properties. 
     
     I could not get this to work: produced results at variance from tabulated viscosities
+    
+    LATER, The LGE-3 in C. Whitson, M. Brule, 
+    Phase Behavior, Monograph vol. 20, Soc. Petrol. Eng. (2000), p. 26
+    gave excellent agreement for 3 Norwegian gas mixtures. Get this & try again ?
+    says: L. I. Langelandsvik, S. Solvang, M. Rousselet, I. N. Metaxa, and M. J. Assael, “Dynamic viscosity 
+    measurements of three natural gas mixtures-comparison against prediction models,” Int. J. Thermophys., vol. 
+    28, no. 4, pp. 1120–1130, 2007, doi: 10.1007/s10765-007-0270-3.
     """
-    raise # don't use this 
+    raise # don't use this unti fixed
     
     T = T_k * 9/5 # convert Kelvins to Rankine
    
@@ -1978,7 +1984,7 @@ def main():
     plt.close()
 
    # Plot dZ/dP v P  for pure hydrogen and natural gases
-
+    plt.figure(figsize=(10, 5))
     for g, txt in [('H2','Pure hydrogen'), ('NG','Natural gas')]:
         T2 = T273 + 42.5
         dzdp_ = [dzdp(T2, p, g)*1e5 for p in pressures]
