@@ -704,6 +704,59 @@ def LPM(g, T, P, L_seg, D, Qh):
 
     return lpm
 
+def plot_lpm():
+    # Plot LPM  for pure hydrogen and natural gases
+    pressures = np.linspace(1, 100, 5)  # bar
+    plt.figure(figsize=(10, 5))
+    for g in ['NG', 'H2']:
+        L_seg = 1 # km
+        D = 0.11 # 110 mm
+        Q20 = 0.020 # 20 MW as this is in GW
+        for T in [ T8C]:
+        #for T in [T230, T8C, T25C, T50C]:
+            for p in pressures:
+                vg = get_v_from_Q(g, T, p, Q20, D)
+                print(f"|| {g:7} {vg=:9.1e} m/s")
+            label=f"{T-T273:4.0f}°C"
+            txt = f"{g} {label}"
+            p_lpm = [LPM(g, T, p, L_seg, D, Q20) for p in pressures]
+            
+            #print(f"Velocity ratio min:{v_ratio[0]:.3f} max:{vr_max:.3f} at  {T-T273:4.1f}°C")
+            plt.plot(pressures, p_lpm,  label=txt, **plot_kwargs(g))
+
+    plt.title(f'Linepack Metric vs Pressure')
+    plt.xlabel('Pressure (bar)')
+    plt.ylabel('Linepack Metric (hours/km)')
+    plt.legend()
+    plt.grid(True)
+
+    plt.savefig("peng_lpm.png")
+    plt.close()
+
+    # Plot LPM  RATIO hydrogen : natural gases
+    if False:
+        pressures = np.linspace(6, 80, 5)  # bar
+        plt.figure(figsize=(10, 5))
+        for g in ['NG']:
+            L_seg = 1 # km
+            D = 0.11 # 110 mm
+            Q20 = 0.020 # 20 MW as this is in GW
+            #for T in [ T8C]:
+            for T in [ T25C, T8C, T273]:
+                label=f"{T-T273:4.0f}°C"
+                txt = f"{g} {label}"
+                p_lpm = [LPM('H2', T, p, L_seg, D, Q20)/LPM(g, T, p, L_seg, D, Q20)  for p in pressures]
+                plt.plot(pressures, p_lpm,  label=label, **plot_kwargs(g))
+
+        plt.title(f'Linepack Metric Ratio H2/NG vs Pressure')
+        plt.xlabel('Pressure (bar)')
+        plt.ylabel(f'Linepack Metric ratio H2/NG')
+        plt.legend()
+        plt.grid(True)
+
+        plt.savefig("peng_lpm_ratio.png")
+        plt.close()
+    
 def plot_pipeline(title_in, output, plot="linear", fff=afzal):
     # Derived from plot_pt_diagram(), all need refactoring
     
@@ -1044,57 +1097,7 @@ plt.rcParams.update(params)
 T8C = T273 +8
 T = T8C
 P = 30
-# Plot LPM  for pure hydrogen and natural gases
-pressures = np.linspace(1, 100, 5)  # bar
-plt.figure(figsize=(10, 5))
-for g in ['NG', 'H2']:
-    L_seg = 1 # km
-    D = 0.11 # 110 mm
-    Q20 = 0.020 # 20 MW as this is in GW
-    for T in [ T8C]:
-    #for T in [T230, T8C, T25C, T50C]:
-        for p in pressures:
-            vg = get_v_from_Q(g, T, p, Q20, D)
-            print(f"|| {g:7} {vg=:9.1e} m/s")
-        label=f"{T-T273:4.0f}°C"
-        txt = f"{g} {label}"
-        p_lpm = [LPM(g, T, p, L_seg, D, Q20) for p in pressures]
-        
-        #print(f"Velocity ratio min:{v_ratio[0]:.3f} max:{vr_max:.3f} at  {T-T273:4.1f}°C")
-        plt.plot(pressures, p_lpm,  label=txt, **plot_kwargs(g))
-
-plt.title(f'Linepack Metric vs Pressure')
-plt.xlabel('Pressure (bar)')
-plt.ylabel('Linepack Metric (hours/km)')
-plt.legend()
-plt.grid(True)
-
-plt.savefig("peng_lpm.png")
-plt.close()
-
-# Plot LPM  RATIO hydrogen : natural gases
-if False:
-    pressures = np.linspace(6, 80, 5)  # bar
-    plt.figure(figsize=(10, 5))
-    for g in ['NG']:
-        L_seg = 1 # km
-        D = 0.11 # 110 mm
-        Q20 = 0.020 # 20 MW as this is in GW
-        #for T in [ T8C]:
-        for T in [ T25C, T8C, T273]:
-            label=f"{T-T273:4.0f}°C"
-            txt = f"{g} {label}"
-            p_lpm = [LPM('H2', T, p, L_seg, D, Q20)/LPM(g, T, p, L_seg, D, Q20)  for p in pressures]
-            plt.plot(pressures, p_lpm,  label=label, **plot_kwargs(g))
-
-    plt.title(f'Linepack Metric Ratio H2/NG vs Pressure')
-    plt.xlabel('Pressure (bar)')
-    plt.ylabel(f'Linepack Metric ratio H2/NG')
-    plt.legend()
-    plt.grid(True)
-
-    plt.savefig("peng_lpm_ratio.png")
-    plt.close()
+plot_lpm()
 
 moody_ylim = True
 
