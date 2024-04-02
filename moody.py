@@ -738,7 +738,10 @@ def LPM(g, T, P_ent, L_seg, D, Qh, rr=1e-5, f_function=afzal_mod):
     V_seg = L_seg * A # volume
     _, _, hc_g = get_Hc(g, T) # MJ/mol 
 
-    P_exit = running_dp38(L_seg, g, T, P_ent, f_function, rr, D, Qh)
+    #P_exit = running_dp38(L_seg, g, T, P_ent, f_function, rr, D, Qh)
+    P_exit = get_final_pressure(g, T, P_ent, L_seg, D, Qh)
+    if P_exit < 0:
+        print(f"## Negative exit pressure. {g} {T} {P} {L_seg}")
     v_ent = get_v_from_Q(g, T, P_ent, Qh, D)
     #print(f"++ {g:5} ({T-T273:5.1f}°C)   L={L_seg/1e3:5.1f}km {v_ent=:5.1f} {P_ent=:5.1f} {P_exit=:5.1f} {P_ent-P_exit=:7.3f} bar")
 
@@ -758,7 +761,7 @@ def LPM(g, T, P_ent, L_seg, D, Qh, rr=1e-5, f_function=afzal_mod):
 
     return lpm # in seconds
 
-def plot_lpm():
+def plot_lpm(L_seg = 83): # L_seg (km)
     """Plot LPM  for pure hydrogen and natural gases
     Standardise on 4 m/s for NG, and equivalent energy velocity for H2
     """
@@ -773,7 +776,7 @@ def plot_lpm():
     plt.figure(figsize=(10, 5))
     
     for g in ['NG', 'H2']:
-        L_seg = 10  # km
+          # km
         Lm = L_seg * 1e3 # m
         D = 0.2 # 200 mm
         v = 4 # m/s
@@ -797,6 +800,35 @@ def plot_lpm():
 
     plt.savefig("pipe_lpm.png")
     plt.close()
+    
+    # This is eqn(38) direct calculated differential curve
+    # COPY FOR DEBUGGING LPM
+    output="pipeLPM"
+    f = afzal_mod
+    
+    plt.figure(figsize=(10, 6))
+    fn = f"{f.__name__}"
+    #title = title_in + f" (ε/D = {rr0} [{fn}])"
+    filename = output + "_p_" + fn + ".png"
+    x_range = np.linspace(1, L_seg*1000-1, 50) # 500 km
+
+    
+    p_final ={}
+    for g in ['Yamal', 'H2']:
+        p_final[g] = {}
+        for T in [T230, T8C, T25C, T50C]:
+            lab =  f" ({T-T273:.1f}°C)"
+
+            p_x = {}
+            label = f"{g:7}" + lab
+            # print(label)
+            p_x[T] = [running_dp38(x, g, T, 30, f, 1e-5, D, get_Q_NG(30, T)) for x in x_range] # bar
+            plotit(g, p_x, "linear", f, label, x_range)
+            #p_final[g][T] =   p_x[T][-1] # printed at end of program
+    plt.ylabel('Pressure (bar)')
+    saveit( label,filename)
+    # END OF COPY FOR DEBUGGING LPM
+
 
     print(f"Now plot the ratio")
     # Plot LPM  RATIO hydrogen : natural gases
@@ -804,7 +836,6 @@ def plot_lpm():
         pressures = np.linspace(6, 80, 50)  # bar
         plt.figure(figsize=(10, 5))
         for g in ['NG']:
-            L_seg = 10 # km
             Lm = L_seg * 1e3 # m
             D = 0.2 # 200 mm
             #for T in [ T8C]:
@@ -822,60 +853,72 @@ def plot_lpm():
 
         plt.savefig("pipe_lpm_ratio.png")
         plt.close()
-    
+        
+def get_final_pressure(g, T, P_zero, L_pipe, D, Qh, rr=1e-5, f=afzal_mod):
+    """     Pfinal = SQRT (P0² - B f Z L/D )
+    L_pipe (m)
+    P_zero (bar)
+    """
+    def estimate(g, T, P_zero, P_mean):
+        
+        Qg = kg_from_GW(g, Qh)
+        B = funct_B(g, Qg, T, D)
+        Z = get_z(g, P_mean, T)
+        Re =  get_Re(g, T, P_mean, Qh, D)
+        ff = f(Re, rr)
+        t1 = (P_zero*1e5)**2
+        t2 = B * ff * Z * L_pipe / D
+        if t1 > t2:
+            fp = np.sqrt(t1 - t2 ) # Pa
+        else:
+            fp = 1e-9
+            print(f"## Negative  sqrt  {g:7} {T-T273:4.0f}°C {P_zero:8.3f} {P_mean:8.3f} {t1:.3e} {t2:.3e}")
+        return fp * 1e-5 # bar
+        
+    fp1 = estimate(g, T, P_zero, P_zero)
+    mean_P = (P_zero + fp1)/2
+    rms_P = np.sqrt((P_zero**2 + fp1**2)/2)
+    geo_P = np.sqrt(P_zero * fp1)
+    fp2 = estimate(g, T, P_zero, mean_P)
+    #print(g, P_zero, fp1, fp2, rms_P, mean_P, geo_P)
+    return fp2
+        
+def plotit(g, p_x, plot, ff, label, x_range):
+    # Plot the calculated curves 
+    if plot == "loglog":
+        for rr, p in p_x.items():
+            plt.loglog(x_range/1000, ff, label=label, **plot_kwargs(g))
+    if plot == "linear":
+        for rr, ff in p_x.items():
+            plt.plot(x_range/1000, ff, label=label, **plot_kwargs(g))
+    if plot == "linlog":
+        for rr, ff in p_x.items():
+            plt.semilogx(x_range/1000, ff, label=label, **plot_kwargs(g))
+
+def saveit(title,filename):
+    plt.title(title)
+    plt.xlabel('Distance (km)')
+    plt.grid(True, which='both', ls='--')
+    plt.legend()
+    plt.savefig(filename)
+    plt.close()
+    # print(f"*** {filename} ***")
+        
 def plot_pipeline(title_in, output, plot="linear", fff=afzal_mod):
     # Derived from plot_pt_diagram(), all need refactoring
     
     # Be Careful. Many variables rely on Python scoping rules between functions and
     # included functions. These rules are implicit.
     global P, T
-    def get_final_pressure(g, T, P_zero, L_pipe):
-        # Pfinal = SQRT (P0² - B f Z L/D )
-        def estimate(g, T, P_zero, P_mean):
-            
-            Qg = kg_from_GW(g, Qh)
-            B = funct_B(g, Qg, T, D)
-            Z = get_z(g, P_mean, T)
-            Re =  get_Re(g, T, P_mean, Qh, D)
-            ff = f(Re, rr0)
-            fp = np.sqrt((P_zero*1e5)**2 - B * ff * Z * L_pipe / D ) # Pa
-            return fp * 1e-5 # bar
-            
-        fp1 = estimate(g, T, P_zero, P_zero)
-        mean_P = (P_zero + fp1)/2
-        rms_P = np.sqrt((P_zero**2 + fp1**2)/2)
-        geo_P = np.sqrt(P_zero * fp1)
-        fp2 = estimate(g, T, P_zero, mean_P)
-        #print(P0, fp1, fp2, rms_P, mean_P, geo_P)
-        return fp2
-    
-    def plotit(g, p_x, plot, ff, label):
-        # Plot the calculated curves 
-        if plot == "loglog":
-            for rr, p in p_x.items():
-                plt.loglog(x_range/1000, ff, label=label, **plot_kwargs(g))
-        if plot == "linear":
-            for rr, ff in p_x.items():
-                plt.plot(x_range/1000, ff, label=label, **plot_kwargs(g))
-        if plot == "linlog":
-            for rr, ff in p_x.items():
-                plt.semilogx(x_range/1000, ff, label=label, **plot_kwargs(g))
 
-    def saveit(title,filename):
-        plt.title(title)
-        plt.xlabel('Distance (km)')
-        plt.grid(True, which='both', ls='--')
-        plt.legend()
-        plt.savefig(filename)
-        plt.close()
-        # print(f"*** {filename} ***")
+
         
     def print_finals():
         for g in ['Yamal', 'H2']:
             for t in t_range:
                 T = T273+t
                 pf_i = p_final[g][T]
-                pf = get_final_pressure(g, T, P0, L_pipe)
+                pf = get_final_pressure(g, T, P0, L_pipe, D, Qh, rr0, f)
                 error = 100*(pf_i - pf)/pf_i
                 print(f"   {g:7} ({T-T273:5.1f}°C) P_final:{pf_i:5.1f} bar eqn39 estimate:{pf:5.1f} bar {error=:5.2f} %")
         for t in t_range:
@@ -887,8 +930,8 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal_mod):
                 T = T273+t
                 for Lkm in [10, 20, 100, 200, 800 ]: # km
                     Length = Lkm*1e3 # m
-                    p_H2 = get_final_pressure('H2', T, P0, Length)
-                    p_NG = get_final_pressure('Yamal', T, P0, Length)
+                    p_H2 = get_final_pressure('H2', T, P0, Length, D, Qh, rr0, f)
+                    p_NG = get_final_pressure('Yamal', T, P0, Length, D, Qh,rr0, f)
                     ratio = (84 - p_H2)/(84 - p_NG)
                     print(f"   {Lkm:5.0f}km  ({T-T273:5.1f}°C) r:{ratio:8.4f} H2/Yamal +{100*(ratio-1):6.2f} % {p_H2:8.4f} {p_NG:8.4f}")
                
@@ -943,7 +986,7 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal_mod):
                 label = f"{g:7}" + lab
                 # print(label)
                 p_x[T] = [running_dp38(x, g, T, P0, f, rr0, D, Qh) for x in x_range] # bar
-                plotit(g, p_x, plot, f, label)
+                plotit(g, p_x, plot, f, label, x_range)
                 p_final[g][T] =   p_x[T][-1] # printed at end of program
         plt.ylabel('Pressure (bar)')
         saveit( title,filename)
@@ -963,7 +1006,7 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal_mod):
                 label = f"{g:7}" + lab
                 # print(label)
                 g_x[T] = [dp38(x, running_dp38(x, g, T, P0, f, rr0, D, Qh), g, T, f, rr0, D, Qh)*1000  for x in x_range] # bar
-                plotit(g, g_x, plot, f, label)
+                plotit(g, g_x, plot, f, label, x_range)
 
         plt.ylabel('Pressure gradient (bar/km)')
         saveit("Gradient of " + title,filename)
@@ -984,7 +1027,7 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal_mod):
                 label = f"{g:7}" + lab
                 lpm = LPM(g, T, P0, 139*1e3, D, Qh) # Qh (GW) L (m)
                 v_x[T] = [get_v_from_Q(g, T, running_dp38(x, g, T, P0, f, rr0, D, Qh), Qh, D)  for x in x_range] # bar
-                plotit(g, v_x, plot, f, label)
+                plotit(g, v_x, plot, f, label, x_range)
 
         plt.ylabel('Gas velocity (m/s)')
         saveit("Gradient of " + title,filename)
@@ -1005,7 +1048,7 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal_mod):
                 label = f"{g:7}" + lab
                 # print(label)
                 p_x[T] = [pint(x, g, P0) for x in x_range]
-                plotit(g, p_x, plot, f, label)
+                plotit(g, p_x, plot, f, label, x_range)
                
         plt.ylabel('Pressure (bar)')
         saveit(title,filename)
@@ -1026,7 +1069,7 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal_mod):
                 label = f"{g:7}" + lab
                 # print(label)
                 p_x[T] = [d_pint(x, g, P0, f, rr0, D)*1e3 for x in x_range]
-                plotit(g, p_x, plot, f, label)
+                plotit(g, p_x, plot, f, label, x_range)
 
         plt.ylabel('Pressure gradient (bar/km)')
         saveit("Gradient of " + title,filename)
@@ -1047,7 +1090,7 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal_mod):
                 label = f"{g:7}" + lab
                 # print(label)
                 p_x[T] = [int_d_pint(x, g, P0, f, rr0, D) for x in x_range]
-                plotit(g, p_x, plot, f, label)
+                plotit(g, p_x, plot, f, label, x_range)
 
         plt.ylabel('Pressure (bar)')
         saveit(title,filename)
