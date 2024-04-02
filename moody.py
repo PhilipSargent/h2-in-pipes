@@ -761,7 +761,7 @@ def LPM(g, T, P_ent, L_seg, D, Qh, rr=1e-5, f_function=afzal_mod):
 
     return lpm # in seconds
 
-def plot_lpm(L_seg = 83): # L_seg (km)
+def plot_lpm(L_seg = 12): # L_seg (km)
     """Plot LPM  for pure hydrogen and natural gases
     Standardise on 4 m/s for NG, and equivalent energy velocity for H2
     """
@@ -826,7 +826,7 @@ def plot_lpm(L_seg = 83): # L_seg (km)
             plotit(g, p_x, "linear", f, label, x_range)
             #p_final[g][T] =   p_x[T][-1] # printed at end of program
     plt.ylabel('Pressure (bar)')
-    saveit( label,filename)
+    saveit(f'Pressure - for NG v ={v:2.0f} m/s ({L_seg} km, {D*1000:.0f} mm dia.)',filename)
     # END OF COPY FOR DEBUGGING LPM
 
 
@@ -868,11 +868,11 @@ def get_final_pressure(g, T, P_zero, L_pipe, D, Qh, rr=1e-5, f=afzal_mod):
         ff = f(Re, rr)
         t1 = (P_zero*1e5)**2
         t2 = B * ff * Z * L_pipe / D
-        if t1 > t2:
+        if t1 > t2 + 1:
             fp = np.sqrt(t1 - t2 ) # Pa
         else:
-            fp = 1e-9
-            print(f"## Negative  sqrt  {g:7} {T-T273:4.0f}°C {P_zero:8.3f} {P_mean:8.3f} {t1:.3e} {t2:.3e}")
+            fp = 1
+            print(f"## Floor P=1 bar  {g:7} {T-T273:4.0f}°C {P_zero=:8.3f} {P_mean=:8.3f} {t1:.3e} {t2:.3e}")
         return fp * 1e-5 # bar
         
     fp1 = estimate(g, T, P_zero, P_zero)
