@@ -540,7 +540,7 @@ def funct_B_sub(g, Qg, D):
     m = do_mm_rules(g) # g/mol
     m_kg = m * 1e-3 # kg/mol
     Bs = np.power(Qg/A,2) * Rg  / m_kg
-    print(f".. {g:7} B/T: {Bs:9.4f} {m=:8.4f} g/mol {A=:9.5} m²  {D=} m  {Qg=:9.5f} kg/s")
+    #print(f".. {g:7} B/T: {Bs:9.4f} {m=:8.4f} g/mol {A=:9.5} m²  {D=} m  {Qg=:9.5f} kg/s")
     return Bs
     
 @memoize
@@ -637,18 +637,18 @@ def running_dp38(L, g, T, P0, f_function, rr, D, Qh):
     func(x,..)
     """
     def dpdx(x,p):
-        # Have to do this because I can't find the args=() documentaiton for scipy
+        # Have to do this because I can't find the args=() documentation for scipy
         if type(p) is not float:
             p = p[0] # scipy likes to set this to a numpty.ndarray of a numpy.float64 value instead of a simple float
         gradient = dp38(x, p, g, T, f_function, rr, D, Qh)
         return gradient
         
-    p = P0 # 84 bar
+    p = P0 # 84 bar, for Yamal pipe
     
     # Initial condition p = [P0]
     x_span = (0, L)
     # Solve the ODE
-    solution = solve_ivp(dpdx, x_span, [P0]) # has to be a list for last vaiable
+    solution = solve_ivp(dpdx, x_span, [P0]) # has to be a list for last variable
 
     #print(solution.t)
     #print(solution.y)
@@ -700,27 +700,42 @@ def dp38(x, P, g, T, f_function, rr, D, Qh):
     #print (f"--{g:7} P={P/1e5:0.5f} bar  {B=:0.5e} Pa² gradient={gradient*1000:0.5e} bar/km")
     return gradient # bar/m
 
-@memoize
-def LPM(g, T, P, L_seg, D, Qh):
+#@memoize
+def LPM(g, T, P_ent, L_seg, D, Qh, rr=1e-5, f_function=afzal_mod):
     """LinePackMetric for a gas in a pipe of length L (m), diameter D (m), carrying Qh (GW) of gas
     But perhaps GW is the wrong thing to keep constant, maybe all for same gas velocity ? 
     At each pressure, maintaining the same MJ/s for Ng at 5 m/s ?
     """
+    def energy_in_pipe(Pp):
+        v = get_v_from_Q(g, T, Pp, Qh, D)
+        ϱ = get_density(g, Pp, T) 
+        ϱv = ϱ * v
+        
+        Vm = get_Vm(g, Pp, T) # m³/mol - molar volume at P
+        hhvv = hc_g / Vm # MJ/m³ # HHV per cubic metre
+        E_seg = V_seg * hhvv *1e6 # J = Ws = amount of gas when linepacked 100%
+        #print(f"++ {g:5} ({T-T273:5.1f}°C) {P=:5.1f} {ϱ=:8.4f} kg/m³  {v=:8.4f} m/s  {ϱv=:8.3f} kg/s.m² {hhvv=:8.3f} MJ/m³ Vm{Vm*1000:8.3f} m³/kmol")
+        return E_seg
+        
     A = get_A(D)
-    v0 = get_v_from_Q(g, T, P, Qh, D)
-    ϱ0 = get_density(g, P, T) 
-    ϱv0 = ϱ0 * v0
-    # HHV per cubic metre
-    Vm = get_Vm(g, P, T) # m³/mol
-    _, _, hc_g = get_Hc(g, T) # MJ/mol
-    hhvv = hc_g / Vm # MJ/m³
-    V_seg = L_seg * A # velocity
-    E_seg = V_seg * hhvv *1e6 # J = Ws
-    lpm = E_seg/(Qh*1e9) # Ws / W
-    #print(f"++ {g:5} ({T-T273:5.1f}°C) {ϱ0=:8.4f} kg/m³  {v0=:8.4f} m/s  {ϱv0=:8.3f} kg/s.m² {hhvv=:8.3f} MJ/m³ Vm{Vm*1000:8.3f} m³/kmol")
-    lpm_km = lpm/(L_seg * 1e-3)
+    V_seg = L_seg * A # volume
+    _, _, hc_g = get_Hc(g, T) # MJ/mol 
 
-    #print(f"+++{g:5} ({T-T273:5.1f}°C) {P=:7.1f} bar V_seg={V_seg/1e3:9.4f} 1000.m³ lpm={lpm:8.1e} s  ={lpm/3600:7.3f} hours  lpm/km={lpm_km:8.1f} s/km")
+    P_exit = running_dp38(L_seg, g, T, P_ent, f_function, rr, D, Qh)
+    #print(f"++ {g:5} ({T-T273:5.1f}°C)  {P=:5.1f} {P_exit=:5.1f} {P-P_exit=:7.3f} ")
+
+    E_ent = energy_in_pipe(P_ent)*1e-9 # GJ =GWs
+    E_exit = energy_in_pipe(P_exit)*1e-9 # GJ = GWs
+    
+    # Now subtract the amount of gas which is in the pipe under normal flow
+     
+    
+    lpm = (E_ent-E_exit)/(Qh) # GWs / GW
+    #lpm = (E_ent)/(Qh) # GWs / GW
+
+    lpm_km = lpm/(L_seg * 1e-3)
+    #print(f"+++{g:5} ({T-T273:5.1f}°C) {P_ent=:7.1f} bar  E_ent={E_ent:8.0f} E_exit={E_exit:8.0f} lpm={lpm:8.1e} s  ={lpm/3600:7.3f} hours  lpm/km={lpm_km:8.1f} s/km")
+    # print(f"+++{g:5} ({T-T273:5.1f}°C) {P=:7.1f} bar V_seg={V_seg/1e3:9.4f} 1000.m³ lpm={lpm:8.1e} s  ={lpm/3600:7.3f} hours  lpm/km={lpm_km:8.1f} s/km")
 
     return lpm # in seconds
 
@@ -735,15 +750,15 @@ def plot_lpm():
         
         return Q_NG
          
-    pressures = np.linspace(8, 80, 5)  # bar
+    pressures = np.linspace(8, 80, 100)  # bar
     plt.figure(figsize=(10, 5))
     
     for g in ['NG', 'H2']:
         L_seg = 10  # km
         D = 0.2 # 200 mm
         v = 4 # m/s
-        #for T in [ T8C]:
-        for T in [T230, T8C, T25C, T50C]:
+        for T in [ T8C]:
+        #for T in [T230, T8C, T25C, T50C]:
             # for p in pressures:
                 # v_gas = get_v_from_Q(g, T, p, get_Q(g,p), D)
                 # print(f"|| {g:7} {v_gas=:9.4f} m/s")
@@ -765,7 +780,7 @@ def plot_lpm():
 
     # Plot LPM  RATIO hydrogen : natural gases
     if True:
-        pressures = np.linspace(6, 80, 5)  # bar
+        pressures = np.linspace(6, 80, 100)  # bar
         plt.figure(figsize=(10, 5))
         for g in ['NG']:
             L_seg = 10 # km
@@ -1128,9 +1143,10 @@ plt.rcParams.update(params)
 T8C = T273 +8
 T = T8C
 P = 30
-plot_lpm()
+plot_lpm() # using defaults for rr and f_function
 
 moody_ylim = True
+
 
 reynolds_laminar = np.logspace(2.9, 3.9, 5) # 10^2.7 = 501, 10^3.4 = 2512
 reynolds = np.logspace(2.4, 14.0, 1000) # 10^7.7 = 5e7
