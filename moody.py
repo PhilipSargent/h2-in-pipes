@@ -655,7 +655,10 @@ def running_dp38(L, g, T, P0, f_function, rr, D, Qh):
     p = solution.y[0][-1]
     grad = dpdx(L,[p])
     #print(f"{int(L/1000):5} km  ({p:5.1f} bar) P0-p:{p-P0:8.3f} bar  gradient:{grad*1000:9.5f} bar/km")
-
+    
+    if p < 0:
+        print(f"**** Negative pressure - pressure drop too large. {L=} {g=} {T=} {P0=} {f_function=} {rr=} {D=} {Qh=}")
+        exit(-1)
     return p
    
 @memoize
@@ -728,9 +731,10 @@ def LPM(g, T, P_ent, L_seg, D, Qh, rr=1e-5, f_function=afzal_mod):
     E_exit = energy_in_pipe(P_exit)*1e-9 # GJ = GWs
     
     # Now subtract the amount of gas which is in the pipe under normal flow
-     
+    # But remember, the P/x curve is almost linear, so the line[ack triangle
+    # is half the difference.
     
-    lpm = (E_ent-E_exit)/(Qh) # GWs / GW
+    lpm = 0.5* (E_ent-E_exit)/(Qh) # GWs / GW
     #lpm = (E_ent)/(Qh) # GWs / GW
 
     lpm_km = lpm/(L_seg * 1e-3)
@@ -750,21 +754,22 @@ def plot_lpm():
         
         return Q_NG
          
-    pressures = np.linspace(8, 80, 100)  # bar
+    pressures = np.linspace(8, 80, 50)  # bar
     plt.figure(figsize=(10, 5))
     
     for g in ['NG', 'H2']:
         L_seg = 10  # km
+        Lm = L_seg * 1e3 # m
         D = 0.2 # 200 mm
         v = 4 # m/s
-        for T in [ T8C]:
-        #for T in [T230, T8C, T25C, T50C]:
+        #for T in [ T8C]:
+        for T in [T230, T8C, T25C, T50C]:
             # for p in pressures:
                 # v_gas = get_v_from_Q(g, T, p, get_Q(g,p), D)
                 # print(f"|| {g:7} {v_gas=:9.4f} m/s")
             label=f"{T-T273:4.0f}°C"
             txt = f"{g} {label}"
-            p_lpm = [LPM(g, T, p, L_seg*1e3, D, get_Q(g, p, T)) for p in pressures]
+            p_lpm = [LPM(g, T, p, Lm, D, get_Q(g, p, T)) for p in pressures]
             
             #print(f"Velocity ratio min:{v_ratio[0]:.3f} max:{vr_max:.3f} at  {T-T273:4.1f}°C")
             plt.plot(pressures, p_lpm,  label=txt, **plot_kwargs(g))
@@ -780,7 +785,7 @@ def plot_lpm():
 
     # Plot LPM  RATIO hydrogen : natural gases
     if True:
-        pressures = np.linspace(6, 80, 100)  # bar
+        pressures = np.linspace(6, 80, 50)  # bar
         plt.figure(figsize=(10, 5))
         for g in ['NG']:
             L_seg = 10 # km
