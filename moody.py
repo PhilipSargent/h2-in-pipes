@@ -509,6 +509,9 @@ def get_v_from_Q(g, Tt, Pp, Qh, D):
 def get_Q_from_v(g, Tt, Pp, v, D):
     # v (m/s)
     # Q (GW)
+    #print(f"***{g:7}  get_Q_from_v {v=:9.2f} m/s [{Tt=}] {D=}")  
+    if Pp < 0 :
+        print(f"***{g:7}  get_Q_from_v {v=:9.2f} m/s [{Tt=}] {D=}")    
     A = get_A(D)
     ϱ = get_density(g, Pp, Tt) 
     Qv = v * A
@@ -615,7 +618,7 @@ def int_d_pint(L, g, P0, f, rr, D):
     p, est_err_quad = quad(d_pint, 2, L, args=(g, P0, f, rr, D))
     p = p + P0
     if p < 0:
-        print(f"negative P. Abort.")
+        print(f"negative P. Abort. int_d_pint()")
         exit(-1)    
     return p
     
@@ -640,6 +643,10 @@ def running_dp38(L, g, T, P0, f_function, rr, D, Qh):
         # Have to do this because I can't find the args=() documentation for scipy
         if type(p) is not float:
             p = p[0] # scipy likes to set this to a numpty.ndarray of a numpy.float64 value instead of a simple float
+        if p < 0:
+            #print(f"negative P. Abort. def dpdx(x,p) {T} {P0} {x} {p}")
+            #exit(-1) 
+            p = 1e-9
         gradient = dp38(x, p, g, T, f_function, rr, D, Qh)
         return gradient
         
@@ -663,6 +670,9 @@ def running_dp38(L, g, T, P0, f_function, rr, D, Qh):
    
 @memoize
 def get_Re(g, T, P, Qh, D):
+    if P < 0:
+        print(f"negative P. Abort.  get_Re(g, T, P, Qh, D): {T=} {P=}")
+        exit(-1)    
     ϱ = get_density(g, P, T) # kg/m³
     v = get_v_from_Q(g, T, P, Qh, D)
     μ = get_viscosity(g, P, T, visc_f) #in μPa.s 
@@ -688,6 +698,10 @@ def dp38(x, P, g, T, f_function, rr, D, Qh):
     Qh (GW)
     
     dP/dx = - B f Z / (2 D P) """
+    if P < 0:
+        print(f"negative P. Abort. dp38(x, P, g, T, f_function, rr, D, Qh) {T=} {P=}")
+        exit(-1)    
+    
     Qg = kg_from_GW(g, Qh) # kg/s
     B = funct_B(g, Qg, T, D) # Pa² / m
 
@@ -725,7 +739,8 @@ def LPM(g, T, P_ent, L_seg, D, Qh, rr=1e-5, f_function=afzal_mod):
     _, _, hc_g = get_Hc(g, T) # MJ/mol 
 
     P_exit = running_dp38(L_seg, g, T, P_ent, f_function, rr, D, Qh)
-    #print(f"++ {g:5} ({T-T273:5.1f}°C)  {P=:5.1f} {P_exit=:5.1f} {P-P_exit=:7.3f} ")
+    v_ent = get_v_from_Q(g, T, P_ent, Qh, D)
+    #print(f"++ {g:5} ({T-T273:5.1f}°C)   L={L_seg/1e3:5.1f}km {v_ent=:5.1f} {P_ent=:5.1f} {P_exit=:5.1f} {P_ent-P_exit=:7.3f} bar")
 
     E_ent = energy_in_pipe(P_ent)*1e-9 # GJ =GWs
     E_exit = energy_in_pipe(P_exit)*1e-9 # GJ = GWs
@@ -747,7 +762,7 @@ def plot_lpm():
     """Plot LPM  for pure hydrogen and natural gases
     Standardise on 4 m/s for NG, and equivalent energy velocity for H2
     """
-    def get_Q(g, p, T):
+    def get_Q_NG(p, T):
         # Normalises to same Q (GW) as for NG v=4m/s at this T,P
         v_ng = 4 # m/s
         Q_NG = get_Q_from_v("NG", T, p, v_ng, D)
@@ -769,9 +784,9 @@ def plot_lpm():
                 # print(f"|| {g:7} {v_gas=:9.4f} m/s")
             label=f"{T-T273:4.0f}°C"
             txt = f"{g} {label}"
-            p_lpm = [LPM(g, T, p, Lm, D, get_Q(g, p, T)) for p in pressures]
+            p_lpm = [LPM(g, T, p, Lm, D, get_Q_NG(p, T)) for p in pressures]
             
-            #print(f"Velocity ratio min:{v_ratio[0]:.3f} max:{vr_max:.3f} at  {T-T273:4.1f}°C")
+            print(f"Linepack Metric {g:7} at  {T-T273:4.1f}°C")
             plt.plot(pressures, p_lpm,  label=txt, **plot_kwargs(g))
 
     plt.title(f'Linepack Metric - for NG v ={v:2.0f} m/s ({L_seg} km, {D*1000:.0f} mm dia.)')
@@ -783,6 +798,7 @@ def plot_lpm():
     plt.savefig("pipe_lpm.png")
     plt.close()
 
+    print(f"Now plot the ratio")
     # Plot LPM  RATIO hydrogen : natural gases
     if True:
         pressures = np.linspace(6, 80, 50)  # bar
@@ -795,7 +811,7 @@ def plot_lpm():
             for T in [ T25C, T8C, T273]:
                 label=f"{T-T273:4.0f}°C"
                 txt = f"{g} {label}"
-                p_lpm = [LPM('H2', T, p, Lm, D, get_Q(g,p,T))/LPM(g, T, p, Lm, D, get_Q(g,p,T))  for p in pressures]
+                p_lpm = [LPM('H2', T, p, Lm, D, get_Q_NG(p,T))/LPM(g, T, p, Lm, D, get_Q_NG(p,T))  for p in pressures]
                 plt.plot(pressures, p_lpm,  label=label, **plot_kwargs(g))
 
         plt.title(f'Linepack Metric Ratio H2/NG - for NG v ={v:2.0f} m/s ({L_seg} km, {D*1000:.0f} mm dia.)')
@@ -816,6 +832,7 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal_mod):
     def get_final_pressure(g, T, P_zero, L_pipe):
         # Pfinal = SQRT (P0² - B f Z L/D )
         def estimate(g, T, P_zero, P_mean):
+            
             Qg = kg_from_GW(g, Qh)
             B = funct_B(g, Qg, T, D)
             Z = get_z(g, P_mean, T)

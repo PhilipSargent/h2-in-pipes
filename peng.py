@@ -198,7 +198,7 @@ def viscosity_H2(T, P):
             print(f"H2   {P=:3.1f} {T=:3.0f} {ϱ=:0.4e}  ")
             A = 0
             if P < 0:
-                print(f"negative P. Abort.")
+                print(f"negative P. Abort.  AB(ϱ) {T=} {P=}")
                 exit(-1)
         # np.log() is natural log. np.log10() is log base 10.
         # We don't know what units Li et al. are using for density.
@@ -234,6 +234,9 @@ def viscosity_H2(T, P):
         Δvs = Δvs /10
         return Δvs
         
+    if P < 0:
+        print(f"negative P. Abort.  viscosity_H2(T, P) {T=} {P=}")
+        exit(-1)
     # Equation as used for other gases to get vx0 for H2
     vs0, t0, power  = gas_data['H2']['Vs'] # at T=t 
     vs_1 = pow(T/t0, power) * vs0 # at 1 atm
@@ -266,6 +269,10 @@ def viscosity_ng(μ, T, P):
 def viscosity_actual(gas, T, P, force=False):
     """Calculate viscosity in microPa.s for a pure gas at temperature T and pressure = P
     """
+    if P < 0:
+        print(f"negative P. Abort.  viscosity_actual(gas, T, P, force=False) {T=} {P=}")
+        exit(-1)
+    
     if not force and gas == 'H2':
         return viscosity_H2(T, P)
 
@@ -283,6 +290,10 @@ def viscosity_actual(gas, T, P, force=False):
 def viscosity_values(mix, T, P):
     if not P:
         print(mix,  T, P)
+    if P < 0:
+        print(f"negative P. Abort.  viscosity_values(mix, T, P) {T=} {P=}")
+        exit(-1)
+        
     values = {}
     composition = gas_mixtures[mix]
     for gas, x in composition.items():
@@ -1015,7 +1026,10 @@ def get_viscosity(g, P, T, visc_f):
     # if 'visc_f' not in locals():
         # #print("UNDEFINED viscosity mean value algorithm, using Wilke")
         # visc_f = set_mix_rule()
-    
+    if P < 0:
+        print(f"negative P. Abort.  get_viscosity(g, P, T, visc_f) {T=} {P=}")
+        exit(-1)
+
     if g in gas_data:
         μ = viscosity_actual(g, T, P)
     else:
