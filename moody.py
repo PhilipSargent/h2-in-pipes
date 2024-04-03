@@ -560,25 +560,7 @@ def pint(x, g, P0):
   
     p = P0 * np.sqrt(L - x)/np.sqrt(L)
     return p
-    
-@memoize
-def d_pint(x, g, P0, f, rr, D):
-    delta_x = 0.1
-    p1 = pint(x-delta_x, g, P0)
-    p2 = pint(x+delta_x, g, P0)
-    return (p2 - p1)/(2 * delta_x)
-    
-def int_d_pint(L, g, P0, f, rr, D):
-    """Given that we have only a pressure gradient, calculate the pressure drop
-    as an integral of that"""
-    original = pint(L, g, P0)
-   
-    p, est_err_quad = quad(d_pint, 2, L, args=(g, P0, f, rr, D))
-    p = p + P0
-    if p < 0:
-        print(f"negative P. Abort. int_d_pint()")
-        exit(-1)    
-    return p
+
     
 
 @memoize
@@ -604,7 +586,7 @@ def running_dp38(L, g, T, P0, f_function, rr, D, Qh):
         if p < 0:
             #print(f"negative P. Abort. def dpdx(x,p) {T} {P0} {x} {p}")
             #exit(-1) 
-            p = 1e-9
+            p = 1
         gradient = dp38(x, p, g, T, f_function, rr, D, Qh)
         return gradient
         
