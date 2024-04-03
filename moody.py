@@ -555,15 +555,6 @@ def funct_B(g, Qg, T, D):
     return B
 
 @memoize
-def pint(x, g, P0):
-    L = 800e3 + 1
-  
-    p = P0 * np.sqrt(L - x)/np.sqrt(L)
-    return p
-
-    
-
-@memoize
 def running_dp38(L, g, T, P0, f_function, rr, D, Qh):
     """Does the integral from x: 0 to L of all the dP/dx to get P = P(L)
     This understands x i.e. L
@@ -620,7 +611,7 @@ def get_Re(g, T, P, Qh, D):
     Re = ϱ * v * D / μ # dimensionless as Pa ≡ N/m² and kg.m/s² ≡ N
     return Re
 
-def eq36(g, T, P, B, ff, Z, D, Qh):
+def eq36(g, T, P, B, ff, Z, D):
     r""" Equation 36 {Sargent2024b}
     \begin{equation}
     \label{eqn:force9a}
@@ -628,10 +619,6 @@ def eq36(g, T, P, B, ff, Z, D, Qh):
     \end{equation}
     
     Yamal data
-    
-    input variable Qh is in GW of Yamal gas, 
-    so we need to convert this to Q (kg/s) of whatever gas we are plotting
-    and calculate the gas velocity from that too.
     
     In all this we need to be careful with units: all in SI m³ and N and Pa,
     not litres or bars or g/mol.
@@ -651,12 +638,12 @@ def eq36(g, T, P, B, ff, Z, D, Qh):
    
     # g  =  -B * ff * Z  / (2 * D * P) #  Pa /m
     # return g  #  Pa /m    
-    dZdP = dzdp(T, P, g)     # in WHATEVER UNITS P is in
-
+    dZdP = dzdp(T, P*1e-5, g)     # P must be in bar, otherzie Z is completely wrong.
+    dZdP = dZdP *1e-5 # convert to Pa^-1
     denom = (Z/P) - (P/B) - dZdP 
+    denom = (Z/P) - (P/B) 
     gr = nom /denom # Pa/m
-    #gr = -nom * B /P # Pa/m
-    print (f"-- {g:7} dP/dx={gr:8.4f}Pa/m {nom=:0.5f} {denom=:0.5f}  (Z/P){(Z/P)*1e5:0.5e}  -(P/B){-(P/B)*1e5:0.5e} -dZdP{-dZdP*1e5:0.5e}  ")    
+    print (f"-- {g:7} Z={Z:8.4f} {P=:.0f} Pa {denom=:0.5f}  (Z/P):{(Z/P)*1e5:0.5f}  -(P/B):{-(P/B)*1e5:0.5f} -dZdP:{-dZdP*1e5:0.5f} (Pa^-1) ")    
     # g  =  -B * ff * Z  / (2 * D * P) #  Pa /m
     return gr  #  Pa /m
 
@@ -673,6 +660,10 @@ def dp38(x, P, g, T, f_function, rr, D, Qh):
     
     This calculates the dP/dx for given P, T, Qh. It does not understand 'x'.
     But it seems to have to have it so that the quad() integration works
+
+    input variable Qh is in GW of Yamal gas, 
+    so we need to convert this to Q (kg/s) of whatever gas we are plotting
+    and calculate the gas velocity from that too.
     
     In all this we need to be careful with units: all in SI m³ and N and Pa,
     not litres or bars or g/mol.
@@ -689,7 +680,7 @@ def dp38(x, P, g, T, f_function, rr, D, Qh):
         exit(-1)    
     
     Qg = kg_from_GW(g, Qh) # kg/s
-    B = funct_B(g, Qg, T, D) # Pa² / m
+    B = funct_B(g, Qg, T, D) # Pa² 
 
     # dimensionless
     Z = get_z(g, P, T)
@@ -701,8 +692,8 @@ def dp38(x, P, g, T, f_function, rr, D, Qh):
     # equation 38 or 36:
     #print (f"][ {g:7} ({T-T273:5.1f}°C)  P:{P/1e5:8.4f} bar  dZ/dp={dzdp(T, P, g):8.4f} Pa/m")
 
-    gradient  = eq38(B, ff, Z, D, P) #  Pa /m
-    gradient  = eq36(g, T, P, B, ff, Z, D, Qh) #  Pa /m
+    #gradient  = eq38(B, ff, Z, D, P) #  Pa /m
+    gradient  = eq36(g, T, P, B, ff, Z, D) #  Pa /m
     gradient = gradient * 1e-5 # bar/m
     #print (f"--{g:7} P={P/1e5:0.5f} bar  {B=:0.5e} Pa² gradient={gradient*1000:0.5e} bar/km")
     return gradient # bar/m
@@ -1023,68 +1014,6 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal_mod):
         plt.ylabel('Gas velocity (m/s)')
         saveit("Gradient of " + title,filename)
 
-        #
-        # Now the SQRT fudge to see what sort of function it looks like - - -- - - - -- - --- -- -- --
-        #
-        fn = f"{f.__name__}"
-        title = title_in + f" (ε/D = {rr0} [{fn}])"
-        filename = "sqrt" + "_" + fn + ".png"
-        
-        for t in t_range:
-            T = T273+t
-            lab =  f" ({T-T273:.1f}°C)"
-
-            p_x = {}
-            for g in ['Yamal', 'H2']:
-                label = f"{g:7}" + lab
-                # print(label)
-                p_x[T] = [pint(x, g, P0) for x in x_range]
-                plotit(g, p_x, plot, f, label, x_range)
-               
-        plt.ylabel('Pressure (bar)')
-        saveit(title,filename)
-
-        # Now the  sqrt diff 
-
-        plt.figure(figsize=(10, 5))
-        fn = f"{f.__name__}"
-        title = title_in + f" (ε/D = {rr0} [{fn}])"
-        filename = "sqrt" + "_D_" + fn + ".png"
-        
-        for t in t_range:
-            T = T273+t
-            lab =  f" ({T-T273:.1f}°C)"
-
-            p_x = {}
-            for g in ['Yamal', 'H2']:
-                label = f"{g:7}" + lab
-                # print(label)
-                p_x[T] = [d_pint(x, g, P0, f, rr0, D)*1e3 for x in x_range]
-                plotit(g, p_x, plot, f, label, x_range)
-
-        plt.ylabel('Pressure gradient (bar/km)')
-        saveit("Gradient of " + title,filename)
-
-        # Now the integral of the sqrt diff - to check
-        
-        plt.figure(figsize=(10, 5))
-        fn = f"{f.__name__}"
-        title = title_in + f" (ε/D = {rr0} [{fn}])"
-        filename = "sqrt" + "_I_" + fn + ".png"
-        
-        for t in t_range:
-            T = T273+t
-            lab =  f" ({T-T273:.1f}°C)"
-
-            p_x = {}
-            for g in ['Yamal', 'H2']:
-                label = f"{g:7}" + lab
-                # print(label)
-                p_x[T] = [int_d_pint(x, g, P0, f, rr0, D) for x in x_range]
-                plotit(g, p_x, plot, f, label, x_range)
-
-        plt.ylabel('Pressure (bar)')
-        saveit(title,filename)
         
         print_finals()
  

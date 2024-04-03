@@ -683,10 +683,14 @@ def pz(T, P, gas): # return the Pressure divided by Z
     return P/Z
 
 @memoize
-def dzdp(T, P, gas): # return gradient dZ/dP    in (1/bar)  
-    Z1 = peng_robinson(T, P*0.999, gas)
-    Z2 = peng_robinson(T, P*1.001, gas)
+def dzdp(T, P, g): # return gradient dZ/dP    in (1/bar)  
+    # P must be provided in bar, and returns 
+    Z1 = peng_robinson(T, P*0.999, g)
+    Z2 = peng_robinson(T, P*1.001, g)
+    Z1 = get_z(g, P*0.999, T)
+    Z2 = get_z(g, P*1.001, T)
     dz_dp =  (Z2 - Z1)/ (P*1.001 - P*0.999)
+    #print (f"^^ {g:7} {P=:.0f}  {T-T273:4.1f}°C Z1={Z1:8.4e} Z2={Z2:8.4e} {P*1.001=:.0f}  {P*0.999=:.0f}   {dz_dp=:.4e} ") 
     return dz_dp
 
 @memoize
@@ -1969,7 +1973,7 @@ def main():
 
     plt.figure(figsize=(10, 5))
 
-    for g, txt in [('H2','Pure hydrogen'), ('NG','Natural gas'), ('CH4','Pure methane')]:
+    for g, txt in [('H2','Pure hydrogen'), ('CH4','Pure methane'), ('NG','Fordoun gas'), ('Yamal','Yamal gas')]:
         Z = [peng_robinson(T, p, g) for p in pressures]
         plt.plot(pressures, Z, label=txt, **plot_kwargs(g))
 
@@ -1984,7 +1988,7 @@ def main():
 
     # Plot P/Z  for pure hydrogen and natural gases
 
-    for g, txt in [('H2','Pure hydrogen'), ('NG','Natural gas'), ('CH4','Pure methane')]:
+    for g, txt in [('H2','Pure hydrogen'), ('NG','Fordoun gas'),('Yamal','Yamal gas')]:
         p_z = [pz(T, p, g) for p in pressures]
         plt.plot(pressures, p_z, label=txt, **plot_kwargs(g))
     
@@ -1999,7 +2003,7 @@ def main():
 
    # Plot dZ/dP v P  for pure hydrogen and natural gases
     plt.figure(figsize=(10, 5))
-    for g, txt in [('H2','Pure hydrogen'), ('NG','Natural gas')]:
+    for g, txt in [('H2','Pure hydrogen'), ('Yamal','Yamal gas'), ('NG','Fordoun gas')]:
         T2 = T273 + 42.5
         dzdp_ = [dzdp(T2, p, g)*1e5 for p in pressures]
         plt.plot(pressures, dzdp_, label=txt, **plot_kwargs(g))
