@@ -11,6 +11,7 @@ If you would like a preprint of this paper, please just look at the file https:/
 The oxygen-firing effect on the dew point and thus the efficiency of condensing boilers is describe in an online article: https://philipsargent.wordpress.com/2024/03/01/oxygen-boilers-making-condensing-boilers-more-efficient/
 ![p2_h2_ratio](https://github.com/PhilipSargent/h2-in-pipes/assets/5623885/be00b721-4024-4d8e-ade0-a5a0f9c79bb7)
 
+![peng_z_p](https://github.com/PhilipSargent/h2-in-pipes/assets/5623885/e7a252f0-f0b5-49a6-82f9-188b04dcb490)
 
 ![w2_h2_ratio_pt](https://github.com/PhilipSargent/h2-in-pipes/assets/5623885/35bf4e3c-8b86-4151-b591-4c3c261ae42b)
 
