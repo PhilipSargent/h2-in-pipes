@@ -1932,6 +1932,7 @@ def main():
         plt.plot(temperatures - T273, re_g[mix], label= mix, **plot_kwargs(mix))
         
     #plt.title(f'Kinematic Viscosity vs Temperature at {pressure} bar')
+    plt.title(f'Kinematic Viscosity vs Temperature ')
     plt.xlabel('Temperature (°C)')
     plt.ylabel('Dynamic Viscosity/Density (μPa.s)/(kg/m³) ')
     plt.legend()

@@ -643,7 +643,7 @@ def eq36(g, T, P, B, ff, Z, D):
     denom = (Z/P) - (P/B) - dZdP 
     denom = (Z/P) - (P/B) 
     gr = nom /denom # Pa/m
-    print (f"-- {g:7} Z={Z:8.4f} {P=:.0f} Pa {denom=:0.5f}  (Z/P):{(Z/P)*1e5:0.5f}  -(P/B):{-(P/B)*1e5:0.5f} -dZdP:{-dZdP*1e5:0.5f} (Pa^-1) ")    
+    #print (f"-- {g:7} Z={Z:8.4f} {P=:.0f} Pa {denom=:0.5f}  (Z/P):{(Z/P)*1e5:0.5f}  -(P/B):{-(P/B)*1e5:0.5f} -dZdP:{-dZdP*1e5:0.5f} (Pa^-1) ")    
     # g  =  -B * ff * Z  / (2 * D * P) #  Pa /m
     return gr  #  Pa /m
 
@@ -949,10 +949,10 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal_mod):
         fff = [fff]
     
     for f in fff: # several different friction factor functions
-        plt.figure(figsize=(10, 6))
+        plt.figure(figsize=(10, 5))
         
         # This is eqn(38) direct calculated differential curve
-        plt.figure(figsize=(10, 6))
+        plt.figure(figsize=(10, 5))
         fn = f"{f.__name__}"
         title = title_in + f" (ε/D = {rr0} [{fn}])"
         filename = output + "_p_" + fn + ".png"
@@ -1012,7 +1012,7 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal_mod):
                 plotit(g, v_x, plot, f, label, x_range)
 
         plt.ylabel('Gas velocity (m/s)')
-        saveit("Gradient of " + title,filename)
+        saveit(title,filename)
 
         
         print_finals()
