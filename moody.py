@@ -555,48 +555,6 @@ def funct_B(g, Qg, T, D):
     return B
 
 @memoize
-def d_pipe(L, g, T, P, f_function, rr, D, Qh):
-    r""" Equation 36 {Sargent2024b}
-    \begin{equation}
-    \label{eqn:force9a}
-    \frac{\delta P}{\delta x} =     \frac{Z f}{2 D \left[  \frac{Z}{P} - \frac{P}{B} -  \left( \frac{\partial Z}{\partial P} \right)_T   \right]}
-    \end{equation}
-    
-    Yamal data
-    
-    input variable Qh is in GW of Yamal gas, 
-    so we need to convert this to Q (kg/s) of whatever gas we are plotting
-    and calculate the gas velocity from that too.
-    
-    In all this we need to be careful with units: all in SI m³ and N and Pa,
-    not litres or bars or g/mol.
-    
-    TO BE DEBUGGED !!
-    
-    """
-    Qg = kg_from_GW(g, Qh) # kg/s
-    B = funct_B(g, Qg, T, D) # Pa²
-    dZdP = dzdp(T, P, g)     # but this is in terms of (1/bar)
-    dZdP = dZdP * 1e5 # now in (1/Pa)
-    Z = get_z(g, P, T) # dimensionless
-
-    v = get_v_from_Q(g, T, P, Qh, D) # m/s
-    μ = get_viscosity(g, P, T, visc_f) # in microPa.s 
-    μ = μ * 1e-6 # in Pa.s
-    
-    ϱ = get_density(g, P, T) # kg/m³
-
-    Re = ϱ * v * D / μ # dimensionless as pa=N/m and kg.m/s²=N
-    ff = f_function(Re, rr) # afzal(reynolds, relative_roughness)
-    print (f"--{g:7}  {ff=:.3e} {Re=:0.3e}  {ϱ=:8.4f}  {v=:0.3f} m/s {μ=:8.2e} Pa.s")
-    nom = Z * ff / (2 * D)
-    P = P * 1e5 # convert bar to Pa
-    denom = (Z/P) - (P/B) - dZdP 
-    gradient = nom /denom # Pa/m
-    print (f"-- {g:7} dP/dx={gradient:8.4f}Pa/m {nom=:0.5f} {denom=:0.5f}  {(Z/P)=:0.5e}  {-(P/B)=:0.5e} {-dZdP=:0.5e}  ")
-    return gradient * 1e-5 # now in bar/m
-
-@memoize
 def pint(x, g, P0):
     L = 800e3 + 1
   
@@ -679,7 +637,52 @@ def get_Re(g, T, P, Qh, D):
     μ = μ * 1e-6 # in Pa.s
     Re = ϱ * v * D / μ # dimensionless as Pa ≡ N/m² and kg.m/s² ≡ N
     return Re
+
+def eq36(g, T, P, B, ff, Z, D, Qh):
+    r""" Equation 36 {Sargent2024b}
+    \begin{equation}
+    \label{eqn:force9a}
+    \frac{\delta P}{\delta x} =     \frac{Z f}{2 D \left[  \frac{Z}{P} - \frac{P}{B} -  \left( \frac{\partial Z}{\partial P} \right)_T   \right]}
+    \end{equation}
     
+    Yamal data
+    
+    input variable Qh is in GW of Yamal gas, 
+    so we need to convert this to Q (kg/s) of whatever gas we are plotting
+    and calculate the gas velocity from that too.
+    
+    In all this we need to be careful with units: all in SI m³ and N and Pa,
+    not litres or bars or g/mol.
+    
+    TO BE DEBUGGED !!
+    
+    T (K)
+    P (Pa)
+    B (Pa^-2)
+    ff (-)
+    Z (-)
+    D (m)
+    Qh (GW)
+    """
+    # print (f"-- {g:7}  {ff=:.3e} {Re=:0.3e}") #  {ϱ=:8.4f}  {v=:0.3f} m/s {μ=:8.2e} Pa.s")
+    nom = Z * ff / (2 * D) # units (1/m)
+   
+    # g  =  -B * ff * Z  / (2 * D * P) #  Pa /m
+    # return g  #  Pa /m    
+    dZdP = dzdp(T, P, g)     # in WHATEVER UNITS P is in
+
+    denom = (Z/P) - (P/B) - dZdP 
+    gr = nom /denom # Pa/m
+    #gr = -nom * B /P # Pa/m
+    print (f"-- {g:7} dP/dx={gr:8.4f}Pa/m {nom=:0.5f} {denom=:0.5f}  (Z/P){(Z/P)*1e5:0.5e}  -(P/B){-(P/B)*1e5:0.5e} -dZdP{-dZdP*1e5:0.5e}  ")    
+    # g  =  -B * ff * Z  / (2 * D * P) #  Pa /m
+    return gr  #  Pa /m
+
+
+def eq38(B, ff, Z, D, P):
+    g  =  -B * ff * Z  / (2 * D * P) #  Pa /m
+    return g  #  Pa /m
+
 @memoize
 def dp38(x, P, g, T, f_function, rr, D, Qh):
     """This is the 'near-ideal gas' version of the equation (38)
@@ -698,6 +701,7 @@ def dp38(x, P, g, T, f_function, rr, D, Qh):
     Qh (GW)
     
     dP/dx = - B f Z / (2 D P) """
+        
     if P < 0:
         print(f"negative P. Abort. dp38(x, P, g, T, f_function, rr, D, Qh) {T=} {P=}")
         exit(-1)    
@@ -712,7 +716,11 @@ def dp38(x, P, g, T, f_function, rr, D, Qh):
     # print (f"--{g:7}  {ff=:.3e} {Re=:0.3e}  {ϱ=:8.4f}  {Z=:0.5f}  {v=:0.3f} m/s {μ=:8.2e} Pa.s")
     
     P = P *1e5 # convert bar to Pa
-    gradient  =  -B * ff * Z  / (2 * D * P) #  Pa /m
+    # equation 38 or 36:
+    #print (f"][ {g:7} ({T-T273:5.1f}°C)  P:{P/1e5:8.4f} bar  dZ/dp={dzdp(T, P, g):8.4f} Pa/m")
+
+    gradient  = eq38(B, ff, Z, D, P) #  Pa /m
+    gradient  = eq36(g, T, P, B, ff, Z, D, Qh) #  Pa /m
     gradient = gradient * 1e-5 # bar/m
     #print (f"--{g:7} P={P/1e5:0.5f} bar  {B=:0.5e} Pa² gradient={gradient*1000:0.5e} bar/km")
     return gradient # bar/m
@@ -934,6 +942,7 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal_mod):
                     p_NG = get_final_pressure('Yamal', T, P0, Length, D, Qh,rr0, f)
                     ratio = (84 - p_H2)/(84 - p_NG)
                     print(f"   {Lkm:5.0f}km  ({T-T273:5.1f}°C) r:{ratio:8.4f} H2/Yamal +{100*(ratio-1):6.2f} % {p_H2:8.4f} {p_NG:8.4f}")
+
                
 
     t_range = [42.5, 8, -40]
@@ -1009,7 +1018,7 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal_mod):
                 plotit(g, g_x, plot, f, label, x_range)
 
         plt.ylabel('Pressure gradient (bar/km)')
-        saveit("Gradient of " + title,filename)
+        saveit(title,filename)
         
         # Now take the results from the last run and calculate the velocity
         plt.figure(figsize=(10, 5))
@@ -1208,7 +1217,7 @@ plt.rcParams.update(params)
 T8C = T273 +8
 T = T8C
 P = 30
-plot_lpm() # using defaults for rr and f_function
+# plot_lpm() # using defaults for rr and f_function
 
 moody_ylim = True
 

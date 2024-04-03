@@ -686,7 +686,8 @@ def pz(T, P, gas): # return the Pressure divided by Z
 def dzdp(T, P, gas): # return gradient dZ/dP    in (1/bar)  
     Z1 = peng_robinson(T, P*0.999, gas)
     Z2 = peng_robinson(T, P*1.001, gas)
-    return (Z2 - Z1)/ (P*1.001 - P*0.999)
+    dz_dp =  (Z2 - Z1)/ (P*1.001 - P*0.999)
+    return dz_dp
 
 @memoize
 def peng_robinson_invert(a,b): # Peng-Robinson Equation of State
