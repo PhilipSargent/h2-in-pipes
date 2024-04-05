@@ -140,6 +140,11 @@ gas_mixtures = {
     #'Air':  {'N2': 0.761749, 'O2': 0.204355, 'CO2': 0.00039, 'Ar': 0.009112, 'He': 5.0e-06, 'H2O': 0.024389} # https://www.thoughtco.com/chemical-composition-of-air-604288
     # But ALSO adding 2.5% moisture to the air and normalising
     
+   # 8 gas cmpositions from Texas in https://tsapps.nist.gov/publication/get_pdf.cfm?pub_id=903432
+    # A. Johnson and B. Johansen, “Comparison of Five Natural Gas Equations of State Used for Flow and Energy Measurement,” 7th Annu. Int. Symp. Fluid Flow Meas., pp. 1–19, 2009, [Online]. Available: https://tsapps.nist.gov/publication/get_pdf.cfm?pub_id=903432.:
+    # Gulf coast, Amarillo, Ekofisk, High N2, High N2/CO2, CEESI Iowa CEESI Colorado high ethan, CEESI Iowa high ethans.
+    'High-N2': {'CH4': 0.81441, 'C2H6': 0.033, 'C3H8':0.00605, 'nC4':0.00104, 'iC4':0.001, 'nC5':0.000, 'iC5':0.000, 'CO2':0.00985, 'N2':0.13465}, # North Sea gas [Hassanpou]      
+    
     'O2':  { 'O2': 1.0}, # for the 'oxidiser' list, also test for gas 'mix'
     'HeOx':  { 'O2': 0.2, 'He': 0.8}, # Heliox, for testing viscosity algorithms
     'ArH2':  { 'Ar': 0.2, 'H2': 0.4, 'He': 0.4}, # Argon-H2, for testing viscosity algorithms
@@ -150,7 +155,7 @@ gas_mixtures = {
 # but 17 are missing from the accessible copies of the paper
 
 ng_gases = ['NG', 'Groening', 'AHBJ', 'Tokyo', 'Biomethane', '10C2-10N', '7C2-2N', 'mix6',
-    'NTS79', '11D', 'Algerian', 'North Sea', 'UW', 'NoGas', 'RuGas', 'BioGas', 'NL-H', 'NL-L','NASA-1','NASA-2', 'ALGr', 'Yamal']
+    'NTS79', '11D', 'Algerian', 'North Sea', 'UW', 'NoGas', 'RuGas', 'BioGas', 'NL-H', 'NL-L','NASA-1','NASA-2', 'ALGr', 'Yamal', 'High-N2']
     
 """reduce the lower limit for Wobbe Index from 47.2 MJ/m³  to 46.50 MJ/m³ was approved by HSE. 
 This shall enter into force from 6 April 2025
