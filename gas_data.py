@@ -78,6 +78,7 @@ Cp_data = {
     }
         
 # Natural gas compositions (mole fractions)
+# We do not do LPG yet, but here are the propane/butane ratios: https://www.mylpg.eu/useful/lpg-mixture
 gas_mixtures = {
     
     'NG': {'CH4': 0.895514, 'C2H6': 0.051196, 'C3H8': 0.013549, 'nC4': 0.001269, 'iC4': 0.002162, 'nC5': 2e-05, 'iC5': 0.000344, 'neoC5': 0.003472, 'C6': 0.002377, 'CO2': 0.020743, 'N2': 0.009354}, # Normalized.email John Baldwin 30/12/2023 - Fordoun
@@ -146,7 +147,14 @@ gas_mixtures = {
     'Gulf': {'CH4': 0.965222, 'C2H6': 0.018186, 'C3H8':0.004596, 'nC4':0.001007, 'iC4':0.000977, 'nC5':0.000324, 'iC5': 0.000473, 'CO2':0.005956, 'N2':0.002595, 'C6': 0.000664},
     
     'Amrllo': {'CH4': 0.906724, 'C2H6': 0.045279, 'C3H8':0.00828, 'N2':0.031284, 'CO2':0.004676,'iC4':0.001037, 'nC4':0.001563, 'nC5':0.000321, 'iC5':0.000443, 'C6': 0.000393 },        
-    
+
+    'Ekofsk': {'CH4': 0.859063, 'C2H6': 0.084919, 'C3H8':0.023015, 'N2':0.010068, 'CO2':0.014954,'iC4':0.003486, 'nC4':0.003506, 'nC5':0.000509, 'iC5':0.00048, 'C6': 0.000 },        
+
+    'HiN2C': {'CH4': 0.81212, 'C2H6': 0.04303, 'C3H8':0.00895, 'N2':0.05702, 'CO2':0.07585,'iC4':0.00151, 'nC4':0.00152, 'nC5':0.000, 'iC5':0.000, 'C6': 0.000 },        
+
+    'Iowa': {'CH4': 0.95485, 'C2H6': 0.018984, 'C3H8':0.00177, 'H2': 0.001599, 'N2':0.015987, 'CO2':0.005995,'iC4':0.000154, 'nC4':0.0002013, 'nC5':0.00005, 'iC5':0.00003, 'He': 0.0003497, 'C6': 0.00003 },        
+
+
     
     'High-N2': {'CH4': 0.81441, 'C2H6': 0.033, 'C3H8':0.00605, 'N2':0.13465, 'CO2':0.00985,'iC4':0.001, 'nC4':0.00104, 'nC5':0.0, 'iC5':0.0, 'C6': 0.0 },        
     
@@ -160,7 +168,7 @@ gas_mixtures = {
 # but 17 are missing from the accessible copies of the paper
 
 ng_gases = ['NG', 'Groening', 'AHBJ', 'Tokyo', 'Biomethane', '10C2-10N', '7C2-2N', 'mix6',
-    'NTS79', '11D', 'Algerian', 'North Sea', 'UW', 'NoGas', 'RuGas', 'BioGas', 'NL-H', 'NL-L','NASA-1','NASA-2', 'ALGr', 'Yamal', 'Gulf', 'Amrllo', 'High-N2']
+    'NTS79', '11D', 'Algerian', 'North Sea', 'UW', 'NoGas', 'RuGas', 'BioGas', 'NL-H', 'NL-L','NASA-1','NASA-2', 'ALGr', 'Yamal', 'Gulf', 'Amrllo', 'Ekofsk', 'High-N2', 'HiN2C', 'Iowa' ]
     
 """reduce the lower limit for Wobbe Index from 47.2 MJ/m³  to 46.50 MJ/m³ was approved by HSE. 
 This shall enter into force from 6 April 2025
