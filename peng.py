@@ -36,10 +36,18 @@ UNITS: bar, K, litres NOTE: bar is not SI ! Need to convert to Pascal.
 
 gas_data now imported from a separate file. It is initialised on import.
 
-
 memoize() is imported from peng-utils.py
 We memoize some functions so that they do not get repeatedly called with
 the same arguments. Yet still be retain a more obvius way of writing the program.
+
+TO DO:
+ - incorporate the model for the iC5 specific heat data (iC5.py)
+ - to properly modle viscosity & specific heat, we need to abandon Peng-Robinson and move to
+   a Helmholz energy EOS not the P-R EOS.
+ - Check all the natural gases through the pipeflow models.
+ - Generate a load of random mixtures that fill the Wobbe polygon and run them though the boiler model.
+ - refactor several overlapping functions.
+
 """
 
 # Peng-Robinson Equation of State constants for Hydrogen and Methane

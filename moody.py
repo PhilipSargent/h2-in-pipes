@@ -1,5 +1,14 @@
 """
-Below is a Python program that uses the `matplotlib` and `numpy` libraries to plot a Moody diagram, which is a graph that shows the relationship between the Reynolds number, relative roughness, and the Darcy-Weisbach friction factor for fluid flow in pipes. The program will save the plot as an image file named `moody_diagram.png`."""
+Below is a Python program that uses the `matplotlib` and `numpy` libraries to plot a Moody diagram, which is a graph that shows the relationship between the Reynolds number, relative roughness, and the Darcy-Weisbach friction factor for fluid flow in pipes. The program will save the plot as an image file named `moody_diagram.png`.
+
+TO DO:
+ - Refactor the plotting routines
+ - Factor out the boiler bits into a speratae .py file.
+ - add Prantdl Karman PvK line to Moody plots
+ - re-do the iterative solution for the Afzal equation properly.
+ - Do work / new paper for function that matches Goldenberg equation: properly replace Colebrook & everyone.
+ - Write a paper on oxygen enrched and pressurised condensers
+"""
 
 import functools
 import numpy as np
