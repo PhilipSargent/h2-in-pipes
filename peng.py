@@ -1625,8 +1625,8 @@ def main():
         #print_some_gas_data(plot_gases, visc_f, 220)
 
 
-    # print_wobbe(ng_gases,g, T15C)
     if False:
+        print_wobbe(ng_gases,g, T15C)
         print(f"\n[H2O][CO2] of fuel gas")
         print(f"{'gas':13}{'Mw(g/mol)':6} {'Dew Pt':6}  {'C_':5}   {'H_':5}{'Hc(kJ/mol)':5}  fuel")
         for g in ['H2', 'CH4', 'C2H6']:

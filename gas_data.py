@@ -108,7 +108,7 @@ gas_mixtures = {
     
     'NASA-2': {'CH4': 0.8850, 'C2H6': 0.0795, 'C3H8': 0.011, 'nC4': 0.0017, 'iC4': 0.0007,'nC5': 0.00, 'iC5': 0.00, 'C6': 0.0, 'CO2': 0.0, 'N2': 0.0221, 'O2': 0, 'neoC5': 0.0}, 
     
-     'ALGr': {'CH4': 0.8484, 'C2H6': 0.084, 'C3H8': 0.005, 'nC4': 0.00, 'nC5': 0.00, 'CO2': 0.0066, 'N2': 0.056, 'O2': 0}, # Air Liquide, Greece in 
+    'ALGr': {'CH4': 0.8484, 'C2H6': 0.084, 'C3H8': 0.005, 'nC4': 0.00, 'nC5': 0.00, 'CO2': 0.0066, 'N2': 0.056, 'O2': 0}, # Air Liquide, Greece in 
      #M. J. Assael, N. K. Dalaouti, and V. Vesovic, “Viscosity of Natural-Gas Mixtures :,” Int. J. Thermophys., vol. 22, no. 1, pp. 61–71, 2001.
     
     
@@ -121,7 +121,7 @@ gas_mixtures = {
     '10C2-10N': {'CH4': 0.80,  'C3H8': 0.1, 'N2': 0.1 }, # RH corner of allowable wobbe polygon ?
     '7C2-2N': {'CH4': 0.91,  'C3H8': 0.07, 'N2': 0.02 }, # top corner of allowable wobbe polygon ?
   
-    'mix6': {'CH4': 0.8, 'C2H6': 0.05, 'C3H8': 0.03, 'CO2': 0.02, 'N2': 0.10}, # ==mix6 from      https://backend.orbit.dtu.dk/ws/files/131796794/FPE_D_16_00902R1.pdf - no, somewhere else..
+    'mix6': {'CH4': 0.8, 'C2H6': 0.05, 'C3H8': 0.03, 'CO2': 0.02, 'N2': 0.10}, # ==mix6 from      ?? Source mislaid. Looks artificial.
 
     'NTS79': {'CH4': 0.9363, 'C2H6': 0.0325, 'C3H8': 0.0069, 'nC4': 0.0027, 'CO2': 0.0013, 'N2': 0.0178, 'He': 0.0005, 'nC5': 0.002}, # https://en.wikipedia.org/wiki/National_Transmission_System
     # This NTS composition from Wikipedia actually comes from 1979 !  Cassidy, Richard (1979). Gas: Natural Energy. London: Frederick Muller Limited. p. 14.
@@ -154,6 +154,10 @@ gas_mixtures = {
 
     'Iowa': {'CH4': 0.95485, 'C2H6': 0.018984, 'C3H8':0.00177, 'H2': 0.001599, 'N2':0.015987, 'CO2':0.005995,'iC4':0.000154, 'nC4':0.0002013, 'nC5':0.00005, 'iC5':0.00003, 'He': 0.0003497, 'C6': 0.00003 },        
 
+    'HiEth': {'CH4': 0.848128, 'C2H6': 0.106707, 'C3H8':0.017673, 'H2': 0.0, 'N2':0.00409, 'CO2':0.021109,'iC4':0.0008, 'nC4':0.001258, 'nC5':0.000115, 'iC5':0.0001, 'He': 0.0, 'C6': 0.00002 },        
+
+    'IwEth': {'CH4': 0.921244, 'C2H6': 0.043547, 'C3H8':0.009299, 'H2': 0.001427, 'N2':0.011733, 'CO2':0.009663,'iC4':0.00093, 'nC4':0.001218, 'nC5':0.000259, 'iC5':0.00024, 'He': 0.000293, 'C6': 0.000147 },        
+
 
     
     'High-N2': {'CH4': 0.81441, 'C2H6': 0.033, 'C3H8':0.00605, 'N2':0.13465, 'CO2':0.00985,'iC4':0.001, 'nC4':0.00104, 'nC5':0.0, 'iC5':0.0, 'C6': 0.0 },        
@@ -168,7 +172,7 @@ gas_mixtures = {
 # but 17 are missing from the accessible copies of the paper
 
 ng_gases = ['NG', 'Groening', 'AHBJ', 'Tokyo', 'Biomethane', '10C2-10N', '7C2-2N', 'mix6',
-    'NTS79', '11D', 'Algerian', 'North Sea', 'UW', 'NoGas', 'RuGas', 'BioGas', 'NL-H', 'NL-L','NASA-1','NASA-2', 'ALGr', 'Yamal', 'Gulf', 'Amrllo', 'Ekofsk', 'High-N2', 'HiN2C', 'Iowa' ]
+    'NTS79', '11D', 'Algerian', 'North Sea', 'UW', 'NoGas', 'RuGas', 'BioGas', 'NL-H', 'NL-L','NASA-1','NASA-2', 'ALGr', 'Yamal', 'Gulf', 'Amrllo', 'Ekofsk', 'High-N2', 'HiN2C', 'Iowa', 'HiEth', 'IwEth']
     
 """reduce the lower limit for Wobbe Index from 47.2 MJ/m³  to 46.50 MJ/m³ was approved by HSE. 
 This shall enter into force from 6 April 2025
