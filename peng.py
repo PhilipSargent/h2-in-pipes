@@ -131,7 +131,7 @@ def check_composition(mix, composition, n=0):
             
         # Normalising is not done exactly, but with rounded numbers to 6 places of decimals.
         for g in gas_mixtures[mix]:
-            print(f"{g:9}: {gas_mixtures[mix][g]*100:7.3f} %")
+            print(f"{g:9}: {gas_mixtures[mix][g]*100:9.5f} %")
         print(f"Stated:\n   '{mix}': {gas_mixtures[mix]},") 
         for g in gas_mixtures[mix]:
             gas_mixtures[mix][g] = float(f"{gas_mixtures[mix][g]/norm:.6f}")
@@ -943,7 +943,7 @@ def get_Hc(g, T):
     # hc is in MJ/mol, so we need to divide by the molar volume at  (25 degrees C, 1 atm) in m³
     Mw = do_mm_rules(g)/1000 # Mw now in kg/mol not g/mol
     ϱ_0 = get_density(g, Atm, T) # in g/m³
-    molar_volume_0 = 1000* Mw / ϱ_0  # in m³/mol at 1 Atm.
+    molar_volume_0 =  Mw / ϱ_0  # in m³/mol at 1 Atm.
    
     hhvv_0 = hc/molar_volume_0 # (MJ/mol) / (m³/mol) = MJ/m³  AT ONE ATMOSPHERE
     
@@ -1014,7 +1014,7 @@ def print_fuelgas(g, oxidiser):
 
     mff = get_fuel_fraction(g)
 
-    mv, hcmv, hc = get_Hc(g, 298)
+    mv, _, hc = get_Hc(g, 298)
     if hc:
         # for one mole of fuel gas
         # moles O2 = h_/2 + c_
@@ -1071,8 +1071,8 @@ def print_viscosity(g, p, T, visc_f):
 
 
 def print_wobbe(plot_gases, g, T15C):
-    """HHV and Wobbe much be in MJ/m³, but at 15 C and 1 atm, not p and T as given
-    UK NTS WObbe limits from     https://www.nationalgas.com/data-and-operations/quality
+    """HHV and Wobbe must be in MJ/m³, but at 15 C and 1 atm, not p and T as given
+    UK NTS Wobbe limits from     https://www.nationalgas.com/data-and-operations/quality
     
     "gas that is permitted in gas networks in Great Britain must have a relative density of ≤0.700"
     https://www.hse.gov.uk/gas/gas-safety-management-regulation-changes.htm
@@ -1617,7 +1617,7 @@ def main():
     
     # This next line was for when I was testing the reverse calculation for Tc and Pc from a,b
     # print_some_gas_data( ["H2",  "Ar", "O2", "CH4", "C2H6", "CO2", "He","N2"], visc_f, 20) # 20 bar
-    if True:
+    if False:
         print_some_gas_data(plot_gases, visc_f, 1) # STP is 1 bar, 273.15K
         print_some_gas_data(plot_gases, visc_f, 84) # STP is 1 bar, 273.15K
         #print_some_gas_data(plot_gases, visc_f, 0, 50) # 50 mbar
@@ -1625,8 +1625,8 @@ def main():
         #print_some_gas_data(plot_gases, visc_f, 220)
 
 
+    # print_wobbe(ng_gases,g, T15C)
     if False:
-        print_wobbe(plot_gases,g, T15C)
         print(f"\n[H2O][CO2] of fuel gas")
         print(f"{'gas':13}{'Mw(g/mol)':6} {'Dew Pt':6}  {'C_':5}   {'H_':5}{'Hc(kJ/mol)':5}  fuel")
         for g in ['H2', 'CH4', 'C2H6']:
