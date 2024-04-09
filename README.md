@@ -27,3 +27,4 @@ To deliver the same calorific value as hydrogen instead of natural gas, the hydr
 
 ![peng_ηη_H2](https://github.com/PhilipSargent/h2-in-pipes/assets/5623885/b835f9a9-5124-4ce6-a068-1f7d8aecf7d3)
 ![peng_ηη_NG](https://github.com/PhilipSargent/h2-in-pipes/assets/5623885/41b294d4-8631-4759-a906-3b7b8062a3c5)
+![condse_η20](https://github.com/PhilipSargent/h2-in-pipes/assets/5623885/b0cfa7ee-120d-42db-9500-e1a9acc761a5)
