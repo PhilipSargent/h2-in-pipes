@@ -296,7 +296,7 @@ def main():
             T = 273.15+TC
             
             if "Cp" in gas_data[g]:
-                print(f"{g:7} {T:7.2f} {cp(g, T):8.4f}  {gas_data[g]["Cp"]:8.4f} {100*(cp(g, T)- gas_data[g]["Cp"])/gas_data[g]["Cp"]:8.4f} %")
+                print(f"{g:7} {T:7.2f} {cp(g, T):8.4f}  {gas_data[g]['Cp']:8.4f} {100*(cp(g, T)- gas_data[g]['Cp'])/gas_data[g]['Cp']:8.4f} %")
     for g in Cp_data:
         T = 273.15+25
         print(f"{g:7} {T:7.2f} {cp(g, T):8.4f}")

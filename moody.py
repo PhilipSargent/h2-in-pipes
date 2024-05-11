@@ -914,7 +914,7 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal_mod):
         for t in t_range:
             T = T273+t
             ratio = (84 - p_final['H2'][T])/(84 - p_final['Yamal'][T])
-            print(f"   {"":7} ({T-T273:5.1f}°C) pressure drop ratio:{ratio:8.4f} H2/Yamal {100*(ratio-1):6.2f} % greater")
+            print(f"   {'':7} ({T-T273:5.1f}°C) pressure drop ratio:{ratio:8.4f} H2/Yamal {100*(ratio-1):6.2f} % greater")
         if False:
             for t in [-40, -30, -10, 0, 8, 20, 30, 42.5, 50]:
                 T = T273+t
