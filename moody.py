@@ -546,6 +546,8 @@ def funct_B_sub(g, Qg, D):
     D  (m)
     
     Must return value in Pa² / K.m
+    
+    P* = ( Q / A ) * sqrt ( R T / m) in units of Pascals
     """
     Rg = 8.31446261815324 # J/K.mol # R = 0.083144626  # l.bar/(mol.K) 
     A = get_A(D) # m²
@@ -558,10 +560,32 @@ def funct_B_sub(g, Qg, D):
 @memoize
 def funct_B(g, Qg, T, D):
     # B = Q² R T / A² m # Pa² / m
-    B = T * funct_B_sub(g, Qg, D)
-    sqrtB = np.sqrt(B)/1e5
+    B = T * funct_B_sub(g, Qg, D) # Pascals-squared
+    #sqrtB = np.sqrt(B)/1e5        # bar
     #print(f"-- {g:7} {T=:7.2f} K  ({T-T273:5.1f}°C) B: {B:10.4e} sqrt(B):{sqrtB:9.4f} bar²")
     return B
+    
+@memoize
+def p_star(g, Qg, T, D):
+    # B = Q² R T / A² m # Pa²
+    # B = P*²
+    B = funct_B(g, Qg, T, D) # Pa²
+    p_star = np.sqrt(B)/1e5        # Pa -> bar
+    return p_star
+    
+@memoize
+def p_star_v(g, v, T):
+    """Calculate P* but in terms of gas velocity, not in terms of mass flow rate per cross-section area.
+    We do not lose any generality by simply setting D = 1 metre and P = 1 atm
+    As P* is related to the speed of sound, it only depends on T and not on P or anything else.
+    """
+    D = 1
+    A = get_A(D)
+    P = Atm
+    # Qg = mass flow rate = v . density . A  = m/s * kg/m^3 * m²
+    ϱ = get_density(g, P, T)
+    Qg = v * ϱ * A
+    return p_star(g, Qg, T, D)
 
 @memoize
 def running_dp38(L, g, T, P0, f_function, rr, D, Qh):
@@ -707,6 +731,30 @@ def dp38(x, P, g, T, f_function, rr, D, Qh):
     #print (f"--{g:7} P={P/1e5:0.5f} bar  {B=:0.5e} Pa² gradient={gradient*1000:0.5e} bar/km")
     return gradient # bar/m
 
+def plot_p_star(): 
+    """Plot P* for NG and H2 for a range of temperatures
+    """
+         
+    temperatures = np.linspace(233.15, 323.15, 100)  
+    plt.figure(figsize=(10, 5))
+    
+    for g in ['NG', 'H2']:
+        for v in [0.1, 1, 4, 10, 20]:
+            label=f"{v:4.1f} m/s"
+            txt = f"{g} {label}"
+            pstar_v = [p_star_v(g, v, t) for t in temperatures]
+            
+            # print(f"P* {g:7} at  {v:4.1f} m/s")
+            plt.semilogy(temperatures, pstar_v,  label=txt, **plot_kwargs(g))
+
+    plt.title(f'P* = ( Q / A ) * sqrt ( R T / m)')
+    plt.xlabel('Gas temperature (K)')
+    plt.ylabel('P* (bar)')
+    plt.legend()
+    plt.grid(True)
+
+    plt.savefig("pipe_pstar.png")
+    plt.close()
 #@memoize
 def LPM(g, T, P_ent, L_seg, D, Qh, rr=1e-5, f_function=afzal_mod):
     """LinePackMetric for a gas in a pipe of length L (m), diameter D (m), carrying Qh (GW) of gas
@@ -1137,7 +1185,8 @@ plt.rcParams.update(params)
 T8C = T273 +8
 T = T8C
 P = 30
-# plot_lpm() # using defaults for rr and f_function
+plot_p_star()
+plot_lpm() # using defaults for rr and f_function
 
 moody_ylim = True
 
