@@ -739,17 +739,17 @@ def plot_p_star():
     plt.figure(figsize=(10, 5))
     
     for g in ['NG', 'H2']:
-        for v in [0.1, 1, 4, 10, 20]:
+        for v in [20, 10, 1, 0.1]:
             label=f"{v:4.1f} m/s"
             txt = f"{g} {label}"
             pstar_v = [p_star_v(g, v, t) for t in temperatures]
             
             # print(f"P* {g:7} at  {v:4.1f} m/s")
-            plt.semilogy(temperatures, pstar_v,  label=txt, **plot_kwargs(g))
+            plt.semilogy(temperatures - T273, pstar_v,  label=txt, **plot_kwargs(g))
 
-    plt.title(f'P* = ( Q / A ) * sqrt ( R T / m)')
-    plt.xlabel('Gas temperature (K)')
-    plt.ylabel('P* (bar)')
+    plt.title(f'P* as a function of temperature for several gas velocities')
+    plt.xlabel('Gas temperature (°C)')
+    plt.ylabel('P* = ( Q / A ) * sqrt ( R T / m) (bar)')
     plt.legend()
     plt.grid(True)
 
