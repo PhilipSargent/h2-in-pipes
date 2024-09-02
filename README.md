@@ -1,9 +1,9 @@
 # h2-in-pipes
-Equation of state for natural gas (several varieties) and mixtures with hydrogen. Also Moody plots for the calculation of the friction factor in rough pipes.
+This work includes an Equation of state for natural gas (several varieties) and mixtures with hydrogen. We also have Moody plots for the calculation of the friction factor in rough pipes.
 
 To cite this work, please click on "Cite this repository" on the right-hand menu.
 
-This is reseach code. It is **not qualified for any design purpose whatsoever**. It contains bugs and has not been through any code review process.
+This is research code. It is **not qualified for any design purpose whatsoever**. It contains bugs and has not been through any code review process.
 
 We have a paper just accepted for publication (29/02/2024) in J.Intl Hydrogen Energy which documents and uses these calculations for the case where UK distribution gas pipes are repurposed to carry hydrogen.
 If you would like a preprint of this paper, please just look at the file https://github.com/PhilipSargent/h2-in-pipes/blob/main/_SUBMIT3-BOTH-Hydrogen_pipe_friction.pdf in this repo.
