@@ -10,16 +10,12 @@ TO DO:
  - Write a paper on oxygen enrched and pressurised condensers
 """
 
-import functools
-import warnings
-
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.integrate import quad, solve_ivp
-from scipy.interpolate import interp1d
+from scipy.integrate import solve_ivp
 
 import pyfrac_yj as pf
-import virt_nik as vn
+import virt_nik as vn # unused
 from peng import (
     T273,
     Atm,
