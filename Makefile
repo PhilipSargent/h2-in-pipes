@@ -13,6 +13,7 @@ moody_afzal.png: moody.py
 	uv run moody.py
 	
 ruff: moody.py peng.py
+	ruff check --select I --fix # just does import order
 	ruff check moody.py
 	ruff peng.py
 

@@ -1,0 +1,17 @@
+[tool.ruff]
+# https://docs.astral.sh/ruff/configuration/
+# we do not use black or isort, we use ruff instead, see Makefile
+line-length=120
+ignore = ["E402", "F541"]
+
+[project]
+name = "h2-in-pipes"
+version = "2024.01.1"
+description = "Gases in pipes"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies =  [
+	"matplotlib",
+	"scipy",
+]
+
