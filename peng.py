@@ -1,17 +1,15 @@
-import functools 
-import numpy as np
-import matplotlib.pyplot as plt
-
+import functools
 import pathlib as pl
 import sys
 import warnings
 
-import sonntag as st
-
+import matplotlib.pyplot as plt
+import numpy as np
 from cycler import cycler
 from scipy.optimize import fsolve
 
-from gas_data import gas_data, gas_mixtures, gas_mixture_properties, ng_gases, enrich, air_list, k_ij
+import sonntag as st
+from gas_data import air_list, enrich, gas_data, gas_mixture_properties, gas_mixtures, k_ij, ng_gases
 from peng_utils import memoize
 
 """This code written Philip Sargent, starting in December 2023, by  to support
