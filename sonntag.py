@@ -1,6 +1,7 @@
 import math
 import sys
 
+
 def sonntag_vapor_pressure(T_K):
     """
     Calculates the saturation vapor pressure of water vapor using the provided Sonntag equation.

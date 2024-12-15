@@ -1,5 +1,7 @@
-import numpy as np
 import sys
+
+import numpy as np
+
 """Converted to python from fortran by Philip Sargent, with the assistance of bard.google.com
 in January 2024.
 From Yang and Joseph, doi:10.1080/14685240902806491

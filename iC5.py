@@ -1,5 +1,3 @@
-import numpy as np
-
 # Data from
 #https://webbook.nist.gov/cgi/cbook.cgi?ID=C78784&Units=SI&Mask=1#Thermo-Gas
 # Used copilot to parse the table of data and write the code 31/3/2024

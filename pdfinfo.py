@@ -1,5 +1,7 @@
 import sys
+
 from pdfreader import SimplePDFViewer
+
 
 def print_pdf_properties(pdf_path):
     fd = open(pdf_path, 'rb')

@@ -11,17 +11,35 @@ TO DO:
 """
 
 import functools
-import numpy as np
-import matplotlib.pyplot as plt
-import virt_nik as vn
-import pyfrac_yj as pf
 import warnings
 
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy.integrate import quad, solve_ivp
 from scipy.interpolate import interp1d
-from scipy.integrate import quad,solve_ivp
 
+import pyfrac_yj as pf
+import virt_nik as vn
+from peng import (
+    T273,
+    Atm,
+    R,
+    colour,
+    do_mm_rules,
+    dzdp,
+    get_density,
+    get_Hc,
+    get_v_ratio,
+    get_viscosity,
+    get_Vm,
+    get_z,
+    get_Δp_ratio_br,
+    get_μ_ratio,
+    get_ϱ_ratio,
+    set_mix_rule,
+    style,
+)
 from peng_utils import memoize
-from peng import  R, get_v_ratio, get_Δp_ratio_br, get_ϱ_ratio, get_μ_ratio, Atm, T273, set_mix_rule, do_mm_rules, dzdp, get_viscosity, get_Hc, get_z, get_Vm, get_density, style, colour
 
 # We memoize some functions so that they do not get repeadtedly called with
 # the same arguments. Yet still retain a more obvious way of writing the program.
@@ -420,7 +438,7 @@ def plot_pt_diagram(title, filename, plot="loglog", fff=colebrook, gradient=Fals
     global P, T
     rr = 1e-7
     title = title + f" (ε/D = {rr})"
-    if not type(fff) is list:
+    if type(fff) is not list:
         fff = [fff]
     plt.figure(figsize=(10, 6))
     
@@ -1002,7 +1020,7 @@ def plot_pipeline(title_in, output, plot="linear", fff=afzal_mod):
     x_range = np.linspace(1, L_pipe-1000, 50) # 500 km
 
 
-    if not type(fff) is list:
+    if type(fff) is not list:
         fff = [fff]
     
     for f in fff: # several different friction factor functions
@@ -1084,7 +1102,7 @@ def plot_diagram(title, filename, plot="loglog", fff=colebrook, gradient=False, 
     global P, T
     if title:
         title = title + f" ({T-T273:.0f}°C, {P:.0f} bar)"
-    if not type(fff) is list:
+    if type(fff) is not list:
         fff = [fff]
 
     plt.figure(figsize=(10, 6))

@@ -7,8 +7,8 @@ All rights reserved. See the LICENSE.TXT file for more details.
 """
 
 import numpy as np
-from scipy.special import factorial
 from scipy.optimize import fsolve
+from scipy.special import factorial
 
 
 def FF_YangJoseph_vector(ReNum, rough):

@@ -14,8 +14,9 @@ pip install numpy matplotlib
 Also, remember to replace the MWg value with the actual molecular weight of your natural gas mixture. The temperature T should be in Kelvin (K) and the density rho_g should be in kg/m^3. The resulting viscosity is expressed in Pascal-seconds (Pa.s).
 """
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+
 
 def calculate_viscosity(MWg, T, rho_g):
     # Constants for the Lee, Gonzalez, and Eakin method

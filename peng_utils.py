@@ -1,4 +1,4 @@
-import functools 
+import functools
 
 """Utility functions used throughout the peng-robinson and moody programs
 """

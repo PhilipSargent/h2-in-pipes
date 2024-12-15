@@ -1,6 +1,6 @@
-import numpy as np
-import matplotlib.pyplot as plt
 import matplotlib.markers as mks
+import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 from scipy.interpolate import CubicSpline
 
