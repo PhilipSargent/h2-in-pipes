@@ -2,6 +2,7 @@
 all: run
 
 run:
+	git config --global core.quotePath false # enables display of unicode in filenames in git output
 	python peng.py
 	python moody.py
 
