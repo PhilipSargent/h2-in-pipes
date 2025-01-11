@@ -9,7 +9,7 @@ from cycler import cycler
 from scipy.optimize import fsolve
 
 import sonntag as st
-from gas_data import air_list, enrich, gas_data, gas_mixture_properties, gas_mixtures, k_ij, ng_gases
+from gas_data import air_list, air_dict, enrich, gas_data, gas_mixture_properties, gas_mixtures, k_ij, ng_gases
 from peng_utils import memoize
 
 """This code written Philip Sargent, starting in December 2023, by  to support
@@ -1535,6 +1535,24 @@ colours =  {'H2': 'xkcd:red',
 # see https://matplotlib.org/cycler/
 #colour_cycle = cycler('color', ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'])
 
+my_linestyles = dict(
+    [('solid',               (0, ())),
+     ('loosely dotted',      (0, (1, 10))),
+     ('dotted',              (0, (1, 5))),
+     ('densely dotted',      (0, (1, 1))),
+
+     ('loosely dashed',      (0, (5, 10))),
+     ('dashed',              (0, (5, 5))),
+     ('densely dashed',      (0, (5, 1))),
+
+     ('loosely dashdotted',  (0, (3, 10, 1, 10))),
+     ('dashdotted',          (0, (3, 5, 1, 5))),
+     ('densely dashdotted',  (0, (3, 1, 1, 1))),
+
+     ('loosely dashdotdotted', (0, (3, 10, 1, 10, 1, 10))),
+     ('dashdotdotted',         (0, (3, 5, 1, 5, 1, 5))),
+     ('densely dashdotdotted', (0, (3, 1, 1, 1, 1, 1)))])
+     
 def colour(g):
     if g in colours:
         return colours[g]
@@ -1557,12 +1575,18 @@ def plot_kwargs_linestyle(g):
     return  {'linestyle': linestyle}
 
 def plot_kwargs_bw(g):
+    # air_list goes from 'Air' to 'O2'
     if g in ["NG", "H2"]:
-        linestyle=style(g)
+        return({'color': "black", 'linestyle': "solid"})
     else:
-        linestyle = ""
-
-    return  {'color': "black", 'linestyle': linestyle}
+        if g in air_list:
+            i = air_list.index(g)
+            # print(i, g) # will crash if i > 6
+            linestyle = ["", "dashed", (0, (5, 10)),"dashdot",   "dotted", (0, (5, 1)),(0, (1, 10))][i]
+            return({'color': "black", 'linestyle': linestyle})
+        else:
+            return({'color': "black", 'linestyle': ' '})
+                
 
 # ---------- ----------main program starts here---------- ------------- #
 def main():
@@ -1716,46 +1740,64 @@ def main():
     # Plot the condensing curves at different % oxygen  - - - - - - - - - - -
     p = Atm
     for g in ['NG', 'H2']:
-        plt.figure(figsize=(10, 6))
-        c_g = {}
-        for o in air_list:
-            # print(f"Cp {o:8} {get_Cp(o):.3f}")
-            c_g[o] = [condense(T, p, g, o) for T in t_condense]
-            
-            if o == 'Air':
-                k = g  # linestyle for plot
+        for colour_style in [plot_kwargs, plot_kwargs_bw]:
+            plt.figure(figsize=(10, 6))
+            c_g = {}
+            for o in air_list:
+                # print(f"Cp {o:8} {get_Cp(o):.3f}")
+                c_g[o] = [condense(T, p, g, o) for T in t_condense]
+                
+                if o == 'Air':
+                    k = g  # linestyle for plot
+                else:
+                    k = o
+                if colour_style == plot_kwargs_bw:
+                    line_label=f"{g}+{air_dict[o]}"
+                else:
+                    line_label=f"{g}+{o}"
+                plt.plot(t_condense-273.15, c_g[o], label=line_label, **colour_style(k))
+               
+            plt.xlabel('Flue gas condensing temperature (°C)')
+            plt.ylabel('Maximum boiler efficiency (%)')
+            #plt.ylim([80, 100])
+            plt.legend()
+            plt.grid(True)
+
+            if colour_style == plot_kwargs_bw:
+                plt.savefig(f"condse_ηη_{g}-bw.png")
             else:
-                k = o
-            plt.plot(t_condense-273.15, c_g[o], label=f"{g}+{o}", **plot_kwargs(k))
-           
-        plt.xlabel('Flue gas temperature (°C)')
-        plt.ylabel('Maximum boiler efficiency (%)')
-        #plt.ylim([80, 100])
-        plt.legend()
-        plt.grid(True)
+                plt.savefig(f"condse_ηη_{g}.png")
+            
+            plt.close()
+            
+        for colour_style in [plot_kwargs, plot_kwargs_bw]:
+            plt.figure(figsize=(10, 6))
+            for o in air_list:
+                if o == 'Air':
+                    continue # a comparative plot with 'Air' 
+                e = list()
+                for item1, item2 in zip(c_g[o], c_g['Air']):
+                    item = item1 - item2
+                    #item = item1/item2
+                    e.append(item)
+                if colour_style == plot_kwargs_bw:
+                    line_label=f"{g}+{air_dict[o]}"
+                else:
+                    line_label=f"{g}+{o}"
+                plt.plot(t_condense-273.15, e, label=line_label, **colour_style(o))
+            
+            plt.xlabel('Flue gas condensing temperature (°C)')
+            plt.ylabel('Increase in maximum boiler efficiency (%)')
+            #plt.ylim([80, 100])
+            plt.legend()
+            plt.grid(True)
 
-        plt.savefig(f"condse_ηη_{g}.png")
-        plt.close()
-        
-        plt.figure(figsize=(10, 6))
-        for o in air_list:
-            if o == 'Air':
-                continue
-            e = list()
-            for item1, item2 in zip(c_g[o], c_g['Air']):
-                item = item1 - item2
-                #item = item1/item2
-                e.append(item)
-            plt.plot(t_condense-273.15, e, label=f"{g}+{o}", **plot_kwargs(o))
-        
-        plt.xlabel('Flue gas temperature (°C)')
-        plt.ylabel('Increase in maximum boiler efficiency (%)')
-        #plt.ylim([80, 100])
-        plt.legend()
-        plt.grid(True)
-
-        plt.savefig(f"condse_ηηη_{g}.png")
-        plt.close()
+            if colour_style == plot_kwargs_bw:
+                plt.savefig(f"condse_ηηη_{g}-bw.png")
+            else:
+                plt.savefig(f"condse_ηηη_{g}.png")
+            
+            plt.close()
       
     # Plot the Differential of the condensing curve  - - - - - - - - - - -
     p = Atm

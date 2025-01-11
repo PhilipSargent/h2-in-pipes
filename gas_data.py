@@ -203,11 +203,13 @@ gas_mixtures['Air'] = air
 
 enrich = [0.3, 0.5, 0.8]
 air_list = ['Air']
+air_dict = {'Air': 'Air'}
 for o in enrich:
     original_o = gas_mixtures['Air']['O2']
     increase = o - original_o  # i.e. 9.1 % for 30%O2
     factor  = (1 - o) / ( 1 - original_o)
     name_airN = f"Air{o:.0%}O2"
+    name_air2 = f"Air{1-o:.0%}inerts"
     airN = {}
     ag = gas_mixtures['Air']
     for g in ag:
@@ -215,7 +217,10 @@ for o in enrich:
     airN['O2'] = o
     gas_mixtures[name_airN] = airN
     air_list.append(name_airN)
+    air_dict[name_airN] = name_air2
 air_list.append('O2') # pure oxygen
+air_dict['O2'] = 'O2' # pure oxygen
+print(air_dict)
 
 # Binary interaction parameters for hydrocarbons for Peng-Robinson
 # based on the Chueh-Prausnitz correlation
