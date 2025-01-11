@@ -1708,6 +1708,7 @@ def main():
             plt.savefig(f"condse_η0-bw.png")
         else:
             plt.savefig(f"condse_η0.png")
+    plt.close()
 
    # Plot the condensing curve for many gases - - - - - - - - - - -
     p = Atm
@@ -1888,11 +1889,12 @@ def main():
     # Viscosity plot  EXPTL values at 298K - - - - - - - - - - -
 
     P = pressure
+    plt.figure(figsize=(10, 6))
 
     μ_g = {}
     for mix in plot_gases:
         μ_g[mix] = []
-        for T in temperatures:
+         for T in temperatures:
             μ = get_viscosity(mix,P,T, visc_f)
             # μ = hernzip_mix_rule(mix, values) # Makes no visible difference wrt to linear!
             # μ = explog_mix_rule(mix, values) # very slight change by eye
@@ -1925,7 +1927,7 @@ def main():
         plt.plot(temperatures - T273, bf_g[mix], label= mix, **plot_kwargs(mix))
 
 
-    plt.title(f'Blasius Parameter  ϱ^3/4.μ^1/4 vs Temperature at {pressure} bar')
+    plt.title(f'BAD Blasius Parameter  ϱ^3/4.μ^1/4 vs Temperature at {pressure} bar')
     plt.xlabel('Temperature (°C)')
     plt.ylabel('Blasius Parameter  ϱ^3/4.μ^1/4 ')
     plt.legend()
@@ -1969,7 +1971,7 @@ def main():
     plt.grid(True)
     plt.legend()
     #plt.savefig(f"peng_bf_NG_{t}.png")
-    plt.savefig(f"peng_bf_NG_.png")
+    plt.savefig(f"peng_bf_NG_H2.png")
     plt.close()
 
     # Pressure-drop plot NORMALIZED wrt NG  - - - - - - - - - - -
