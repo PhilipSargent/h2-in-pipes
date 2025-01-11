@@ -15,7 +15,7 @@ import numpy as np
 from scipy.integrate import solve_ivp
 
 import pyfrac_yj as pf
-import virt_nik as vn # unused
+import virt_nik as vn  # unused
 from peng import (
     T273,
     Atm,

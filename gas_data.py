@@ -279,6 +279,7 @@ def cp(g, T):
 
 @memoize   
 def Cp_H2(T):
+    # UNITS ?!
     # data from https://www.engineeringtoolbox.com/hydrogen-d_976.html downloaded 29 March 2024
     temperatures = [175, 200, 225, 250, 275, 300, 325, 350, 375, 400]  # in Kelvin
     specific_heats = [13.12, 13.53, 13.83, 14.05, 14.20, 14.31, 14.38, 14.43, 14.46, 14.48]  # in kJ/(kg·K)
@@ -290,15 +291,22 @@ def Cp_H2(T):
 @memoize  
 def main():
     # Testing the specific heat function, for H2
+    print(f"  T       cp()     Cp_H2     % difference")
     for TC in [-40, 0,15,25,100,150]:
         T = 273.15+TC
         print(f"{T:7.2f} {cp('H2', T):8.4f}  {Cp_H2(T):8.4f} {100*(cp('H2', T)- Cp_H2(T))/cp('H2', T):8.4f} %")
+
+    print()
+    print(f"gas        T       cp()     single     % difference")
     for g in gas_data:
         for TC in [-40, 25,100,150]:
             T = 273.15+TC
             
             if "Cp" in gas_data[g]:
                 print(f"{g:7} {T:7.2f} {cp(g, T):8.4f}  {gas_data[g]['Cp']:8.4f} {100*(cp(g, T)- gas_data[g]['Cp'])/gas_data[g]['Cp']:8.4f} %")
+
+    print()
+    print(f"gas        T       cp()  ")
     for g in Cp_data:
         T = 273.15+25
         print(f"{g:7} {T:7.2f} {cp(g, T):8.4f}")

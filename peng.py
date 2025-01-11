@@ -1555,6 +1555,15 @@ def plot_kwargs_linestyle(g):
     linestyle=style(g)
 
     return  {'linestyle': linestyle}
+
+def plot_kwargs_bw(g):
+    if g in ["NG", "H2"]:
+        linestyle=style(g)
+    else:
+        linestyle = ""
+
+    return  {'color': "black", 'linestyle': linestyle}
+
 # ---------- ----------main program starts here---------- ------------- #
 def main():
     global visc_f
@@ -1652,7 +1661,31 @@ def main():
              'ytick.labelsize':'x-large'}
     plt.rcParams.update(params)
 
-   # Plot the condensing curve  - - - - - - - - - - -
+   # Plot the condensing curve  for just NG & H2 - - - - - - - - - - -
+    p = Atm
+    for colour_style in [plot_kwargs, plot_kwargs_bw]:
+        plt.figure(figsize=(10, 6))
+        for i in [0]:
+            p = Atm + i # bar
+            t_condense = np.linspace(273.15+20, 273.15+100, 1000)  
+            c_H2 = [condense(T, p, 'H2', 'Air') for T in t_condense]
+            c_NG = [condense(T, p, 'NG', 'Air') for T in t_condense]
+            
+            plt.plot(t_condense-273.15, c_NG, label=f'Natural Gas  {i+1} Atm', **colour_style('NG'))
+            plt.plot(t_condense-273.15, c_H2, label=f'Pure hydrogen {i+1} Atm', **colour_style('H2'))
+           
+            plt.title(f'Maximum boiler efficiency vs Condensing Temperature at {p} bar')
+        plt.xlabel('Flue gas condensing temperature (°C)')
+        plt.ylim([80, 100])
+        plt.ylabel('Maximum boiler efficiency (%)')
+        plt.legend()
+        plt.grid(True)
+        if colour_style == plot_kwargs_bw:
+            plt.savefig(f"condse_η0-bw.png")
+        else:
+            plt.savefig(f"condse_η0.png")
+
+   # Plot the condensing curve for many gases - - - - - - - - - - -
     p = Atm
     plt.figure(figsize=(10, 6))
     for i in [0, 0.5, 1]:
@@ -1665,20 +1698,19 @@ def main():
         plt.plot(t_condense-273.15, c_NG, label=f'Natural Gas  {i+1} Atm', **plot_kwargs_linestyle('NG'))
         plt.plot(t_condense-273.15, c_H2, label=f'Pure hydrogen {i+1} Atm', **plot_kwargs_linestyle('H2'))
        
-        #plt.title(f'Maximum boiler efficiency vs Condensing Temperature at {p} bar')
-    plt.xlabel('Flue gas temperature (°C)')
-    #plt.ylim([80, 100])
+        plt.title(f'Maximum boiler efficiency vs Condensing Temperature at {p} bar')
+    plt.xlabel('Flue gas condensing temperature (°C)')
+    plt.ylim([80, 100])
     plt.ylabel('Maximum boiler efficiency (%)')
     plt.legend()
     plt.grid(True)
     plt.savefig(f"condse_η.png")
-    
-    p = Atm
-    plt.plot(t_condense-273.15, c_20H, label='NG+20%H2', **plot_kwargs('NG+20%H2'))
-    plt.legend()
-    plt.savefig("condse_η20.png")
-  
-    
+     
+    # p = Atm
+    # plt.plot(t_condense-273.15, c_20H, label='NG+20%H2', **plot_kwargs('NG+20%H2'))
+    # plt.legend()
+    # plt.savefig("condse_η20.png")
+      
     plt.close()
     
     # Plot the condensing curves at different % oxygen  - - - - - - - - - - -
@@ -1727,20 +1759,25 @@ def main():
       
     # Plot the Differential of the condensing curve  - - - - - - - - - - -
     p = Atm
-    plt.figure(figsize=(10, 6))
-    c_H2 = [d_condense(T, p, 'H2', 'Air') for T in t_condense]
-    c_g = [d_condense(T, p, 'NG', 'Air') for T in t_condense]
+    for colour_style in [plot_kwargs, plot_kwargs_bw]:
+        plt.figure(figsize=(10, 6))
+        c_H2 = [d_condense(T, p, 'H2', 'Air') for T in t_condense]
+        c_g = [d_condense(T, p, 'NG', 'Air') for T in t_condense]
+         
+        plt.plot(t_condense-273.15, c_H2, label='Pure hydrogen', **colour_style('H2'))
+        plt.plot(t_condense-273.15, c_g, label='Natural Gas', **colour_style('NG'))
+       
+        plt.title(f'd(η)/d(T) vs Condensing Temperature at {p} bar')
+        plt.xlabel('Flue gas condensing temperature (°C)')
+        plt.ylabel('Boiler efficiency gradient d(η)/d(T) (%/K)')
+        plt.legend()
      
-    plt.plot(t_condense-273.15, c_H2, label='Pure hydrogen', **plot_kwargs('H2'))
-    plt.plot(t_condense-273.15, c_g, label='Natural Gas', **plot_kwargs('NG'))
-   
-    plt.title(f'd(η)/d(T) vs Condensing Temperature at {p} bar')
-    plt.xlabel('Temperature (°C)')
-    plt.ylabel('Boiler efficiency gradient d(η)/d(T) (%/K)')
-    plt.legend()
- 
-    plt.savefig("condse_dη.png")
-    plt.close()
+        if colour_style == plot_kwargs_bw:
+            plt.savefig("condse_dη-bw.png")
+        else:
+            plt.savefig("condse_dη.png")
+       
+        plt.close()
     
     for i in [0, 0.5, 1 ]:
         p = Atm + i # bar
