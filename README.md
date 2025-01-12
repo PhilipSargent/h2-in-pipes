@@ -31,6 +31,6 @@ To deliver the same calorific value as hydrogen instead of natural gas, the hydr
 
 We can use the models to calculate the linepack for natural gas and for hydrogen when flowing in the same pipe and delivering the same combustion energy (HHV):
 
-![pipe_lpm.png](https://github.com/PhilipSargent/h2-in-pipes/blob/main/[pipe_lpm.png)
+![pipe_lpm.png](https://github.com/PhilipSargent/h2-in-pipes/blob/main/pipe_lpm.png)
 
 ![pipe_lpm_ratio.png](https://github.com/PhilipSargent/h2-in-pipes/blob/main/pipe_lpm_ratio.png)
