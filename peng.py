@@ -1894,7 +1894,7 @@ def main():
     μ_g = {}
     for mix in plot_gases:
         μ_g[mix] = []
-         for T in temperatures:
+        for T in temperatures:
             μ = get_viscosity(mix,P,T, visc_f)
             # μ = hernzip_mix_rule(mix, values) # Makes no visible difference wrt to linear!
             # μ = explog_mix_rule(mix, values) # very slight change by eye
