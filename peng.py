@@ -1576,7 +1576,9 @@ def plot_kwargs_linestyle(g):
 
 def plot_kwargs_bw(g):
     # air_list goes from 'Air' to 'O2'
-    if g in ["NG", "H2"]:
+    if g in ["H2"]: # hack for plots with H2 and NG together
+        return({'color': "black", 'linestyle': my_linestyles["dashdotted"]})
+    elif g in ["NG", "H2"]:
         return({'color': "black", 'linestyle': "solid"})
     else:
         if g in air_list:
@@ -1696,7 +1698,7 @@ def main():
             c_NG = [condense(T, p, 'NG', 'Air') for T in t_condense]
             
             plt.plot(t_condense-273.15, c_NG, label=f'Natural Gas  {i+1} Atm', **colour_style('NG'))
-            plt.plot(t_condense-273.15, c_H2, label=f'Pure hydrogen {i+1} Atm', **colour_style('H2'))
+            plt.plot(t_condense-273.15, c_H2, label=f'Pure hydrogen {i+1} Atm', **colour_style('dashed'))
            
             plt.title(f'Maximum boiler efficiency vs Condensing Temperature at {p} bar')
         plt.xlabel('Flue gas condensing temperature (°C)')
