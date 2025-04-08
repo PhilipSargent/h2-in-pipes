@@ -1746,7 +1746,7 @@ def main():
         for colour_style in [plot_kwargs, plot_kwargs_bw]:
             plt.figure(figsize=(10, 6))
             c_g = {}
-            for o in air_list:
+            for o in reversed(air_list):
                 # print(f"Cp {o:8} {get_Cp(o):.3f}")
                 c_g[o] = [condense(T, p, g, o) for T in t_condense]
                 
@@ -1775,7 +1775,7 @@ def main():
             
         for colour_style in [plot_kwargs, plot_kwargs_bw]:
             plt.figure(figsize=(10, 6))
-            for o in air_list:
+            for o in reversed(air_list):
                 if o == 'Air':
                     continue # a comparative plot with 'Air' 
                 e = list()
