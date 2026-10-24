@@ -99,10 +99,9 @@ def f_enhancement_coutinho(T_K, P_bar, y_dict):
 # ==============================================================================
 # 3. COOLPROP MODEL IMPLEMENTATION
 # ==============================================================================
-
 def f_enhancement_coolprop(T_K, P_bar, y_dict):
     """
-    Computes vapor-phase enhancement factor f(T, P) using CoolProp GERG-2008 / HEOS.
+    Computes enhancement factor f(T, P) using CoolProp Cubic Peng-Robinson (PR) model.
     f = (phi_w_mix * P_total) / (phi_w_pure_sat * P_sat_pure)
     """
     P_Pa = P_bar * 1e5
@@ -122,11 +121,12 @@ def f_enhancement_coolprop(T_K, P_bar, y_dict):
             mole_fractions.append(mole_frac)
             
     try:
-        # 1. Evaluate mixture state forced to Vapor Phase
-        AS_mix = CP.AbstractState("HEOS", "&".join(species_list))
+        # Use PR backend for smooth multi-component phase stability
+        mix_str = "PR::" + "&".join(species_list)
+        AS_mix = CP.AbstractState(mix_str)
         AS_mix.set_mole_fractions(mole_fractions)
         
-        # Specify Vapor_phase to prevent CoolProp from flashing into liquid at low T / high P
+        # Specify vapor phase calculation explicitly
         AS_mix.specify_phase(CP.Vapor_phase)
         AS_mix.update(CP.PT_INPUTS, P_Pa, T_K)
         
@@ -136,20 +136,19 @@ def f_enhancement_coolprop(T_K, P_bar, y_dict):
         fugacity_w_mix = AS_mix.fugacity(water_idx)
         phi_w_mix = fugacity_w_mix / (y_w * P_Pa)
         
-        # 2. Pure water saturation pressure & saturation fugacity coefficient
+        # Pure water saturation pressure & pure saturation fugacity coefficient
         P_sat_pure_Pa = sonntag_vapor_pressure(T_K)
         
-        # Pure water vapor at saturation
-        AS_pure = CP.AbstractState("HEOS", "Water")
-        AS_pure.update(CP.QT_INPUTS, 1.0, T_K)  # Q=1 is saturated vapor
+        AS_pure = CP.AbstractState("PR::Water")
+        AS_pure.update(CP.QT_INPUTS, 1.0, T_K)  # Q=1 saturated vapor
         phi_w_pure_sat = AS_pure.fugacity(0) / P_sat_pure_Pa
         
-        # Rigorous Enhancement Factor formula
+        # Enhancement Factor formula
         f_cp = (phi_w_mix * P_Pa) / (phi_w_pure_sat * P_sat_pure_Pa)
         return f_cp
         
-    except Exception:
-        # If PT is well above the mixture dew point line where vapor state cannot exist
+    except Exception as e:
+        # Debug fallback if needed
         return np.nan
         
 # ==============================================================================
