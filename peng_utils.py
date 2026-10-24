@@ -15,15 +15,28 @@ import functools
 
  # Furthermore, using @functools.lru_cache or a specialized  fast key-generator will drastically speed up both your Coutinho-Tsonopoulos model and any virial evaluation.
 
+def freeze(obj):
+    if isinstance(obj, dict):
+        return tuple(sorted((k, freeze(v)) for k, v in obj.items()))
+    elif isinstance(obj, (list, tuple)):
+        return tuple(freeze(item) for item in obj)
+    return obj
+
 def memoize(func):
-    """Standard memoize function to use in a decorator, see
-    https://medium.com/@nkhaja/memoization-and-decorators-with-python-32f607439f84
-    """
     cache = func.cache = {}
+    
     @functools.wraps(func)
     def memoized_func(*args, **kwargs):
-        key = str(args) + str(kwargs)
-        if key not in cache:
-            cache[key] = func(*args, **kwargs)
-        return cache[key]
+        try:
+            frozen_args = tuple(freeze(arg) for arg in args)
+            frozen_kwargs = tuple(sorted((k, freeze(v)) for k, v in kwargs.items())) if kwargs else ()
+            key = (frozen_args, frozen_kwargs)
+            
+            if key not in cache:
+                cache[key] = func(*args, **kwargs)
+            return cache[key]
+        except TypeError:
+            # Fallback if any argument contains an unhashable type that couldn't be frozen
+            return func(*args, **kwargs)
+            
     return memoized_func

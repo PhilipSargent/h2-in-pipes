@@ -5,6 +5,7 @@ import CoolProp.CoolProp as CP
 
 # 1. Import gas critical data from uploaded gas_data.py
 try:
+    from peng_utils import memoize
     from gas_data import gas_data
 except ImportError:
     print("Error: Could not import gas_data.py. Ensure gas_data.py is in the working directory.")
@@ -27,6 +28,7 @@ R = 83.144626  # bar cm^3 / (mol K)
 # 2. COUTINHO - TSONOPOULOS MODEL IMPLEMENTATION
 # ==============================================================================
 
+@memoize
 def coutinho_b(species):
     """
     Computes component co-volume b_i (cm^3/mol) using Peng-Robinson definition:
@@ -36,11 +38,13 @@ def coutinho_b(species):
     Pc = gas_data[species]['Pc']  # bar
     return 0.07780 * (R * Tc / Pc)
 
+@memoize
 def coutinho_k_ij(b1, b2):
     """Calculates binary interaction parameter k_ij using Coutinho et al. correlation."""
     term = 2.0 * np.sqrt(b1 * b2) / (b1 + b2)
     return 1.0 - 0.885 * (term ** -0.036)
 
+@memoize
 def tsonopoulos_B(T, Tc, Pc, omega):
     """Calculates pure second virial coefficient B(T) [cm^3/mol] via Tsonopoulos (1974)."""
     Tr = T / Tc
@@ -48,6 +52,7 @@ def tsonopoulos_B(T, Tc, Pc, omega):
     f1 = 0.0637 + 0.331 / (Tr**2) - 0.423 / (Tr**3) - 0.008 / (Tr**8)
     return (R * Tc / Pc) * (f0 + omega * f1)
 
+@memoize
 def cross_virial_B_gw(T, species1, species2):
     """Calculates cross-second virial coefficient B_12(T) using Coutinho k_ij."""
     p1, p2 = gas_data[species1], gas_data[species2]
