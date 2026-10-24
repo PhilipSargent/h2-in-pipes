@@ -17,7 +17,7 @@ NAME_MAP = {
 
 def sonntag_vapor_pressure(T_K):
     """
-    Calculates the saturation vapor pressure of water vapor using the provided Sonntag equation.
+    Calculates the saturation vapor pressure of water vapor using the Sonntag equation.
 
     Args:
         T_K: Temperature in Kelvin.
@@ -78,34 +78,34 @@ def get_gerg_B_cm3(sp1, sp2, T_K):
         return -1150.0
 
 
-def get_enhancement_factor_gerg(T_K, P_bar, y_dict):
+def get_enhancement_factor_gerg(T_K, P_bar, flue_gas):
     """
     Calculates enhancement factor f(T, P, y) using GERG-2008 virial coefficients.
     
     Args:
         T_K: Temperature in Kelvin.
         P_bar: Total system pressure in bar.
-        y_dict: Dict of mole fractions, e.g., {'H2O': 0.15, 'CO2': 0.08, 'N2': 0.74, 'O2': 0.03}
+        flue_gas: Dict of mole fractions, e.g., {'H2O': 0.15, 'CO2': 0.08, 'N2': 0.74, 'O2': 0.03}
     
     Returns:
         f (dimensionless enhancement factor, typically ~ 1.00 to 1.05)
     """
-    y_w = y_dict.get('H2O', 0.0)
+    y_w = flue_gas.get('H2O', 0.0)
     if y_w <= 0.0 or y_w >= 1.0:
         return 1.0
 
     # Dry gas normalized fractions
-    dry_dict = {k: v / (1.0 - y_w) for k, v in y_dict.items() if k != 'H2O'}
+    dry_flue_gas = {k: v / (1.0 - y_w) for k, v in flue_gas.items() if k != 'H2O'}
 
     # 1. B_gg (Dry gas matrix virial sum)
     B_gg = 0.0
-    for g1, y1 in dry_dict.items():
-        for g2, y2 in dry_dict.items():
+    for g1, y1 in dry_flue_gas.items():
+        for g2, y2 in dry_flue_gas.items():
             B_gg += y1 * y2 * get_gerg_B_cm3(g1, g2, T_K)
 
     # 2. B_gw (Dry gas <-> Water cross virial sum)
     B_gw = 0.0
-    for g, y_g in dry_dict.items():
+    for g, y_g in dry_flue_gas.items():
         B_gw += y_g * get_gerg_B_cm3(g, 'H2O', T_K)
 
     # 3. Virial enhancement factor expression
@@ -114,29 +114,29 @@ def get_enhancement_factor_gerg(T_K, P_bar, y_dict):
     return math.exp(ln_f)
 
 
-def get_enhanced_vapor_pressure(T_K, P_bar, y_dict):
+def get_enhanced_vapor_pressure(T_K, P_bar, flue_gas):
     """
     Returns effective saturation vapor pressure of water in flue gas mixture in Pa.
     """
     P_sat_pure = sonntag_vapor_pressure(T_K)
-    f = get_enhancement_factor_gerg(T_K, P_bar, y_dict)
+    f = get_enhancement_factor_gerg(T_K, P_bar, flue_gas)
     return f * P_sat_pure
 
 
-def get_dew_point_enhanced(h2o_pp_Pa, P_bar, y_dict):
+def get_dew_point_enhanced(h2o_pp_Pa, P_bar, flue_gas):
     """
     Finds dew point temperature [K] where h2o_pp_Pa = f(T, P, y) * P_sat_pure(T).
     
     Args:
         h2o_pp_Pa: Partial pressure of H2O in flue gas [Pa].
         P_bar: Total flue gas pressure [bar].
-        y_dict: Flue gas mole fraction dictionary.
+        flue_gas: Flue gas mole fraction dictionary.
     """
     T = 323.15  # Initial guess ~ 50°C
     tolerance = 1e-6
     
     for i in range(50):
-        P_eff = get_enhanced_vapor_pressure(T, P_bar, y_dict)
+        P_eff = get_enhanced_vapor_pressure(T, P_bar, flue_gas)
         error = P_eff - h2o_pp_Pa
         
         if abs(error) < tolerance:
@@ -145,7 +145,7 @@ def get_dew_point_enhanced(h2o_pp_Pa, P_bar, y_dict):
         
         # Secant/Numerical derivative step
         dT = 0.01
-        dP_dT = (get_enhanced_vapor_pressure(T + dT, P_bar, y_dict) - P_eff) / dT
+        dP_dT = (get_enhanced_vapor_pressure(T + dT, P_bar, flue_gas) - P_eff) / dT
         
         if dP_dT == 0:
             print(f"{i:5} iterations, but dP_dT == 0")
