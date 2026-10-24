@@ -180,13 +180,12 @@ def get_dew_point_enhanced(h2o_pp_Pa, P_bar, flue_gas):
 
     return T, 50
     
-def run_enhancement_self_test():
+def run_enhancement_self_test(T_C, P_atm):
     """Self-test comparing pure Sonntag vs GERG-2008 enhanced water vapor 
     properties for NG Flue Gas, H2 Flue Gas, and Dry Air at 0°C and 10 atm.
     """
-    T_C = 0.0
+    
     T_K = 273.15 + T_C
-    P_atm = 10.0
     P_bar = P_atm * 1.01325  # 10.1325 bar
     P_Pa = P_bar * 1e5
 
@@ -269,7 +268,11 @@ def main():
 # print(f"Dew point temperature at {pressure_Pa} Pa is {dew_point_temperature_K:.2f} K")    
 
     # Run enhancement factor comparison tests
-    run_enhancement_self_test()
+    run_enhancement_self_test(0, 10) # 0 C and 10 atm
+    run_enhancement_self_test(30, 10) 
+    run_enhancement_self_test(30, 1) 
+    run_enhancement_self_test(70, 1) 
+
     
 if __name__ == '__main__':
     sys.exit(main())  
