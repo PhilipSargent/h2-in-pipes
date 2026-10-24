@@ -41,25 +41,20 @@ def sonntag_vapor_pressure(T_K):
     return P_sat
 
 def d_sonntag_vapor_pressure_dT(T_K):
-    """Calculates the analytical derivative of the Sonntag vapor pressure function.
-    This is a spectacularly pointless optimization for this purpose. """
-
-    # Constants for the Sonntag equation
+    """Calculates the exact analytical derivative dP/dT [Pa/K]."""
     A1 = -6096.9385
-    A2 = 21.2409642
     A3 = -2.711193e-2
     A4 = 1.673952e-5
     A5 = 2.433502
 
-    # Calculate the derivative of the logarithm of the saturation vapor pressure
-    ln_P_sat_prime = -A1 / T_K**2 + A3 + 2 * A4 * T_K + A5 / T_K
-
-    # Convert the derivative back to the original units
-    #P_sat = sonntag_vapor_pressure(T_K)
-    dP_dT =  math.exp(ln_P_sat_prime)   # P_sat is already calculated in the original function
-
-    return dP_dT
+    # d(ln P)/dT
+    d_lnP_dT = -A1 / (T_K**2) + A3 + 2.0 * A4 * T_K + A5 / T_K
     
+    # dP/dT = P * d(ln P)/dT
+    P_sat = sonntag_vapor_pressure(T_K)
+    return P_sat * d_lnP_dT
+
+   
 def get_gerg_B_cm3(sp1, sp2, T_K):
     """
     Extracts cross-second virial coefficient B_12(T) in cm^3/mol 
@@ -122,83 +117,69 @@ def get_enhanced_vapor_pressure(T_K, P_bar, flue_gas):
     f = get_enhancement_factor_gerg(T_K, P_bar, flue_gas)
     return f * P_sat_pure
 
-def get_dew_point_enhanced(h2o_pp_Pa, P_bar, flue_gas):
-    """
-    Finds dew point temperature [K] where h2o_pp_Pa = f(T, P, y) * P_sat_pure(T).
-     
-    Args:
-        h2o_pp_Pa: Partial pressure of H2O in flue gas [Pa].
-        P_bar: Total flue gas pressure [bar].
-        flue_gas: Flue gas mole fraction dictionary.
-        
-        Guarded against sub-zero Kelvin undershoots and high-temperature math overflows.
-    """
-    if h2o_pp_Pa <= 0:
-        return 273.15
 
-    # Initial guess based on partial pressure
-    T = 250.0 if h2o_pp_Pa < 1000 else 320.0
-    tolerance = 1e-6
+def get_dew_point(pressure_Pa):
+    """Calculates the dew point temperature [K] for a given water partial pressure [Pa]
 
-    for _ in range(100):
-        P_eff = get_enhanced_vapor_pressure(T, P_bar, flue_gas)
-        error = P_eff - h2o_pp_Pa
+    using a highly stable Newton-Raphson solver on ln(P).
+    """
+    if pressure_Pa <= 0:
+        return 273.15, 0
+
+    # Fast Antoine-style initial guess for water dew point [K]
+    # T ~ 1730 / (10.08 - log10(P_kPa)) + 39.5
+    P_kPa = pressure_Pa / 1000.0
+    T = 1730.63 / (10.08 - math.log10(max(P_kPa, 1e-4))) + 39.5
+    
+    target_lnP = math.log(pressure_Pa)
+    tolerance = 1e-7
+
+    for i in range(1, 50):
+        P_calc = sonntag_vapor_pressure(T)
+        lnP_calc = math.log(P_calc)
+        error = lnP_calc - target_lnP
 
         if abs(error) < tolerance:
-            return T
+            return T, i
 
-        dT = 0.01
-        P_eff_plus = get_enhanced_vapor_pressure(T + dT, P_bar, flue_gas)
-        dP_dT = (P_eff_plus - P_eff) / dT
-
-        if dP_dT == 0:
-            break
-
-        step = error / dP_dT
-        # Clamp T within reasonable thermodynamic bounds [180 K, 400 K]
-        T = max(180.0, min(400.0, T - step))
-
-    return T
-
-
-def get_dew_point(pressure):
-    """
-    Calculates the dew point temperature given a partial pressure in Pa 
-    using a guarded Newton-Raphson solver on the Sonntag equation.
-    Args:
-        pressure: Pressure in Pa.
-
-    Returns:
-        Dew point temperature in Kelvin.
-
-    """
-    if pressure <= 0:
-        return 273.15
-
-    # Estimate initial guess based on order of magnitude
-    if pressure < 1000:
-        T = 250.0  # ~ -23 °C for low partial pressure
-    else:
-        T = 320.0  # ~ 47 °C
-
-    tolerance = 1e-6
-    for _ in range(100):
-        P_calc = sonntag_vapor_pressure(T)
-        dP = P_calc - pressure
-        
-        if abs(dP) < tolerance:
-            return T
-            
+        # Derivative d(lnP)/dT = (1/P) * dP/dT
         dP_dT = d_sonntag_vapor_pressure_dT(T)
-        if dP_dT == 0:
-            break
+        d_lnP_dT = dP_dT / P_calc
 
-        # Newton-Raphson step with safety guards on both lower (180 K) and upper (400 K) bounds
-        dT = dP / dP_dT
-        T = max(180.0, min(400.0, T - dT))
+        T -= error / d_lnP_dT
 
-    return T
-        
+    return T, 50
+
+def get_dew_point_enhanced(h2o_pp_Pa, P_bar, flue_gas):
+    """Finds enhanced dew point temperature [K] where
+
+    h2o_pp_Pa = f(T, P, y) * P_sat_pure(T) using Newton-Raphson on ln(P_eff).
+    """
+    if h2o_pp_Pa <= 0:
+        return 273.15, 0
+
+    # Start from pure Sonntag dew point guess
+    T, _ = get_dew_point(h2o_pp_Pa)
+    target_lnP = math.log(h2o_pp_Pa)
+    tolerance = 1e-7
+
+    for i in range(1, 50):
+        P_eff = get_enhanced_vapor_pressure(T, P_bar, flue_gas)
+        lnP_eff = math.log(P_eff)
+        error = lnP_eff - target_lnP
+
+        if abs(error) < tolerance:
+            return T, i
+
+        # Numerical derivative of ln(P_eff) w.r.t T
+        dT = 0.001
+        P_eff_plus = get_enhanced_vapor_pressure(T + dT, P_bar, flue_gas)
+        d_lnP_eff_dT = (math.log(P_eff_plus) - lnP_eff) / dT
+
+        T -= error / d_lnP_eff_dT
+
+    return T, 50
+    
 def run_enhancement_self_test():
     """Self-test comparing pure Sonntag vs GERG-2008 enhanced water vapor 
     properties for NG Flue Gas, H2 Flue Gas, and Dry Air at 0°C and 10 atm.
@@ -253,11 +234,13 @@ def run_enhancement_self_test():
         p_h2o_Pa = y_w * P_Pa
         
         # Dew point comparisons at 10 atm partial pressure
-        T_dp_pure_C = get_dew_point(p_h2o_Pa) - 273.15
-        T_dp_eff_C = get_dew_point_enhanced(p_h2o_Pa, P_bar, y_dict) - 273.15
+        dew_point, convergence = get_dew_point(p_h2o_Pa)
+        T_dp_pure_C = dew_point - 273.15
+        dew_point_enh, convergence_enh  = get_dew_point_enhanced(p_h2o_Pa, P_bar, y_dict)
+        T_dp_eff_C = dew_point_enh - 273.15
         dT_dp = T_dp_eff_C - T_dp_pure_C
 
-        print(f"{name:<25} | {f_gerg:<10.5f} | {P_sat_pure_Pa:<14.2f} | {P_sat_eff_Pa:<14.2f} | +{dT_dp:.3f} °C")
+        print(f"{name:<25} | {f_gerg:<10.5f} | {P_sat_pure_Pa:<14.2f} | {P_sat_eff_Pa:<14.2f} | +{dT_dp:.3f} °C | {convergence} iterations | {convergence_enh} iterations (enh)")
 
     print("=" * 80)
 
@@ -275,8 +258,9 @@ def main():
 
     p = 0.1661356 # partial pressure in atm (16.61% NG flue gas)
     p2 = p * atm  # pp in Pa
-    dew_point_pure = get_dew_point(p2) - 273.15
-    print(f"\nPure Sonntag Dew point for H2O partial pressure of {p:.4f} atm: {dew_point_pure:.4f} °C")   
+    dew_point, convergence = get_dew_point(p2)
+    dew_point_pure =  dew_point - 273.15
+    print(f"\nPure Sonntag Dew point for H2O partial pressure of {p:.4f} atm: {dew_point_pure:.4f} °C  | {convergence} iterations\n")   
 
 
 # # Example usage
