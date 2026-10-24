@@ -122,17 +122,16 @@ def get_enhanced_vapor_pressure(T_K, P_bar, flue_gas):
     f = get_enhancement_factor_gerg(T_K, P_bar, flue_gas)
     return f * P_sat_pure
 
-
-
 def get_dew_point_enhanced(h2o_pp_Pa, P_bar, flue_gas):
     """
     Finds dew point temperature [K] where h2o_pp_Pa = f(T, P, y) * P_sat_pure(T).
-    Guarded against sub-zero Kelvin overshoots.
-    
+     
     Args:
         h2o_pp_Pa: Partial pressure of H2O in flue gas [Pa].
         P_bar: Total flue gas pressure [bar].
         flue_gas: Flue gas mole fraction dictionary.
+        
+        Guarded against sub-zero Kelvin undershoots and high-temperature math overflows.
     """
     if h2o_pp_Pa <= 0:
         return 273.15
@@ -141,7 +140,7 @@ def get_dew_point_enhanced(h2o_pp_Pa, P_bar, flue_gas):
     T = 250.0 if h2o_pp_Pa < 1000 else 320.0
     tolerance = 1e-6
 
-    for i in range(100):
+    for _ in range(100):
         P_eff = get_enhanced_vapor_pressure(T, P_bar, flue_gas)
         error = P_eff - h2o_pp_Pa
 
@@ -156,9 +155,11 @@ def get_dew_point_enhanced(h2o_pp_Pa, P_bar, flue_gas):
             break
 
         step = error / dP_dT
-        T = max(180.0, T - step)
+        # Clamp T within reasonable thermodynamic bounds [180 K, 400 K]
+        T = max(180.0, min(400.0, T - step))
 
     return T
+
 
 def get_dew_point(pressure):
     """
@@ -181,7 +182,7 @@ def get_dew_point(pressure):
         T = 320.0  # ~ 47 °C
 
     tolerance = 1e-6
-    for i in range(100):
+    for _ in range(100):
         P_calc = sonntag_vapor_pressure(T)
         dP = P_calc - pressure
         
@@ -192,9 +193,9 @@ def get_dew_point(pressure):
         if dP_dT == 0:
             break
 
-        # Newton-Raphson step with safety guard against T <= 0 K
+        # Newton-Raphson step with safety guards on both lower (180 K) and upper (400 K) bounds
         dT = dP / dP_dT
-        T = max(180.0, T - dT)
+        T = max(180.0, min(400.0, T - dT))
 
     return T
         
