@@ -6,12 +6,38 @@ ignore = ["E402", "F541"]
 
 [project]
 name = "h2-in-pipes"
-version = "2024.01.1"
-description = "Gases in pipes"
+version = "2026.10.24"
+description = "Gases in pipes, water vapor enhancement factors in flue gas mixtures using Coutinho-Tsonopoulos virial model"
 readme = "README.md"
+license = { text = "MIT" }
+authors = [
+{ name = "Philip Sargent", email = "philip.sargent@gmail.com" }
+]
 requires-python = ">=3.13"
-dependencies =  [
-	"matplotlib",
-	"scipy",
+dependencies = [
+"numpy>=2.5.4",
+"matplotlib>=3.11.2",
+"coolprop>=8.0.0",
+"scipy>=1.18.1",
 ]
 
+keywords = [
+"condensing",
+"boilers",
+"flue-gas",
+"water-vapor",
+"enhancement-factor",
+"coolprop",
+"virial-coefficients",
+"tsonopoulos",
+"coutinho"
+]
+classifiers = [
+"Development Status :: 4 - Beta",
+"Intended Audience :: Science/Research",
+"Topic :: Scientific/Engineering :: Chemistry",
+"Topic :: Scientific/Engineering :: Physics",
+"Programming Language :: Python :: 3",
+"License :: OSI Approved :: MIT License",
+"Operating System :: OS Independent",
+]
