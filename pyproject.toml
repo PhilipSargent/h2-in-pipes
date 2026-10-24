@@ -30,7 +30,9 @@ keywords = [
 "coolprop",
 "virial-coefficients",
 "tsonopoulos",
-"coutinho"
+"coutinho",
+"moody",
+"coleman",
 ]
 classifiers = [
 "Development Status :: 4 - Beta",
