@@ -100,55 +100,54 @@ def f_enhancement_coutinho(T_K, P_bar, y_dict):
 # 3. COOLPROP MODEL IMPLEMENTATION
 # ==============================================================================
 def f_enhancement_coolprop(T_K, P_bar, y_dict):
-    """
-    Computes enhancement factor f(T, P) using CoolProp Cubic Peng-Robinson (PR) model.
-    f = (phi_w_mix * P_total) / (phi_w_pure_sat * P_sat_pure)
-    """
-    P_Pa = P_bar * 1e5
-    y_w = y_dict.get('H2O', 0.0)
+    return f_enhancement_coolprop_gerg_virial(T_K, P_bar, y_dict)
     
+def f_enhancement_coolprop_gerg_virial(T_K, P_bar, y_dict):
+    """
+    Computes f(T, P) using exact GERG-2008 Virial Coefficients extracted from CoolProp.
+    Bypasses phase-flash instability completely.
+    """
+    y_w = y_dict.get('H2O', 0.0)
     if y_w <= 0:
         return 1.0
 
+    v_l = 18.07  # Liquid water molar volume (cm^3/mol)
+    dry_dict = {k: v / (1.0 - y_w) for k, v in y_dict.items() if k != 'H2O'}
+    
     name_map = {'H2O': 'Water', 'CO2': 'CO2', 'N2': 'Nitrogen', 'O2': 'Oxygen'}
     
-    # Clean species list and mole fractions
-    species_list = []
-    mole_fractions = []
-    for comp, mole_frac in y_dict.items():
-        if mole_frac > 0:
-            species_list.append(name_map.get(comp, comp))
-            mole_fractions.append(mole_frac)
-            
+    def get_gerg_B(sp1, sp2, T):
+        """Extracts B_12(T) in cm^3/mol from CoolProp HEOS/GERG2008."""
+        n1, n2 = name_map.get(sp1, sp1), name_map.get(sp2, sp2)
+        if sp1 == sp2:
+            # Pure second virial B(T) in m^3/mol -> convert to cm^3/mol
+            B_m3 = CP.PropsSI('Bvirial', 'T', T, 'P', 1e5, n1)
+            return B_m3 * 1e6
+        else:
+            # Cross second virial B_12(T) using HEOS binary mixture
+            mix_str = f"HEOS::{n1}[0.5]&{n2}[0.5]"
+            B_m3 = CP.PropsSI('Bvirial', 'T', T, 'P', 1e5, mix_str)
+            return B_m3 * 1e6
+
     try:
-        # Use PR backend for smooth multi-component phase stability
-        mix_str = "PR::" + "&".join(species_list)
-        AS_mix = CP.AbstractState(mix_str)
-        AS_mix.set_mole_fractions(mole_fractions)
+        # 1. GERG Dry Gas Virial B_gg
+        B_gg = 0.0
+        for g1, y1 in dry_dict.items():
+            for g2, y2 in dry_dict.items():
+                B_12 = get_gerg_B(g1, g2, T_K)
+                B_gg += y1 * y2 * B_12
+
+        # 2. GERG Cross Virial B_gw (Dry Gas Matrix <-> Water)
+        B_gw = 0.0
+        for g, y_g in dry_dict.items():
+            B_gw += y_g * get_gerg_B(g, 'H2O', T_K)
+
+        # 3. Enhancement Factor
+        term1 = ((1.0 - y_w) * P_bar) / (R * T_K)
+        ln_f = term1 * (B_gg - 2.0 * B_gw + v_l)
+        return np.exp(ln_f)
         
-        # Specify vapor phase calculation explicitly
-        AS_mix.specify_phase(CP.Vapor_phase)
-        AS_mix.update(CP.PT_INPUTS, P_Pa, T_K)
-        
-        water_idx = species_list.index('Water')
-        
-        # Partial fugacity f_w in Pa -> phi_w = f_w / (y_w * P)
-        fugacity_w_mix = AS_mix.fugacity(water_idx)
-        phi_w_mix = fugacity_w_mix / (y_w * P_Pa)
-        
-        # Pure water saturation pressure & pure saturation fugacity coefficient
-        P_sat_pure_Pa = sonntag_vapor_pressure(T_K)
-        
-        AS_pure = CP.AbstractState("PR::Water")
-        AS_pure.update(CP.QT_INPUTS, 1.0, T_K)  # Q=1 saturated vapor
-        phi_w_pure_sat = AS_pure.fugacity(0) / P_sat_pure_Pa
-        
-        # Enhancement Factor formula
-        f_cp = (phi_w_mix * P_Pa) / (phi_w_pure_sat * P_sat_pure_Pa)
-        return f_cp
-        
-    except Exception as e:
-        # Debug fallback if needed
+    except Exception:
         return np.nan
         
 # ==============================================================================
@@ -239,7 +238,7 @@ def run_benchmarking():
     plt.savefig("enhancement_factor_1D_cross_section.png", dpi=300, bbox_inches='tight')
     plt.show()
 
-    print(rf"Benchmarking completed. Maximum absolute deviation $\Delta f$: {delta_max_overall:.6f}")
+    print(rf"Benchmarking completed. Maximum absolute deviation: {delta_max_overall:.6f}")
 
 if __name__ == '__main__':
     run_benchmarking()
