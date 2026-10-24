@@ -182,9 +182,11 @@ def get_dew_point_enhanced(h2o_pp_Pa, P_bar, flue_gas):
     
 def run_enhancement_self_test(T_C, P_atm):
     """Self-test comparing pure Sonntag vs GERG-2008 enhanced water vapor 
-    properties for NG Flue Gas, H2 Flue Gas, and Dry Air at 0°C and 10 atm.
-    """
+    properties for NG Flue Gas, H2 Flue Gas, and Dry Air.
     
+    Splits temperature-dependent properties evaluated at T_ambient from
+    mixture-dewpoint properties determined by system pressure P_atm.
+    """
     T_K = 273.15 + T_C
     P_bar = P_atm * 1.01325  # 10.1325 bar
     P_Pa = P_bar * 1e5
@@ -214,34 +216,53 @@ def run_enhancement_self_test(T_C, P_atm):
 
     P_sat_pure_Pa = sonntag_vapor_pressure(T_K)
 
-    print("=" * 80)
-    print(f"ENHANCEMENT FACTOR COMPARISON TEST AT T = {T_C:.1f}°C ({T_K:.2f} K), P = {P_atm:.1f} atm ({P_bar:.3f} bar)")
-    print(f"Pure Water Saturation Pressure (Sonntag): {P_sat_pure_Pa:.2f} Pa ({P_sat_pure_Pa/101325:.5f} atm)")
-    print("=" * 80)
-    print(f"{'Gas Mixture':<25} | {'f (GERG)':<10} | {'Pure Psat (Pa)':<14} | {'Eff Psat (Pa)':<14} | {'Dew Point Shift':<15}")
-    print("-" * 80)
+    print("=" * 105)
+    print(f"ENHANCEMENT FACTOR TEST | P = {P_atm:.1f} atm ({P_bar:.3f} bar) | T_ambient = {T_C:.1f}°C ({T_K:.2f} K)")
+    print(f"Pure Water Saturation Pressure at T_ambient: {P_sat_pure_Pa:.2f} Pa ({P_sat_pure_Pa/101325:.5f} atm)")
+    print("=" * 105)
+
+    # --------------------------------------------------------------------------
+    # PART A: EVALUATED AT AMBIENT TEMPERATURE T_C (Varies with T_ambient)
+    # --------------------------------------------------------------------------
+    print(f"PART A: Properties at T_ambient = {T_C:.1f}°C, P = {P_atm:.1f} atm (Temperature Dependent)")
+    print("-" * 105)
+    print(f"{'Gas Mixture':<25} | {'f(T_amb, P)':<12} | {'Pure Psat (Pa)':<15} | {'Eff Psat (Pa)':<15}")
+    print("-" * 105)
 
     for name, y_dict in mixtures.items():
-        # 1. Enhancement factor
         f_gerg = get_enhancement_factor_gerg(T_K, P_bar, y_dict)
-        
-        # 2. Enhanced vapor pressure
         P_sat_eff_Pa = get_enhanced_vapor_pressure(T_K, P_bar, y_dict)
-        
-        # 3. Partial pressure of water in total mixture at 10 atm
+        print(f"{name:<25} | {f_gerg:<12.5f} | {P_sat_pure_Pa:<15.2f} | {P_sat_eff_Pa:<15.2f}")
+
+    print("-" * 105)
+
+    # --------------------------------------------------------------------------
+    # PART B: SYSTEM DEW POINT AT PRESSURE P_atm (Independent of T_ambient)
+    # --------------------------------------------------------------------------
+    print(f"PART B: Condensation Dew Points at P = {P_atm:.1f} atm (Independent of T_ambient)")
+    print("-" * 105)
+    print(f"{'Gas Mixture':<25} | {'p_H2O (kPa)':<12} | {'T_dp Pure (°C)':<15} | {'T_dp Eff (°C)':<15} | {'Dew Point Shift':<16} | {'Iter (Pure/Eff)':<15}")
+    print("-" * 105)
+
+    for name, y_dict in mixtures.items():
         y_w = y_dict['H2O']
         p_h2o_Pa = y_w * P_Pa
-        
-        # Dew point comparisons at 10 atm partial pressure
-        dew_point, convergence = get_dew_point(p_h2o_Pa)
-        T_dp_pure_C = dew_point - 273.15
-        dew_point_enh, convergence_enh  = get_dew_point_enhanced(p_h2o_Pa, P_bar, y_dict)
+
+        # Calculate pure and enhanced saturation dew points
+        dew_point_pure, iter_pure = get_dew_point(p_h2o_Pa)
+        T_dp_pure_C = dew_point_pure - 273.15
+
+        dew_point_enh, iter_enh = get_dew_point_enhanced(p_h2o_Pa, P_bar, y_dict)
         T_dp_eff_C = dew_point_enh - 273.15
+
         dT_dp = T_dp_eff_C - T_dp_pure_C
 
-        print(f"{name:<25} | {f_gerg:<10.5f} | {P_sat_pure_Pa:<14.2f} | {P_sat_eff_Pa:<14.2f} | +{dT_dp:.3f} °C | {convergence} iterations | {convergence_enh} iterations (enh)")
+        print(
+            f"{name:<25} | {p_h2o_Pa/1000:<12.2f} | {T_dp_pure_C:<15.2f} | {T_dp_eff_C:<15.2f} | "
+            f"+{dT_dp:<15.3f} °C | {iter_pure} / {iter_enh} iters"
+        )
 
-    print("=" * 80)
+    print("=" * 105)
 
 
 def main():
